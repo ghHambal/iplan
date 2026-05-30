@@ -1101,7 +1101,6 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pdf-sig-line {
-  border-bottom: 1px dashed #000;
   width: 50mm; /* Centered fixed line width */
   height: 8mm;
   margin-bottom: 1.5mm;
