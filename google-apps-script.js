@@ -137,6 +137,16 @@ function doGet(e) {
 
     // --- [NEW] GET Config: ดึงการตั้งค่าคอร์ส/ห้องเรียน/โปรไฟล์ ---
     if (action === 'getConfig') {
+      // บันทึก GAS URL ลงชีทโดยอัตโนมัติ เพื่อให้ผู้ใช้สามารถคัดลอกได้ง่ายจากหน้าชีท
+      try {
+        const webAppUrl = ScriptApp.getService().getUrl();
+        if (webAppUrl) {
+          writeConfig(ss, 'gasUrl', webAppUrl);
+        }
+      } catch (err) {
+        Logger.log('ไม่สามารถเขียน gasUrl: ' + err.toString());
+      }
+
       const config = readAllConfig(ss);
       // parse JSON fields
       const result = {};
@@ -148,7 +158,7 @@ function doGet(e) {
           result[key] = [];
         }
       });
-      ['teacherName', 'hodName', 'schoolName'].forEach(key => {
+      ['teacherName', 'hodName', 'schoolName', 'folderId', 'gasUrl'].forEach(key => {
         result[key] = config[key] || '';
       });
       return corsResponse({ status: 'success', config: result });
@@ -216,7 +226,75 @@ function doPost(e) {
       if (payload.schoolName !== undefined) {
         writeConfig(ss, 'schoolName', payload.schoolName);
       }
+      if (payload.folderId !== undefined) {
+        writeConfig(ss, 'folderId', payload.folderId);
+      }
+      // บันทึก GAS URL ลงชีทโดยอัตโนมัติด้วย
+      try {
+        const webAppUrl = ScriptApp.getService().getUrl();
+        if (webAppUrl) {
+          writeConfig(ss, 'gasUrl', webAppUrl);
+        }
+      } catch (err) {}
+
       return corsResponse({ status: 'success', message: 'บันทึก config เรียบร้อยแล้ว' });
+    }
+
+    // --- [NEW] SAVE All Lessons: บันทึกแผนการสอนทั้งหมดของชั้นเรียน ---
+    if (payload.action === 'saveAllLessons') {
+      const sheetName = payload.sheetName;
+      if (!sheetName) {
+        return corsResponse({ status: 'error', message: 'ไม่พบชื่อแผ่นงาน (sheetName)' });
+      }
+      let sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        sheet = createAndSetupSheet(ss, sheetName);
+      }
+      
+      // ล้างข้อมูลเดิมทั้งหมดตั้งแต่แถวที่ 2 ลงไป
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        sheet.deleteRows(2, lastRow - 1);
+      }
+      
+      const lessons = payload.lessons || [];
+      if (lessons.length > 0) {
+        const headers = sheet.getDataRange().getValues()[0].map(h => String(h).trim());
+        const rowsToAppend = [];
+        
+        lessons.forEach(p => {
+          const newRow = new Array(headers.length).fill('');
+          const fieldMappings = {
+            'Week': p.week || '',
+            'ครั้งที่': String(p.once || ''),
+            'คาบที่สอน': p.period || '',
+            'วว/ดด/ปป ที่สอน': p.date || '',
+            'หน่วยการเรียนรู้ที่': p.unit || '',
+            'เรื่อง': p.topic || '',
+            'จำนวนคาบ': String(p.periodCount || ''),
+            'มาตรฐานการเรียนรู้/ตัวชี้วัด': p.standard || '',
+            'จุดประสงค์การเรียนรู้': p.objectives || '',
+            'กิจกรรมการเรียนรู้': p.activities || '',
+            'การวัดและประเมินผล': p.assessment || '',
+            'สื่อการเรียนรู้': p.materials || '',
+            'ผลการจัดการเรียนรู้': p.outcomes || '',
+            'แนวทางแก้ปัญหา': p.solutions || '',
+            'ลิงก์ไฟล์ PDF': p.pdfUrl || ''
+          };
+          headers.forEach((header, index) => {
+            if (fieldMappings[header] !== undefined) {
+              newRow[index] = fieldMappings[header];
+            }
+          });
+          rowsToAppend.push(newRow);
+        });
+        
+        if (rowsToAppend.length > 0) {
+          sheet.getRange(2, 1, rowsToAppend.length, headers.length).setValues(rowsToAppend);
+        }
+      }
+      
+      return corsResponse({ status: 'success', message: 'บันทึกแผนการสอนทั้งหมดเรียบร้อยแล้ว' });
     }
 
     // --- SAVE Lesson Plan: บันทึกหลังการสอน + PDF ---

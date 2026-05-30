@@ -485,6 +485,29 @@
                   <i data-lucide="download-cloud"></i> <span>โหลดข้อมูลจาก Cloud ตอนนี้</span>
                 </button>
               </div>
+
+              <!-- Easy setup for other devices -->
+              <div id="easy-setup-section" style="margin-top: 14px; padding: 13px 16px; background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.3); border-left: 3px solid #6366f1; border-radius: 10px; display: none;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                  <i data-lucide="qr-code" style="width:15px; height:15px; color:#6366f1; flex-shrink:0;"></i>
+                  <span style="font-size:12.5px; font-weight:700; color:#6366f1;">เชื่อมต่อกับมือถือ / เครื่องอื่นอย่างง่าย</span>
+                </div>
+                <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.6;">
+                  คัดลอกลิงก์การตั้งค่า หรือ สแกน QR Code ด้วยมือถือเพื่อเชื่อมต่ออุปกรณ์ทันทีโดยไม่ต้องกรอกข้อมูลใหม่
+                </p>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                  <button type="button" id="btn-copy-setup-link" class="btn btn-primary" style="flex: 1; font-size:11.5px; padding:6px 12px;">
+                    <i data-lucide="copy"></i> คัดลอกลิงก์แชร์
+                  </button>
+                  <button type="button" id="btn-toggle-qr" class="btn btn-secondary" style="font-size:11.5px; padding:6px 12px;">
+                    <i data-lucide="qr-code"></i> แสดง QR Code
+                  </button>
+                </div>
+                <div id="qr-container" style="display: none; flex-direction: column; align-items: center; justify-content: center; background: #fff; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid #e2e8f0;">
+                  <img id="qr-image" style="width: 140px; height: 140px; border: none; outline: none;" alt="QR Code สำหรับเชื่อมต่อ">
+                  <small style="color: #64748b; font-size: 10px; margin-top: 6px; text-align: center;">สแกนเพื่อเริ่มใช้งาน iPlane บนมือถือทันที</small>
+                </div>
+              </div>
             </div>
           </div>
         </div>

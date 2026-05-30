@@ -312,6 +312,27 @@ const penWidth = 2.5;
 
 // 5. App Initialization on DOM Load
 document.addEventListener('DOMContentLoaded', () => {
+  // Check URL parameters for auto configuration (useful for easy setup across devices)
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramGasUrl = urlParams.get('gasUrl');
+  const paramFolderId = urlParams.get('folderId');
+  if (paramGasUrl) {
+    localStorage.setItem('iplane_gas_url', decodeURIComponent(paramGasUrl));
+    config.gasUrl = decodeURIComponent(paramGasUrl);
+  }
+  if (paramFolderId) {
+    localStorage.setItem('iplane_folder_id', decodeURIComponent(paramFolderId));
+    config.folderId = decodeURIComponent(paramFolderId);
+  }
+  if (paramGasUrl || paramFolderId) {
+    // Clean up URL parameters so they don't stay in the browser address bar
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+    setTimeout(() => {
+      showToast('นำเข้าการเชื่อมต่อฐานข้อมูล Google เรียบร้อยแล้ว! ✓', 4000);
+    }, 500);
+  }
+
   // Load database arrays
   loadDatabaseState();
   
@@ -320,9 +341,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeUI();
   
   if (config.gasUrl) {
-    fetchLiveGoogleData();
-    fetchConfigFromCloud(); // sync courses/classes/profile from cloud
+    fetchConfigFromCloud().then(() => {
+      fetchLiveGoogleData();
+    });
   }
+
+  // อัปเดตส่วนนำเข้าข้ามเครื่องใน settings
+  updateEasySetupShareSection();
 });
 
 // Decoupled Course and Classroom Data Loader and Savers
@@ -1422,6 +1447,10 @@ function runAutoDateRunner() {
   saveCourseLessons(activeCourseId, lessonPlans);
   saveClassLessons(activeClassId, lessonPlans);
 
+  if (config.gasUrl) {
+    syncAllLessonsToCloud();
+  }
+
   // Render calculated list preview inside box
   const previewBox = document.getElementById('date-preview-list');
   previewBox.innerHTML = '';
@@ -1498,6 +1527,10 @@ function saveInlineEditedLesson() {
   // Save full array to LocalStorage using decoupled savers
   saveCourseLessons(activeCourseId, lessonPlans);
   saveClassLessons(activeClassId, lessonPlans);
+  
+  if (config.gasUrl) {
+    syncAllLessonsToCloud();
+  }
   
   // Rebuild selections and previews
   renderSidebar();
@@ -1602,6 +1635,22 @@ async function fetchConfigFromCloud() {
       changed = true;
     }
 
+    // Merge folderId and gasUrl from Cloud (if present)
+    if (remoteConfig.folderId && remoteConfig.folderId !== config.folderId) {
+      config.folderId = remoteConfig.folderId;
+      localStorage.setItem('iplane_folder_id', config.folderId);
+      const driveFolderInput = document.getElementById('input-drive-folder');
+      if (driveFolderInput) driveFolderInput.value = config.folderId;
+      changed = true;
+    }
+    if (remoteConfig.gasUrl && remoteConfig.gasUrl !== config.gasUrl) {
+      config.gasUrl = remoteConfig.gasUrl;
+      localStorage.setItem('iplane_gas_url', config.gasUrl);
+      const gasUrlInput = document.getElementById('input-gas-url');
+      if (gasUrlInput) gasUrlInput.value = config.gasUrl;
+      changed = true;
+    }
+
     if (changed) {
       // Validate active IDs still exist after merge
       if (!courses.find(c => c.id === activeCourseId)) {
@@ -1630,6 +1679,10 @@ async function fetchConfigFromCloud() {
 
       showToast('โหลดข้อมูลจาก Cloud เรียบร้อยแล้ว ✓');
     }
+    
+    // อัปเดตส่วนแชร์และ QR Code หลังดึง config
+    updateEasySetupShareSection();
+    
   } catch (err) {
     console.error('fetchConfigFromCloud error:', err);
   }
@@ -1648,7 +1701,8 @@ async function syncConfigToCloud() {
       classes: classes,
       teacherName: profile.teacherName,
       hodName: profile.hodName,
-      schoolName: profile.schoolName
+      schoolName: profile.schoolName,
+      folderId: config.folderId
     };
     const response = await fetch(config.gasUrl, {
       method: 'POST',
@@ -1659,9 +1713,99 @@ async function syncConfigToCloud() {
     const result = await response.json();
     if (result.status === 'success') {
       showToast('ซิงค์การตั้งค่าขึ้น Cloud เรียบร้อยแล้ว ✓');
+      // อัปเดตแผงแชร์เพราะข้อมูลอาจจะเปลี่ยน
+      updateEasySetupShareSection();
     }
   } catch (err) {
     console.error('syncConfigToCloud error:', err);
+  }
+}
+
+/**
+ * บันทึกแผนการสอนทั้งหมดของคลาสปัจจุบันขึ้น Google Sheets
+ */
+async function syncAllLessonsToCloud() {
+  if (!config.gasUrl) return;
+
+  const currentCourse = courses.find(c => c.id === activeCourseId);
+  const currentClass = classes.find(c => c.id === activeClassId);
+  if (!currentCourse || !currentClass) return;
+
+  const sheetTabName = getSafeSheetName(currentCourse.code, currentClass.name);
+
+  try {
+    const payload = {
+      action: 'saveAllLessons',
+      sheetName: sheetTabName,
+      lessons: lessonPlans
+    };
+    const response = await fetch(config.gasUrl, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('ซิงค์แผนการสอนทั้งหมดขึ้น Cloud เรียบร้อยแล้ว ✓');
+    }
+  } catch (err) {
+    console.error('syncAllLessonsToCloud error:', err);
+  }
+}
+
+/**
+ * อัปเดต QR Code และลิงก์สำหรับนำเข้าการเชื่อมต่อ Google API ไปยังอุปกรณ์อื่น
+ */
+function updateEasySetupShareSection() {
+  const container = document.getElementById('easy-setup-section');
+  if (!container) return;
+
+  if (config.gasUrl) {
+    container.style.display = 'block';
+
+    const setupUrl = window.location.href.split('?')[0] + 
+      '?gasUrl=' + encodeURIComponent(config.gasUrl) + 
+      '&folderId=' + encodeURIComponent(config.folderId || '');
+
+    // ปุ่มคัดลอกลิงก์แชร์
+    const copyBtn = document.getElementById('btn-copy-setup-link');
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(setupUrl).then(() => {
+          showToast('คัดลอกลิงก์ตั้งค่าไปที่คลิปบอร์ดแล้ว! ✓');
+        }).catch(err => {
+          const textarea = document.createElement('textarea');
+          textarea.value = setupUrl;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          showToast('คัดลอกลิงก์ตั้งค่าไปที่คลิปบอร์ดแล้ว! ✓');
+        });
+      };
+    }
+
+    // ปุ่มเปิด-ปิด QR Code
+    const toggleQrBtn = document.getElementById('btn-toggle-qr');
+    const qrContainer = document.getElementById('qr-container');
+    const qrImage = document.getElementById('qr-image');
+
+    if (toggleQrBtn) {
+      toggleQrBtn.onclick = () => {
+        if (qrContainer.style.display === 'none' || qrContainer.style.display === '') {
+          qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setupUrl)}`;
+          qrContainer.style.display = 'flex';
+          toggleQrBtn.innerHTML = '<i data-lucide="eye-off"></i> ซ่อน QR Code';
+        } else {
+          qrContainer.style.display = 'none';
+          toggleQrBtn.innerHTML = '<i data-lucide="qr-code"></i> แสดง QR Code';
+        }
+        lucide.createIcons();
+      };
+    }
+  } else {
+    container.style.display = 'none';
   }
 }
 
@@ -1713,7 +1857,9 @@ async function fetchLiveGoogleData() {
 
   const currentCourse = courses.find(c => c.id === activeCourseId);
   const currentClass = classes.find(c => c.id === activeClassId);
-  const sheetTabName = (currentCourse && currentClass) ? getSafeSheetName(currentCourse.code, currentClass.name) : 'Sheet1';
+  if (!currentCourse || !currentClass) return;
+
+  const sheetTabName = getSafeSheetName(currentCourse.code, currentClass.name);
 
   try {
     const url = `${config.gasUrl}?sheetName=${encodeURIComponent(sheetTabName)}`;
@@ -1721,26 +1867,65 @@ async function fetchLiveGoogleData() {
     const result = await response.json();
 
     if (result.status === 'success' && result.data && result.data.length > 0) {
-      result.data.forEach(sheetItem => {
-        const onceVal = String(sheetItem['ครั้งที่']).trim();
-        const localIndex = lessonPlans.findIndex(p => String(p.once).trim() === onceVal);
-
-        if (localIndex > -1) {
-          if (sheetItem['ผลการจัดการเรียนรู้']) {
-            lessonPlans[localIndex].outcomes = sheetItem['ผลการจัดการเรียนรู้'];
-          }
-          if (sheetItem['แนวทางแก้ปัญหา']) {
-            lessonPlans[localIndex].solutions = sheetItem['แนวทางแก้ปัญหา'];
-          }
-        }
+      // Map remote columns to full lesson plan properties
+      const remoteLessons = result.data.map(sheetItem => {
+        return {
+          once: String(sheetItem['ครั้งที่'] || ''),
+          week: String(sheetItem['Week'] || '1'),
+          period: String(sheetItem['คาบที่สอน'] || '1-2'),
+          date: String(sheetItem['วว/ดด/ปป ที่สอน'] || ''),
+          unit: String(sheetItem['หน่วยการเรียนรู้ที่'] || '1'),
+          topic: String(sheetItem['เรื่อง'] || ''),
+          periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
+          standard: String(sheetItem['มาตรฐานการเรียนรู้/ตัวชี้วัด'] || ''),
+          objectives: String(sheetItem['จุดประสงค์การเรียนรู้'] || ''),
+          activities: String(sheetItem['กิจกรรมการเรียนรู้'] || ''),
+          assessment: String(sheetItem['การวัดและประเมินผล'] || ''),
+          materials: String(sheetItem['สื่อการเรียนรู้'] || ''),
+          outcomes: String(sheetItem['ผลการจัดการเรียนรู้'] || '-'),
+          solutions: String(sheetItem['แนวทางแก้ปัญหา'] || '-'),
+          pdfUrl: String(sheetItem['ลิงก์ไฟล์ PDF'] || '')
+        };
       });
 
-      saveClassLessons(activeClassId, lessonPlans);
+      // Split into courseLessons and classLessons
+      const courseLessons = remoteLessons.map(p => ({
+        once: p.once,
+        unit: p.unit,
+        topic: p.topic,
+        periodCount: p.periodCount,
+        standard: p.standard,
+        objectives: p.objectives,
+        activities: p.activities,
+        assessment: p.assessment,
+        materials: p.materials
+      }));
+
+      const classLessons = remoteLessons.map(p => ({
+        once: p.once,
+        week: p.week,
+        date: p.date,
+        period: p.period,
+        outcomes: p.outcomes,
+        solutions: p.solutions,
+        pdfUrl: p.pdfUrl
+      }));
+
+      localStorage.setItem(`iplane_course_lessons_${activeCourseId}`, JSON.stringify(courseLessons));
+      localStorage.setItem(`iplane_class_lessons_${activeClassId}`, JSON.stringify(classLessons));
+
+      // Reload into active state and render
+      lessonPlans = loadCombinedLessons(activeCourseId, activeClassId);
+
       renderSidebar();
-      // Only select if workspace is active
       if (document.body.classList.contains('workspace-active')) {
         selectLesson(selectedIndex);
       }
+      showToast('ซิงก์ข้อมูลแผนจาก Google Sheets ลงในเครื่องเรียบร้อยแล้ว ✓');
+    } else if (result.status === 'success' && (!result.data || result.data.length === 0)) {
+      // If the sheet in the cloud is empty/newly created, push our current local data to it
+      console.log('Cloud sheet is empty, pushing local database state to cloud...');
+      await syncAllLessonsToCloud();
     }
   } catch (error) {
     console.error('ไม่สามารถดึงข้อมูลจาก Google Sheets ได้:', error);
@@ -2463,6 +2648,10 @@ function importCSVData() {
       lessonPlans = newPlans;
       saveCourseLessons(activeCourseId, lessonPlans);
       saveClassLessons(activeClassId, lessonPlans);
+      
+      if (config.gasUrl) {
+        syncAllLessonsToCloud();
+      }
       
       alert(`นำเข้าข้อมูลแผนการสอนสำเร็จจำนวน ${newPlans.length} คาบเรียนเรียบร้อยแล้ว!`);
       
