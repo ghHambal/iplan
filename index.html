@@ -75,11 +75,15 @@
             <h1>ระบบจัดการแผนการเรียนรู้หน้าเดียว (iPlane)</h1>
             <p class="text-muted">ยินดีต้อนรับเข้าสู่ระบบจัดการ สรุป และบันทึกหลังสอนสำหรับครูยุคใหม่</p>
           </div>
-          <div class="db-header-right">
+          <div class="db-header-right" style="display:flex; flex-direction:column; align-items:flex-end; gap:12px;">
             <div class="status-indicator online" id="db-sync-status">
               <span class="status-dot"></span>
               <span class="status-label">ระบบออฟไลน์ (เบราว์เซอร์)</span>
             </div>
+            <button id="btn-dashboard-settings" class="btn btn-secondary btn-sm" style="padding: 10px 16px; font-size:12.5px;">
+              <i data-lucide="sliders"></i>
+              <span>ตั้งค่าระบบ & คอร์สวิชา</span>
+            </button>
           </div>
         </div>
 
@@ -145,6 +149,10 @@
           <p id="selected-week-subtitle" class="text-muted">กำลังดึงข้อมูลระบบ...</p>
         </div>
         <div class="header-actions">
+          <button id="btn-workspace-settings" class="btn btn-secondary">
+            <i data-lucide="sliders"></i>
+            <span>ตั้งค่าระบบ</span>
+          </button>
           <button id="btn-save-offline" class="btn btn-success">
             <i data-lucide="save"></i>
             <span>บันทึกหลังสอนในเครื่อง</span>

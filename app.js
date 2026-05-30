@@ -437,10 +437,22 @@ function initializeUI() {
 
   // Settings Modal open/close controls
   const settingsModal = document.getElementById('settings-modal');
-  document.getElementById('btn-settings').addEventListener('click', () => {
+  const openSettings = () => {
     settingsModal.classList.add('open');
     populateLessonEditorIndexSelect();
-  });
+  };
+  
+  document.getElementById('btn-settings').addEventListener('click', openSettings);
+  
+  const btnDashboardSettings = document.getElementById('btn-dashboard-settings');
+  if (btnDashboardSettings) {
+    btnDashboardSettings.addEventListener('click', openSettings);
+  }
+  
+  const btnWorkspaceSettings = document.getElementById('btn-workspace-settings');
+  if (btnWorkspaceSettings) {
+    btnWorkspaceSettings.addEventListener('click', openSettings);
+  }
   
   document.getElementById('btn-close-settings').addEventListener('click', () => {
     settingsModal.classList.remove('open');
