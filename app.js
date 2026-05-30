@@ -339,8 +339,12 @@ function loadDatabaseState() {
   const savedClasses = localStorage.getItem('iplane_classes');
   if (savedClasses) {
     classes = JSON.parse(savedClasses);
+    // Ensure all classes have a courseId associated with them
+    classes.forEach(c => {
+      if (!c.courseId) c.courseId = 'c1';
+    });
   } else {
-    classes = [{ id: 'cl1', name: 'ชั้นมัธยมศึกษาปีที่ 5/2 Delima' }];
+    classes = [{ id: 'cl1', courseId: 'c1', name: 'ชั้นมัธยมศึกษาปีที่ 5/2 Delima', classLeader: 'นายสมชาย ดีเด่น' }];
     localStorage.setItem('iplane_classes', JSON.stringify(classes));
   }
 
@@ -427,6 +431,11 @@ function initializeUI() {
   });
 
   // Settings Modal open/close controls
+  // Dashboard view bindings
+  document.getElementById('btn-dashboard').addEventListener('click', openDashboardView);
+  document.getElementById('breadcrumb-dashboard').addEventListener('click', openDashboardView);
+
+  // Settings Modal open/close controls
   const settingsModal = document.getElementById('settings-modal');
   document.getElementById('btn-settings').addEventListener('click', () => {
     settingsModal.classList.add('open');
@@ -486,6 +495,8 @@ function initializeUI() {
   document.getElementById('select-edit-lesson-index').addEventListener('change', loadLessonIntoInlineEditor);
   document.getElementById('btn-save-edited-lesson').addEventListener('click', saveInlineEditedLesson);
   document.getElementById('btn-save-settings').addEventListener('click', saveModalSettings);
+  document.getElementById('btn-download-template').addEventListener('click', downloadCSVTemplate);
+  document.getElementById('btn-process-csv').addEventListener('click', importCSVData);
 
   // Layout action button bindings
   document.getElementById('btn-save-offline').addEventListener('click', () => saveLessonProgress(true));
@@ -516,8 +527,8 @@ function initializeUI() {
     selectLesson(0);
   });
 
-  // Select initial plan
-  selectLesson(0);
+  // Open Main Dashboard initially
+  openDashboardView();
 }
 
 // Update text banners based on profiles
@@ -614,6 +625,18 @@ function renderSettingsDropdowns() {
     opt.selected = cl.id === activeClassId;
     classSelect.appendChild(opt);
   });
+
+  // Populate new classroom course selector dropdown
+  const selectNewClassCourse = document.getElementById('select-new-class-course');
+  if (selectNewClassCourse) {
+    selectNewClassCourse.innerHTML = '';
+    courses.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.innerText = `${c.name} (${c.code})`;
+      selectNewClassCourse.appendChild(opt);
+    });
+  }
 }
 
 // Select a lesson plan and load to workspace forms
@@ -729,6 +752,7 @@ function addNewCourse() {
 
 // Add New Classroom Room (Tab 2)
 function addNewClassRoom() {
+  const courseId = document.getElementById('select-new-class-course').value;
   const name = document.getElementById('input-new-class-name').value.trim();
   const leader = document.getElementById('input-new-class-leader').value.trim();
 
@@ -738,7 +762,7 @@ function addNewClassRoom() {
   }
 
   const newId = 'cl_' + Date.now();
-  classes.push({ id: newId, name: name, classLeader: leader });
+  classes.push({ id: newId, courseId: courseId, name: name, classLeader: leader });
   
   localStorage.setItem('iplane_classes', JSON.stringify(classes));
   
@@ -911,12 +935,27 @@ function updateSyncStatusIndicator() {
   }
 }
 
+// Convert native sheet parameters to valid Google Sheets tab name
+function getSafeSheetName(courseCode, className) {
+  if (!courseCode || !className) return 'Sheet1';
+  // Combine code and class name
+  let name = `${courseCode}_${className}`;
+  // Remove Google Sheet invalid characters: \ / ? * [ ]
+  name = name.replace(/[\\\/\?\*\[\]]/g, '-');
+  // Limit length to 30 characters
+  if (name.length > 30) {
+    name = name.substring(0, 30);
+  }
+  return name.trim();
+}
+
 // Fetch live sheet data from Apps Script backend on startup
 async function fetchLiveGoogleData() {
   if (!config.gasUrl) return;
 
   const currentCourse = courses.find(c => c.id === activeCourseId);
-  const sheetTabName = currentCourse ? `${currentCourse.name}_${currentCourse.code}` : 'Sheet1';
+  const currentClass = classes.find(c => c.id === activeClassId);
+  const sheetTabName = (currentCourse && currentClass) ? getSafeSheetName(currentCourse.code, currentClass.name) : 'Sheet1';
 
   try {
     const url = `${config.gasUrl}?sheetName=${encodeURIComponent(sheetTabName)}`;
@@ -941,7 +980,10 @@ async function fetchLiveGoogleData() {
       const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
       localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
       renderSidebar();
-      selectLesson(selectedIndex);
+      // Only select if workspace is active
+      if (document.body.classList.contains('workspace-active')) {
+        selectLesson(selectedIndex);
+      }
     }
   } catch (error) {
     console.error('ไม่สามารถดึงข้อมูลจาก Google Sheets ได้:', error);
@@ -994,9 +1036,10 @@ async function syncToGoogleSheets() {
     const pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
     printEl.style.display = 'none';
 
-    // Route active course sheet name
+    // Route active classroom specific sheet name
     const currentCourse = courses.find(c => c.id === activeCourseId);
-    const sheetTabName = currentCourse ? `${currentCourse.name}_${currentCourse.code}` : 'Sheet1';
+    const currentClass = classes.find(c => c.id === activeClassId);
+    const sheetTabName = (currentCourse && currentClass) ? getSafeSheetName(currentCourse.code, currentClass.name) : 'Sheet1';
 
     const payload = {
       sheetName: sheetTabName,
@@ -1117,9 +1160,12 @@ function populatePrintTemplate() {
   // Right column sections
   document.getElementById('pdf-print-materials').innerText = plan.materials;
 
-  // Outcome reflection lists with dashed simulated underlines
-  document.getElementById('pdf-print-outcomes').innerText = plan.outcomes || '-';
-  document.getElementById('pdf-print-solutions').innerText = plan.solutions || '-';
+  // Combine Outcomes (ผลการจัดการเรียนรู้) and Solutions (แนวทางการแก้ปัญหา) under Section 6 "บันทึกหลังการสอน"
+  const combinedOutcomes = `ผลการจัดการเรียนรู้:\n${plan.outcomes || '-'}\n\nแนวทางการแก้ปัญหา:\n${plan.solutions || '-'}`;
+  document.getElementById('pdf-print-outcomes').innerText = combinedOutcomes;
+  
+  // Section 7 "ข้อเสนอแนะ" is for HOD to write on later, leave it empty (with blank lines to render dashed underlines beautifully)
+  document.getElementById('pdf-print-solutions').innerText = '\n\n\n\n';
 
   // Apply custom school logo or SVG default
   const customLogo = localStorage.getItem('iplane_school_logo');
@@ -1332,4 +1378,388 @@ function clearSignature() {
 function undoSignatureStroke() {
   strokes.pop();
   drawStrokes();
+}
+
+// ==========================================
+// 9. Dashboard Controller & Overview Renderer
+// ==========================================
+function openDashboardView() {
+  // Add active style to sidebar dashboard button
+  document.getElementById('btn-dashboard').classList.add('active-sidebar-action');
+  
+  // Remove workspace class from body
+  document.body.classList.remove('workspace-active');
+  
+  // Remove active week list highlights in sidebar
+  const items = document.querySelectorAll('.week-item');
+  items.forEach(i => i.classList.remove('active'));
+  
+  // Render dashboard contents
+  renderDashboard();
+}
+
+function openClassroomWorkspace(courseId, classId) {
+  activeCourseId = courseId;
+  activeClassId = classId;
+  localStorage.setItem('iplane_active_course_id', courseId);
+  localStorage.setItem('iplane_active_class_id', classId);
+  
+  // Load class leader
+  const activeCls = classes.find(c => c.id === classId);
+  document.getElementById('input-active-class-leader').value = activeCls ? (activeCls.classLeader || '') : '';
+  
+  // Add workspace active class
+  document.body.classList.add('workspace-active');
+  
+  // Remove active sidebar action from dashboard button
+  document.getElementById('btn-dashboard').classList.remove('active-sidebar-action');
+  
+  // Re-render settings modal selects to align
+  renderSettingsDropdowns();
+  
+  // Reload state
+  loadDatabaseState();
+  
+  // Update labels
+  updateProfileLabels();
+  
+  // Render weeks sidebar list
+  renderSidebar();
+  
+  // Select first lesson
+  selectLesson(0);
+  
+  // Fetch live Google Sheet data for this classroom
+  if (config.gasUrl) {
+    fetchLiveGoogleData();
+  }
+}
+
+function renderDashboard() {
+  // 1. Calculate and update stats
+  document.getElementById('stat-total-courses').innerText = courses.length;
+  document.getElementById('stat-total-classes').innerText = classes.length;
+  
+  let totalLessonsCount = classes.length * 17;
+  let completedLessonsCount = 0;
+  
+  classes.forEach(cls => {
+    const storageKey = `iplane_lessons_${cls.courseId}_${cls.id}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const plans = JSON.parse(saved);
+        plans.forEach(p => {
+          if (p.outcomes && p.outcomes !== '-' && p.outcomes.trim() !== '') {
+            completedLessonsCount++;
+          }
+        });
+      } catch(e) {}
+    }
+  });
+  
+  const progressPercent = totalLessonsCount > 0 ? Math.round((completedLessonsCount / totalLessonsCount) * 100) : 0;
+  document.getElementById('stat-total-progress').innerText = `${progressPercent}%`;
+  document.getElementById('stat-progress-sub').innerText = `บันทึกแล้ว ${completedLessonsCount}/${totalLessonsCount} คาบเรียน`;
+  
+  // Update Sync status in dashboard
+  const dbSyncStatus = document.getElementById('db-sync-status');
+  const dbSyncLabel = dbSyncStatus.querySelector('.status-label');
+  if (config.gasUrl) {
+    dbSyncStatus.className = 'status-indicator online';
+    dbSyncLabel.innerText = 'เชื่อมต่อระบบ Google Sheets แล้ว';
+  } else {
+    dbSyncStatus.className = 'status-indicator offline';
+    dbSyncLabel.innerText = 'ระบบออฟไลน์ (บันทึกเฉพาะที่เครื่อง)';
+  }
+  
+  // 2. Render course and classroom cards
+  const grid = document.getElementById('course-directory-grid');
+  grid.innerHTML = '';
+  
+  if (courses.length === 0) {
+    grid.innerHTML = `
+      <div class="classroom-list-empty" style="grid-column: span 2;">
+        <i data-lucide="info" style="width:24px; height:24px; margin-bottom:8px; display:inline-block; color:var(--text-muted);"></i>
+        <div>ยังไม่มีรายวิชาในสารบบกรุณาคลิก "ตั้งค่าระบบ" เพื่อเพิ่มรายวิชาใหม่</div>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
+  
+  courses.forEach(course => {
+    // Find classes linked to this course
+    const courseClasses = classes.filter(cls => cls.courseId === course.id);
+    
+    const card = document.createElement('div');
+    card.className = 'course-card';
+    
+    // Header HTML
+    let bodyHtml = `
+      <div class="course-card-header">
+        <div class="course-card-title-group">
+          <span class="course-card-title">${course.name}</span>
+          <span class="course-card-code">${course.code}</span>
+        </div>
+        <i data-lucide="graduation-cap"></i>
+      </div>
+      <div class="course-card-body">
+        <div class="classroom-list-title">ห้องเรียนที่เปิดใช้งาน (${courseClasses.length})</div>
+    `;
+    
+    if (courseClasses.length === 0) {
+      bodyHtml += `
+        <div class="classroom-list-empty">
+          <span>ยังไม่มีห้องเรียนในรายวิชานี้ กรุณาเพิ่มห้องเรียนในแท็บตั้งค่า</span>
+        </div>
+      `;
+    } else {
+      bodyHtml += `<div class="classroom-list">`;
+      courseClasses.forEach(cls => {
+        // Compute classroom specific progress
+        let classProgress = 0;
+        const storageKey = `iplane_lessons_${course.id}_${cls.id}`;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          try {
+            const plans = JSON.parse(saved);
+            plans.forEach(p => {
+              if (p.outcomes && p.outcomes !== '-' && p.outcomes.trim() !== '') {
+                classProgress++;
+              }
+            });
+          } catch(e) {}
+        }
+        const classPercent = Math.round((classProgress / 17) * 100);
+        
+        bodyHtml += `
+          <div class="classroom-item">
+            <div class="classroom-item-info">
+              <span class="classroom-item-name">${cls.name}</span>
+              <span class="classroom-item-leader">
+                <i data-lucide="user"></i> หัวหน้าห้อง: ${cls.classLeader || 'ไม่ได้ระบุ'}
+              </span>
+              <div class="classroom-progress-wrapper">
+                <div class="classroom-progress-bg">
+                  <div class="classroom-progress-fill" style="width: ${classPercent}%;"></div>
+                </div>
+                <span class="classroom-progress-text">${classPercent}% (${classProgress}/17)</span>
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="openClassroomWorkspace('${course.id}', '${cls.id}')" style="padding: 8px 12px; font-size: 11.5px;">
+              <span>เปิดห้องเรียน</span>
+              <i data-lucide="arrow-right" style="width:12px; height:12px; margin-left:4px;"></i>
+            </button>
+          </div>
+        `;
+      });
+      bodyHtml += `</div>`;
+    }
+    
+    bodyHtml += `</div>`; // Close course-card-body
+    card.innerHTML = bodyHtml;
+    grid.appendChild(card);
+  });
+  
+  // Re-initialize dynamic icons
+  lucide.createIcons();
+}
+
+// ==========================================
+// 10. CSV Semester Import & Template Download
+// ==========================================
+function downloadCSVTemplate() {
+  const headers = [
+    'Week',
+    'ครั้งที่',
+    'คาบที่สอน',
+    'วว/ดด/ปป ที่สอน',
+    'หน่วยการเรียนรู้ที่',
+    'เรื่อง',
+    'จำนวนคาบ',
+    'มาตรฐานการเรียนรู้/ตัวชี้วัด',
+    'จุดประสงค์การเรียนรู้',
+    'กิจกรรมการเรียนรู้',
+    'การวัดและประเมินผล',
+    'สื่อการเรียนรู้'
+  ];
+  
+  const exampleRow = [
+    '1',
+    '1',
+    '6-7',
+    '12/05/2568',
+    '1',
+    'ความหมายเลขยกกำลัง',
+    '2',
+    'ค1.1 ม.5/1\nเข้าใจความหมายและใช้สมบัติเกี่ยวกับการบวก...',
+    '- ทราบถึงรายละเอียดรายวิชา\n- รู้จักใช้เครื่องมือ ChatGPT...',
+    'ขั้นนำ:\n- ครูทักทายนักเรียน แนะนำรายวิชา\n\nขั้นสอน:\n- ครูอธิบายเลขยกกำลัง...\n\nขั้นสรุป:\n- นักเรียนร่วมกันสรุปบทเรียน',
+    '- สังเกตการตอบถามระหว่างเรียน',
+    '- หนังสือเรียนคณิตศาสตร์ ม.5'
+  ];
+  
+  const escapeCSV = val => {
+    let str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      str = '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  };
+  
+  const csvContent = "\uFEFF" + [
+    headers.map(escapeCSV).join(','),
+    exampleRow.map(escapeCSV).join(',')
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "iplane_template.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function importCSVData() {
+  const fileInput = document.getElementById('input-csv-import');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('กรุณาเลือกไฟล์ CSV ที่คุณได้กรอกข้อมูลแผนการสอนแล้ว');
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    const text = e.target.result;
+    try {
+      const parsedLines = parseCSV(text);
+      if (parsedLines.length <= 1) {
+        alert('ไฟล์ CSV ไม่มีข้อมูลเพียงพอ (ต้องการหัวข้อคอลัมน์และข้อมูลแผนการสอน)');
+        return;
+      }
+      
+      const csvHeaders = parsedLines[0].map(h => h.trim().toLowerCase());
+      const expectedHeaders = {
+        week: ['week', 'สัปดาห์'],
+        once: ['ครั้งที่', 'ครั้ง'],
+        period: ['คาบที่สอน', 'คาบสอน'],
+        date: ['วว/ดด/ปป ที่สอน', 'วันที่สอน', 'วันที่'],
+        unit: ['หน่วยการเรียนรู้ที่', 'หน่วยที่'],
+        topic: ['เรื่องที่สอน', 'เรื่อง'],
+        periodCount: ['จำนวนคาบ', 'คาบ', 'ชั่วโมง'],
+        standard: ['มาตรฐานการเรียนรู้/ตัวชี้วัด', 'มาตรฐาน', 'ตัวชี้วัด'],
+        objectives: ['จุดประสงค์การเรียนรู้', 'จุดประสงค์'],
+        activities: ['กิจกรรมการเรียนรู้', 'กิจกรรม'],
+        assessment: ['การวัดและประเมินผล', 'การวัดผล'],
+        materials: ['สื่อการเรียนรู้', 'สื่อ']
+      };
+      
+      // Map columns
+      const indices = {};
+      Object.keys(expectedHeaders).forEach(field => {
+        indices[field] = csvHeaders.findIndex(hdr => 
+          expectedHeaders[field].some(alias => hdr.includes(alias.toLowerCase()))
+        );
+      });
+      
+      // Verify mandatory fields
+      if (indices.once === -1 || indices.topic === -1) {
+        alert('หัวตาราง CSV ไม่ตรงตามเทมเพลตที่กำหนด (ต้องการคอลัมน์ "ครั้งที่" และ "เรื่อง" อย่างน้อย)');
+        return;
+      }
+      
+      const newPlans = [];
+      // Parse rows
+      for (let i = 1; i < parsedLines.length; i++) {
+        const row = parsedLines[i];
+        if (row.length < 2 || !row[indices.once]) continue; // Skip empty rows
+        
+        const getValue = field => {
+          const idx = indices[field];
+          return (idx > -1 && row[idx]) ? row[idx].trim() : '';
+        };
+        
+        const plan = {
+          week: getValue('week') || '1',
+          once: getValue('once'),
+          period: getValue('period') || '1-2',
+          date: getValue('date') || '',
+          unit: getValue('unit') || '1',
+          topic: getValue('topic'),
+          periodCount: getValue('periodCount') || '2',
+          standard: getValue('standard') || '',
+          objectives: getValue('objectives') || '',
+          activities: getValue('activities') || '',
+          assessment: getValue('assessment') || '',
+          materials: getValue('materials') || '',
+          outcomes: '-',
+          solutions: '-'
+        };
+        newPlans.push(plan);
+      }
+      
+      if (newPlans.length === 0) {
+        alert('ไม่พบแถวข้อมูลแผนการสอนที่สมบูรณ์ในไฟล์ CSV');
+        return;
+      }
+      
+      // Overwrite local dataset for the active course and classroom
+      lessonPlans = newPlans;
+      const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
+      localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
+      
+      alert(`นำเข้าข้อมูลแผนการสอนสำเร็จจำนวน ${newPlans.length} คาบเรียนเรียบร้อยแล้ว!`);
+      
+      // Re-populate modal selectors and refresh UI
+      populateLessonEditorIndexSelect();
+      renderSidebar();
+      
+      // Close file input value
+      fileInput.value = '';
+    } catch(err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการประมวลผลไฟล์ CSV ตรวจสอบรูปโครงสร้างแถว');
+    }
+  };
+  
+  reader.readAsText(file, 'UTF-8');
+}
+
+// Helper robust CSV parser
+function parseCSV(text) {
+  const lines = [];
+  let row = [""];
+  let inQuotes = false;
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i+1];
+    
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        row[row.length - 1] += '"';
+        i++; // skip next quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      row.push('');
+    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        i++; // skip \n
+      }
+      lines.push(row);
+      row = [''];
+    } else {
+      row[row.length - 1] += char;
+    }
+  }
+  if (row.length > 1 || row[0] !== '') {
+    lines.push(row);
+  }
+  return lines;
 }

@@ -33,6 +33,13 @@
         <span class="version-tag">v1.2</span>
       </div>
       
+      <div class="sidebar-action" style="padding-bottom: 0;">
+        <button id="btn-dashboard" class="btn btn-primary btn-full">
+          <i data-lucide="layout-dashboard"></i>
+          <span>แดชบอร์ดหลัก (Dashboard)</span>
+        </button>
+      </div>
+
       <div class="sidebar-action">
         <button id="btn-settings" class="btn btn-secondary btn-full">
           <i data-lucide="sliders"></i>
@@ -59,10 +66,81 @@
 
     <!-- Main Working Panel -->
     <main class="app-main">
+
+      <!-- Dashboard View -->
+      <div id="dashboard-view" class="dashboard-container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+          <div class="db-header-left">
+            <h1>ระบบจัดการแผนการเรียนรู้หน้าเดียว (iPlane)</h1>
+            <p class="text-muted">ยินดีต้อนรับเข้าสู่ระบบจัดการ สรุป และบันทึกหลังสอนสำหรับครูยุคใหม่</p>
+          </div>
+          <div class="db-header-right">
+            <div class="status-indicator online" id="db-sync-status">
+              <span class="status-dot"></span>
+              <span class="status-label">ระบบออฟไลน์ (เบราว์เซอร์)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overview Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon-wrapper blue-glow">
+              <i data-lucide="graduation-cap"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">รายวิชาทั้งหมด</span>
+              <span class="stat-value" id="stat-total-courses">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper green-glow">
+              <i data-lucide="users"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">ห้องเรียนที่ดูแล</span>
+              <span class="stat-value" id="stat-total-classes">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper purple-glow">
+              <i data-lucide="check-square"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">ความคืบหน้าบันทึกหลังสอนสะสม</span>
+              <div class="stat-progress-container">
+                <span class="stat-value" id="stat-total-progress">0%</span>
+                <span class="stat-subtext" id="stat-progress-sub">0/0 คาบเรียน</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course and Classroom Directory -->
+        <div class="directory-section">
+          <div class="section-title">
+            <i data-lucide="folder-git-2"></i>
+            <h2>สารบบรายวิชาและห้องเรียนที่รับผิดชอบ</h2>
+          </div>
+          <div class="course-directory-grid" id="course-directory-grid">
+            <!-- Dynamically populated via JS -->
+            <div class="loading-spinner-wrapper">
+              <div class="spinner"></div>
+              <span>กำลังโหลดข้อมูลสารบบรายวิชา...</span>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <!-- Sticky Action Header -->
       <header class="app-header">
         <div class="header-info">
+          <div class="header-breadcrumb" style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+            <span id="breadcrumb-dashboard" style="cursor:pointer;" class="hover-link">หน้าหลัก</span>
+            <i data-lucide="chevron-right" style="width:12px; height:12px;"></i>
+            <span id="breadcrumb-course-class" style="font-weight: 500; color: var(--primary);">รายวิชา > ห้องเรียน</span>
+          </div>
           <h1 id="selected-week-title">แผนการสอนครั้งที่ -</h1>
           <p id="selected-week-subtitle" class="text-muted">กำลังดึงข้อมูลระบบ...</p>
         </div>
@@ -270,6 +348,9 @@
         <button class="tab-btn" data-tab="tab-edit-lessons">
           <i data-lucide="edit"></i> แก้ไขแผนหลักย้อนหลัง
         </button>
+        <button class="tab-btn" data-tab="tab-csv-import">
+          <i data-lucide="file-up"></i> นำเข้าแผนจากไฟล์ CSV
+        </button>
       </div>
 
       <div class="modal-body">
@@ -362,7 +443,13 @@
 
               <div class="add-builder-box">
                 <h4>2. เพิ่มห้องเรียนใหม่</h4>
-                <input type="text" id="input-new-class-name" placeholder="ชื่อชั้นเรียน เช่น มัธยมศึกษาปีที่ 5/2 Delima">
+                <div class="form-group" style="gap:4px;">
+                  <label for="select-new-class-course" style="font-size:11px; color:var(--text-muted);">เลือกรายวิชาที่ห้องเรียนนี้สังกัด</label>
+                  <select id="select-new-class-course" style="padding: 10px 14px;">
+                    <!-- Dynamically populated -->
+                  </select>
+                </div>
+                <input type="text" id="input-new-class-name" placeholder="ชื่อชั้นเรียน เช่น มัธยมศึกษาปีที่ 5/2 Delima" style="margin-top: 8px;">
                 <input type="text" id="input-new-class-leader" placeholder="ชื่อหัวหน้าห้อง เช่น นายสมชาย มั่งมี" style="margin-top: 8px;">
                 <button type="button" id="btn-add-class" class="btn btn-secondary btn-full" style="margin-top: 8px;">เพิ่มห้องเรียน</button>
               </div>
@@ -467,6 +554,35 @@
               </div>
 
               <button type="button" id="btn-save-edited-lesson" class="btn btn-success btn-full">บันทึกการแก้ไขข้อมูลแผนหลัก</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 5: CSV Semester bulk import & Template download -->
+        <div class="tab-content" id="tab-csv-import">
+          <p class="tab-intro" style="margin-bottom: 20px;">ดาวน์โหลดเทมเพลตไฟล์ CSV เพื่อกรอกข้อมูลแผนการสอนทั้ง 17 คาบเรียน จากนั้นอัปโหลดกลับเข้ามาในระบบเพื่อเขียนเปลี่ยนทับแผนการจัดการเรียนรู้หลักทั้งหมดของห้องนี้พร้อมกัน</p>
+          
+          <div class="settings-grid">
+            <div class="settings-col">
+              <h3><i data-lucide="download"></i> 1. ดาวน์โหลดเทมเพลตตาราง</h3>
+              <p class="form-help" style="margin-bottom: 16px; font-size:12.5px; line-height: 1.5;">คุณจะได้รับไฟล์ iplane_template.csv เพื่อนำไปเปิดกรอกข้อมูลใน Excel หรือ Google Sheets โดยมีหัวตารางที่ถูกต้องตามแบบแผนจัดการเรียนรู้</p>
+              <button type="button" id="btn-download-template" class="btn btn-secondary btn-full">
+                <i data-lucide="download"></i> ดาวน์โหลดเทมเพลต CSV
+              </button>
+            </div>
+            
+            <div class="settings-col">
+              <h3><i data-lucide="upload"></i> 2. อัปโหลดแผนจัดการเรียนรู้</h3>
+              <p class="form-help" style="margin-bottom: 16px; font-size:12.5px; line-height: 1.5;">เลือกไฟล์ CSV ที่คุณได้กรอกข้อมูลไว้แล้ว (ระบบจะนำเข้าทับแผนการเรียนรู้หลักทั้งหมด 17 ครั้งของรายวิชาและห้องเรียนที่เลือกในขณะนี้)</p>
+              
+              <div class="form-group" style="margin-bottom: 10px;">
+                <input type="file" id="input-csv-import" accept=".csv" style="padding: 10px 14px;">
+                <small class="form-help">รองรับการนำเข้ารหัส UTF-8 เพื่อรองรับภาษาไทย</small>
+              </div>
+              
+              <button type="button" id="btn-process-csv" class="btn btn-success btn-full">
+                <i data-lucide="file-text"></i> ประมวลผลและนำเข้าข้อมูลแผนทั้งหมด
+              </button>
             </div>
           </div>
         </div>
