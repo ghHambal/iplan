@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iPlane - ระบบบันทึกแผนการสอนและบันทึกหลังสอน</title>
+  
+  <!-- Google Fonts: Sarabun (สำหรับเอกสารราชการ/PDF) และ Inter (สำหรับ Interface) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons for premium modern look -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- html2pdf.js for Client-side high fidelity PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Main Container -->
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="logo-wrapper">
+          <i data-lucide="book-open" class="logo-icon"></i>
+          <span class="logo-text">iPlane</span>
+        </div>
+        <span class="version-tag">v1.1</span>
+      </div>
+      
+      <div class="sidebar-action">
+        <button id="btn-settings" class="btn btn-secondary btn-full">
+          <i data-lucide="settings"></i>
+          <span>ตั้งค่า Google Sheets</span>
+        </button>
+      </div>
+
+      <div class="nav-section-title">สัปดาห์ / ครั้งที่สอน</div>
+      <nav class="week-list" id="week-list">
+        <!-- Generated Dynamically via JS -->
+        <div class="loading-spinner-wrapper">
+          <div class="spinner"></div>
+          <span>กำลังโหลดแผนการสอน...</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator offline" id="sync-status">
+          <span class="status-dot"></span>
+          <span class="status-label">ระบบออฟไลน์ (เบราว์เซอร์)</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+      
+      <!-- Top Action Navigation -->
+      <header class="app-header">
+        <div class="header-info">
+          <h1 id="selected-week-title">แผนการสอนครั้งที่ -</h1>
+          <p id="selected-week-subtitle" class="text-muted">เลือกแผนการสอนจากแถบด้านซ้ายเพื่อกรอกบันทึกหลังสอน</p>
+        </div>
+        <div class="header-actions">
+          <button id="btn-save-offline" class="btn btn-success">
+            <i data-lucide="save"></i>
+            <span>บันทึกชั่วคราวในเครื่อง</span>
+          </button>
+          <button id="btn-sync-google" class="btn btn-primary">
+            <i data-lucide="cloud-lightning"></i>
+            <span>ส่งข้อมูล & อัปโหลด Drive</span>
+          </button>
+          <button id="btn-export-pdf" class="btn btn-danger">
+            <i data-lucide="file-text"></i>
+            <span>ดาวน์โหลด PDF</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- App Content Grid -->
+      <div class="content-grid">
+        
+        <!-- Left Column: Lesson details & reflection forms -->
+        <div class="content-left">
+          
+          <!-- Card: ข้อมูลแผนการเรียนรู้ -->
+          <div class="card glass-card">
+            <div class="card-header">
+              <i data-lucide="info" class="card-icon info-icon"></i>
+              <h2>รายละเอียดแผนการจัดการเรียนรู้</h2>
+              <span class="badge" id="lesson-date-badge">-</span>
+            </div>
+            
+            <div class="card-body">
+              <div class="lesson-meta-grid">
+                <div class="meta-item">
+                  <label>สัปดาห์ (Week)</label>
+                  <p id="lbl-week">-</p>
+                </div>
+                <div class="meta-item">
+                  <label>ครั้งที่สอน</label>
+                  <p id="lbl-once">-</p>
+                </div>
+                <div class="meta-item">
+                  <label>คาบเรียนที่สอน</label>
+                  <p id="lbl-period">-</p>
+                </div>
+                <div class="meta-item">
+                  <label>จำนวนคาบ</label>
+                  <p id="lbl-period-count">- คาบ</p>
+                </div>
+              </div>
+
+              <div class="detail-section">
+                <label class="section-label">หน่วยการเรียนรู้</label>
+                <div class="content-box" id="lbl-unit">-</div>
+              </div>
+
+              <div class="detail-section">
+                <label class="section-label">เรื่องที่สอน</label>
+                <div class="content-box topic-highlight" id="lbl-topic">-</div>
+              </div>
+
+              <div class="detail-section">
+                <label class="section-label">มาตรฐานการเรียนรู้ / ตัวชี้วัด</label>
+                <div class="content-box" id="lbl-standard">-</div>
+              </div>
+
+              <div class="detail-section">
+                <label class="section-label">จุดประสงค์การเรียนรู้</label>
+                <div class="content-box content-list" id="lbl-objectives">-</div>
+              </div>
+
+              <div class="detail-section">
+                <label class="section-label">กิจกรรมการเรียนรู้</label>
+                <div class="content-box content-steps" id="lbl-activities">-</div>
+              </div>
+
+              <div class="detail-section">
+                <label class="section-label">การวัดและประเมินผล</label>
+                <div class="content-box" id="lbl-assessment">-</div>
+              </div>
+
+              <div class="detail-section">
+                <label class="section-label">สื่อการเรียนรู้</label>
+                <div class="content-box" id="lbl-materials">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Reflection Form & Signature Pad -->
+        <div class="content-right">
+          
+          <!-- Card: บันทึกหลังการสอน -->
+          <div class="card glass-card form-card">
+            <div class="card-header">
+              <i data-lucide="edit-3" class="card-icon edit-icon"></i>
+              <h2>บันทึกหลังการจัดการเรียนรู้</h2>
+            </div>
+            <div class="card-body">
+              
+              <div class="form-group">
+                <label for="txt-outcomes">
+                  <span>ผลการจัดการเรียนรู้</span>
+                  <span class="required">*</span>
+                </label>
+                <textarea id="txt-outcomes" rows="5" placeholder="ระบุผลสัมฤทธิ์ทางการเรียน เช่น นักเรียนเข้าใจเนื้อหาได้กี่เปอร์เซ็นต์ บรรลุตามวัตถุประสงค์ข้อใดบ้าง..."></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="txt-solutions">
+                  <span>ปัญหา อุปสรรค และแนวทางแก้ไข</span>
+                  <span class="required">*</span>
+                </label>
+                <textarea id="txt-solutions" rows="5" placeholder="ระบุอุปสรรคที่พบ (เช่น สับสนในการบวกเศษส่วน) และข้อเสนอแนะสำหรับการจัดสอนครั้งต่อไป..."></textarea>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Card: ลายเซ็นผู้สอน -->
+          <div class="card glass-card signature-card">
+            <div class="card-header">
+              <i data-lucide="pen-tool" class="card-icon pen-icon"></i>
+              <h2>ลงชื่อผู้สอน (Signature)</h2>
+            </div>
+            <div class="card-body">
+              <div class="signature-container">
+                <canvas id="signature-pad" class="sig-pad"></canvas>
+                <div class="sig-placeholder" id="sig-placeholder">
+                  <i data-lucide="edit-2"></i>
+                  <span>เซ็นลายเซ็นดิจิทัลที่นี่</span>
+                </div>
+              </div>
+              
+              <div class="signature-actions">
+                <div class="pen-colors">
+                  <button type="button" class="color-dot active" data-color="#0000FF" style="background-color: #0000FF;" title="น้ำเงิน"></button>
+                  <button type="button" class="color-dot" data-color="#000000" style="background-color: #000000;" title="ดำ"></button>
+                </div>
+                <div class="sig-buttons">
+                  <button type="button" id="btn-sig-undo" class="btn btn-icon-only btn-secondary" title="ย้อนกลับ (Undo)">
+                    <i data-lucide="undo-2"></i>
+                  </button>
+                  <button type="button" id="btn-sig-clear" class="btn btn-secondary">
+                    <i data-lucide="trash-2"></i>
+                    <span>ล้างลายเซ็น</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Settings Modal (Google API Config) -->
+  <div class="modal-backdrop" id="settings-modal">
+    <div class="modal glass-card">
+      <div class="modal-header">
+        <i data-lucide="settings" class="modal-header-icon"></i>
+        <h2>ตั้งค่าการเชื่อมต่อ Google API</h2>
+        <button class="modal-close" id="btn-close-settings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-intro">เชื่อมต่อแผนการสอนหน้าเดียวเข้ากับ Google Sheets และ Google Drive เพื่อเก็บประวัติการบันทึกหลังสอนและอัปโหลดไฟล์ PDF</p>
+        
+        <div class="form-group">
+          <label for="input-gas-url">
+            <span>Google Apps Script URL (Web App)</span>
+          </label>
+          <input type="url" id="input-gas-url" placeholder="https://script.google.com/macros/s/.../exec">
+          <small class="form-help">ได้จากขั้นตอนการ Deploy Web App ในหน้าต่าง Apps Script ของ Google Sheets</small>
+        </div>
+
+        <div class="form-group">
+          <label for="input-drive-folder">
+            <span>Google Drive Folder ID (สำหรับจัดเก็บ PDF)</span>
+          </label>
+          <input type="text" id="input-drive-folder" placeholder="โฟลเดอร์เริ่มต้น: iPlane_PDFs (ปล่อยว่างไว้ได้)">
+          <small class="form-help">ระบุ ID ของโฟลเดอร์ใน Drive หากต้องการบังคับบันทึกลงในโฟลเดอร์เฉพาะ</small>
+        </div>
+
+        <div class="integration-help">
+          <h3><i data-lucide="help-circle"></i> วิธีติดตั้งระบบหลังบ้าน:</h3>
+          <ol>
+            <li>คัดลอกโค้ดจากไฟล์ <code>google-apps-script.js</code> ในโปรเจกต์นี้</li>
+            <li>ไปที่ Google Sheet ของคุณ เลือก <strong>ส่วนขยาย > แอปสคริปต์ (Apps Script)</strong></li>
+            <li>วางโค้ดลงไป กดบันทึก แล้วกดปุ่ม <strong>ทำให้ใช้งานได้ใหม่ (New Deployment)</strong> เลือกประเภท <strong>เว็บแอป (Web App)</strong></li>
+            <li>ตั้งสิทธิ์การเข้าถึงให้เป็น <strong>ทุกคน (Anyone)</strong> จากนั้นกด Deploy และนำลิงก์ที่ได้มาวางในช่องด้านบน</li>
+          </ol>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-settings" class="btn btn-primary btn-full">บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Container for A4 Printing Generation (html2pdf target) -->
+  <div id="print-template-container" class="print-container">
+    <div class="a4-page">
+      <div class="a4-header">
+        <div class="thai-crest-placeholder">
+          <!-- ครุฑไทยจำลองด้วย SVG ดึงจุดเด่นสไตล์ราชการ -->
+          <svg viewBox="0 0 100 100" class="crest-svg" width="65" height="65">
+            <path fill="#000" d="M50 2C48 10 40 18 35 25C31 22 25 21 20 22C24 28 28 35 30 42C23 41 15 37 10 33C14 42 20 50 28 55C22 58 15 60 8 62C16 64 24 62 30 60C28 68 25 76 20 84C28 80 34 74 38 68C38 74 38 80 38 86C43 82 47 78 50 72C53 78 57 82 62 86C62 80 62 74 62 68C66 74 72 80 80 84C75 76 72 68 70 60C76 62 84 64 92 62C85 60 78 58 72 55C80 50 86 42 90 33C85 37 77 41 70 42C72 35 76 28 80 22C75 21 69 22 65 25C60 18 52 10 50 2Z"/>
+          </svg>
+        </div>
+        <div class="header-titles">
+          <h2 class="thai-font text-center font-bold">แผนการจัดการเรียนรู้รายคาบ (หลังสอนเสร็จสิ้น)</h2>
+          <h3 class="thai-font text-center font-medium" id="print-school-info">โรงเรียนสาธิตอินเตอร์เนชั่นแนล / กลุ่มสาระการเรียนรู้คณิตศาสตร์</h3>
+        </div>
+      </div>
+
+      <div class="a4-body thai-font">
+        <div class="print-row border-bottom">
+          <div class="print-col col-4"><strong>สัปดาห์ที่:</strong> <span id="print-week">-</span></div>
+          <div class="print-col col-4"><strong>ครั้งที่สอน:</strong> <span id="print-once">-</span></div>
+          <div class="print-col col-4"><strong>วันที่สอน:</strong> <span id="print-date">-</span></div>
+        </div>
+
+        <div class="print-row border-bottom">
+          <div class="print-col col-6"><strong>คาบที่สอน:</strong> <span id="print-period">-</span></div>
+          <div class="print-col col-6"><strong>จำนวนคาบ:</strong> <span id="print-period-count">- คาบ</span></div>
+        </div>
+
+        <div class="print-block">
+          <div class="block-title">หน่วยการเรียนรู้และหัวเรื่องที่สอน</div>
+          <div class="block-content">
+            <strong>หน่วยที่:</strong> <span id="print-unit">-</span> <br>
+            <strong>เรื่อง:</strong> <span id="print-topic">-</span>
+          </div>
+        </div>
+
+        <div class="print-block">
+          <div class="block-title">มาตรฐานการเรียนรู้ / ตัวชี้วัด</div>
+          <div class="block-content" id="print-standard">-</div>
+        </div>
+
+        <div class="print-block">
+          <div class="block-title">จุดประสงค์การเรียนรู้</div>
+          <div class="block-content" id="print-objectives">-</div>
+        </div>
+
+        <div class="print-block">
+          <div class="block-title">กิจกรรมการเรียนรู้</div>
+          <div class="block-content" id="print-activities">-</div>
+        </div>
+
+        <div class="print-row print-two-cols">
+          <div class="print-block print-half">
+            <div class="block-title">การวัดและประเมินผล</div>
+            <div class="block-content" id="print-assessment">-</div>
+          </div>
+          <div class="print-block print-half">
+            <div class="block-title">สื่อการเรียนรู้</div>
+            <div class="block-content" id="print-materials">-</div>
+          </div>
+        </div>
+
+        <!-- หน้า 2 หรือส่วนบันทึกหลังสอนอย่างละเอียด -->
+        <div class="page-break"></div>
+
+        <div class="a4-header compact">
+          <h2 class="thai-font text-center font-bold">บันทึกผลหลังการจัดกิจกรรมการเรียนรู้</h2>
+          <h4 class="thai-font text-center text-muted">แผนการสอนครั้งที่ <span id="print-once-header">-</span> เรื่อง <span id="print-topic-header">-</span></h4>
+        </div>
+
+        <div class="print-block">
+          <div class="block-title font-bold">1. ผลการจัดการเรียนรู้ (Teaching Outcomes)</div>
+          <div class="block-content text-justify padding-large" id="print-outcomes">
+            -
+          </div>
+        </div>
+
+        <div class="print-block">
+          <div class="block-title font-bold">2. ปัญหา อุปสรรค และแนวทางแก้ไข (Problems, Obstacles & Solutions)</div>
+          <div class="block-content text-justify padding-large" id="print-solutions">
+            -
+          </div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="print-signature-section">
+          <div class="signature-wrapper">
+            <div class="signature-line">
+              <img id="print-signature-img" class="signature-image" alt="ลายเซ็นผู้สอน" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'></svg>">
+            </div>
+            <div class="signature-details">
+              <p>ลงชื่อ..............................................................ผู้สอน</p>
+              <p>( นายแอนติกราวิตี้ ดีมายด์ )</p>
+              <p>ตำแหน่ง ครูผู้ช่วย กลุ่มสาระการเรียนรู้คณิตศาสตร์</p>
+              <p>วันที่ลงนาม: <span id="print-signature-date">-</span></p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
