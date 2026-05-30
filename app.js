@@ -1764,7 +1764,11 @@ function updateEasySetupShareSection() {
   if (config.gasUrl) {
     container.style.display = 'block';
 
-    const setupUrl = window.location.href.split('?')[0] + 
+    let baseUrl = window.location.href.split('?')[0];
+    if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.startsWith('file:')) {
+      baseUrl = 'https://ghhambal.github.io/iplan/';
+    }
+    const setupUrl = baseUrl + 
       '?gasUrl=' + encodeURIComponent(config.gasUrl) + 
       '&folderId=' + encodeURIComponent(config.folderId || '');
 
