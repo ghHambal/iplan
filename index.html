@@ -3,46 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>iPlane - ระบบบันทึกแผนการสอนและบันทึกหลังสอน</title>
+  <title>iPlane - ระบบแผนการสอนหน้าเดียวและบันทึกหลังสอน</title>
   
-  <!-- Google Fonts: Sarabun (สำหรับเอกสารราชการ/PDF) และ Inter (สำหรับ Interface) -->
+  <!-- Google Fonts: Sarabun (สำหรับพิมพ์ใบแผนการสอนราชการ) และ Inter (สำหรับ Interface) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   
-  <!-- Lucide Icons for premium modern look -->
+  <!-- Lucide Icons for premium modern UI -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- html2pdf.js for Client-side high fidelity PDF generation -->
+  <!-- html2pdf.js for Client-side high-fidelity PDF generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-theme">
 
-  <!-- Main Container -->
+  <!-- Main Grid Layout -->
   <div class="app-container">
     
-    <!-- Sidebar -->
+    <!-- Sidebar Navigation -->
     <aside class="app-sidebar">
       <div class="sidebar-header">
         <div class="logo-wrapper">
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag">v1.1</span>
+        <span class="version-tag">v1.2</span>
       </div>
       
       <div class="sidebar-action">
         <button id="btn-settings" class="btn btn-secondary btn-full">
-          <i data-lucide="settings"></i>
-          <span>ตั้งค่า Google Sheets</span>
+          <i data-lucide="sliders"></i>
+          <span>ตั้งค่าระบบ & คอร์สวิชา</span>
         </button>
       </div>
 
-      <div class="nav-section-title">สัปดาห์ / ครั้งที่สอน</div>
+      <div class="nav-section-title">ลำดับการสอนของคอร์ส</div>
       <nav class="week-list" id="week-list">
-        <!-- Generated Dynamically via JS -->
+        <!-- Rendered dynamically -->
         <div class="loading-spinner-wrapper">
           <div class="spinner"></div>
           <span>กำลังโหลดแผนการสอน...</span>
@@ -57,46 +57,54 @@
       </div>
     </aside>
 
-    <!-- Main Content Area -->
+    <!-- Main Working Panel -->
     <main class="app-main">
       
-      <!-- Top Action Navigation -->
+      <!-- Sticky Action Header -->
       <header class="app-header">
         <div class="header-info">
           <h1 id="selected-week-title">แผนการสอนครั้งที่ -</h1>
-          <p id="selected-week-subtitle" class="text-muted">เลือกแผนการสอนจากแถบด้านซ้ายเพื่อกรอกบันทึกหลังสอน</p>
+          <p id="selected-week-subtitle" class="text-muted">กำลังดึงข้อมูลระบบ...</p>
         </div>
         <div class="header-actions">
           <button id="btn-save-offline" class="btn btn-success">
             <i data-lucide="save"></i>
-            <span>บันทึกชั่วคราวในเครื่อง</span>
+            <span>บันทึกหลังสอนในเครื่อง</span>
           </button>
           <button id="btn-sync-google" class="btn btn-primary">
             <i data-lucide="cloud-lightning"></i>
-            <span>ส่งข้อมูล & อัปโหลด Drive</span>
+            <span>ส่งข้อมูล & ขึ้น Drive</span>
           </button>
           <button id="btn-export-pdf" class="btn btn-danger">
-            <i data-lucide="file-text"></i>
-            <span>ดาวน์โหลด PDF</span>
+            <i data-lucide="printer"></i>
+            <span>ดาวน์โหลด PDF (หน้าเดียว)</span>
           </button>
         </div>
       </header>
 
-      <!-- App Content Grid -->
+      <!-- Grid Column split -->
       <div class="content-grid">
         
-        <!-- Left Column: Lesson details & reflection forms -->
+        <!-- Left: Static Lesson Plan Preview (Editable via Settings) -->
         <div class="content-left">
-          
-          <!-- Card: ข้อมูลแผนการเรียนรู้ -->
           <div class="card glass-card">
             <div class="card-header">
-              <i data-lucide="info" class="card-icon info-icon"></i>
-              <h2>รายละเอียดแผนการจัดการเรียนรู้</h2>
+              <i data-lucide="file-text" class="card-icon info-icon"></i>
+              <h2>เนื้อหาแผนการจัดการเรียนรู้หลัก</h2>
               <span class="badge" id="lesson-date-badge">-</span>
             </div>
             
             <div class="card-body">
+              <!-- Active Course/Class metadata -->
+              <div class="active-config-banner">
+                <i data-lucide="graduation-cap"></i>
+                <div>
+                  <span id="active-course-label">วิชา: -</span>
+                  <span class="divider">|</span>
+                  <span id="active-class-label">ชั้นเรียน: -</span>
+                </div>
+              </div>
+
               <div class="lesson-meta-grid">
                 <div class="meta-item">
                   <label>สัปดาห์ (Week)</label>
@@ -111,8 +119,8 @@
                   <p id="lbl-period">-</p>
                 </div>
                 <div class="meta-item">
-                  <label>จำนวนคาบ</label>
-                  <p id="lbl-period-count">- คาบ</p>
+                  <label>จำนวนชั่วโมง</label>
+                  <p id="lbl-period-count">- ชั่วโมง</p>
                 </div>
               </div>
 
@@ -127,90 +135,90 @@
               </div>
 
               <div class="detail-section">
-                <label class="section-label">มาตรฐานการเรียนรู้ / ตัวชี้วัด</label>
+                <label class="section-label">1. มาตรฐานการเรียนรู้ / ตัวชี้วัด</label>
                 <div class="content-box" id="lbl-standard">-</div>
               </div>
 
               <div class="detail-section">
-                <label class="section-label">จุดประสงค์การเรียนรู้</label>
+                <label class="section-label">2. จุดประสงค์การเรียนรู้</label>
                 <div class="content-box content-list" id="lbl-objectives">-</div>
               </div>
 
               <div class="detail-section">
-                <label class="section-label">กิจกรรมการเรียนรู้</label>
+                <label class="section-label">3. กิจกรรมการเรียนรู้</label>
                 <div class="content-box content-steps" id="lbl-activities">-</div>
               </div>
 
               <div class="detail-section">
-                <label class="section-label">การวัดและประเมินผล</label>
+                <label class="section-label">4. การวัดและประเมินผล</label>
                 <div class="content-box" id="lbl-assessment">-</div>
               </div>
 
               <div class="detail-section">
-                <label class="section-label">สื่อการเรียนรู้</label>
+                <label class="section-label">5. สื่อการเรียนรู้</label>
                 <div class="content-box" id="lbl-materials">-</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Reflection Form & Signature Pad -->
+        <!-- Right: Reflections & Interactive Digital Signature Pad -->
         <div class="content-right">
           
-          <!-- Card: บันทึกหลังการสอน -->
+          <!-- Reflection Box -->
           <div class="card glass-card form-card">
             <div class="card-header">
               <i data-lucide="edit-3" class="card-icon edit-icon"></i>
-              <h2>บันทึกหลังการจัดการเรียนรู้</h2>
+              <h2>ส่วนที่พิมพ์บันทึกหลังจัดการเรียนรู้</h2>
             </div>
             <div class="card-body">
               
               <div class="form-group">
                 <label for="txt-outcomes">
-                  <span>ผลการจัดการเรียนรู้</span>
+                  <span>บันทึกหลังการสอน (ผลการจัดการเรียนรู้)</span>
                   <span class="required">*</span>
                 </label>
-                <textarea id="txt-outcomes" rows="5" placeholder="ระบุผลสัมฤทธิ์ทางการเรียน เช่น นักเรียนเข้าใจเนื้อหาได้กี่เปอร์เซ็นต์ บรรลุตามวัตถุประสงค์ข้อใดบ้าง..."></textarea>
+                <textarea id="txt-outcomes" rows="5" placeholder="ระบุผลการสอน เช่น นักเรียนเข้าใจและคำนวณรากที่ n ได้ถูกต้อง..."></textarea>
               </div>
 
               <div class="form-group">
                 <label for="txt-solutions">
-                  <span>ปัญหา อุปสรรค และแนวทางแก้ไข</span>
+                  <span>ข้อเสนอแนะ / ปัญหา อุปสรรค และแนวทางแก้ไข</span>
                   <span class="required">*</span>
                 </label>
-                <textarea id="txt-solutions" rows="5" placeholder="ระบุอุปสรรคที่พบ (เช่น สับสนในการบวกเศษส่วน) และข้อเสนอแนะสำหรับการจัดสอนครั้งต่อไป..."></textarea>
+                <textarea id="txt-solutions" rows="5" placeholder="ระบุปัญหาอุปสรรคที่พบ และข้อเสนอแนะในการแก้ไขครั้งถัดไป..."></textarea>
               </div>
 
             </div>
           </div>
 
-          <!-- Card: ลายเซ็นผู้สอน -->
+          <!-- Digital Signature Canvas Board -->
           <div class="card glass-card signature-card">
             <div class="card-header">
               <i data-lucide="pen-tool" class="card-icon pen-icon"></i>
-              <h2>ลงชื่อผู้สอน (Signature)</h2>
+              <h2>เขียนลงลายเซ็นดิจิทัลผู้สอน</h2>
             </div>
             <div class="card-body">
               <div class="signature-container">
                 <canvas id="signature-pad" class="sig-pad"></canvas>
                 <div class="sig-placeholder" id="sig-placeholder">
                   <i data-lucide="edit-2"></i>
-                  <span>เซ็นลายเซ็นดิจิทัลที่นี่</span>
+                  <span>สัมผัสหน้าจอหรือใช้เมาส์เขียนชื่อเซ็นตรงนี้</span>
                 </div>
               </div>
               
               <div class="signature-actions">
                 <div class="pen-colors">
-                  <button type="button" class="color-dot active" data-color="#0000FF" style="background-color: #0000FF;" title="น้ำเงิน"></button>
-                  <button type="button" class="color-dot" data-color="#000000" style="background-color: #000000;" title="ดำ"></button>
+                  <button type="button" class="color-dot active" data-color="#0000FF" style="background-color: #0000FF;" title="สีน้ำเงิน"></button>
+                  <button type="button" class="color-dot" data-color="#000000" style="background-color: #000000;" title="สีดำ"></button>
                 </div>
                 <div class="sig-buttons">
-                  <button type="button" id="btn-sig-undo" class="btn btn-icon-only btn-secondary" title="ย้อนกลับ (Undo)">
+                  <button type="button" id="btn-sig-undo" class="btn btn-icon-only btn-secondary" title="Undo">
                     <i data-lucide="undo-2"></i>
                   </button>
                   <button type="button" id="btn-sig-clear" class="btn btn-secondary">
                     <i data-lucide="trash-2"></i>
-                    <span>ล้างลายเซ็น</span>
+                    <span>ล้างช่องเซ็น</span>
                   </button>
                 </div>
               </div>
@@ -222,149 +230,363 @@
     </main>
   </div>
 
-  <!-- Settings Modal (Google API Config) -->
+  <!-- Advanced Tabbed Settings Control Panel (Modal) -->
   <div class="modal-backdrop" id="settings-modal">
-    <div class="modal glass-card">
+    <div class="modal glass-card modal-wide">
       <div class="modal-header">
-        <i data-lucide="settings" class="modal-header-icon"></i>
-        <h2>ตั้งค่าการเชื่อมต่อ Google API</h2>
+        <i data-lucide="sliders" class="modal-header-icon"></i>
+        <h2>ตั้งค่าระบบแผนการสอน & คอร์สวิชา</h2>
         <button class="modal-close" id="btn-close-settings">&times;</button>
       </div>
-      <div class="modal-body">
-        <p class="modal-intro">เชื่อมต่อแผนการสอนหน้าเดียวเข้ากับ Google Sheets และ Google Drive เพื่อเก็บประวัติการบันทึกหลังสอนและอัปโหลดไฟล์ PDF</p>
-        
-        <div class="form-group">
-          <label for="input-gas-url">
-            <span>Google Apps Script URL (Web App)</span>
-          </label>
-          <input type="url" id="input-gas-url" placeholder="https://script.google.com/macros/s/.../exec">
-          <small class="form-help">ได้จากขั้นตอนการ Deploy Web App ในหน้าต่าง Apps Script ของ Google Sheets</small>
-        </div>
-
-        <div class="form-group">
-          <label for="input-drive-folder">
-            <span>Google Drive Folder ID (สำหรับจัดเก็บ PDF)</span>
-          </label>
-          <input type="text" id="input-drive-folder" placeholder="โฟลเดอร์เริ่มต้น: iPlane_PDFs (ปล่อยว่างไว้ได้)">
-          <small class="form-help">ระบุ ID ของโฟลเดอร์ใน Drive หากต้องการบังคับบันทึกลงในโฟลเดอร์เฉพาะ</small>
-        </div>
-
-        <div class="integration-help">
-          <h3><i data-lucide="help-circle"></i> วิธีติดตั้งระบบหลังบ้าน:</h3>
-          <ol>
-            <li>คัดลอกโค้ดจากไฟล์ <code>google-apps-script.js</code> ในโปรเจกต์นี้</li>
-            <li>ไปที่ Google Sheet ของคุณ เลือก <strong>ส่วนขยาย > แอปสคริปต์ (Apps Script)</strong></li>
-            <li>วางโค้ดลงไป กดบันทึก แล้วกดปุ่ม <strong>ทำให้ใช้งานได้ใหม่ (New Deployment)</strong> เลือกประเภท <strong>เว็บแอป (Web App)</strong></li>
-            <li>ตั้งสิทธิ์การเข้าถึงให้เป็น <strong>ทุกคน (Anyone)</strong> จากนั้นกด Deploy และนำลิงก์ที่ได้มาวางในช่องด้านบน</li>
-          </ol>
-        </div>
+      
+      <!-- Tab selectors -->
+      <div class="modal-tabs">
+        <button class="tab-btn active" data-tab="tab-general">
+          <i data-lucide="user-cog"></i> ข้อมูลทั่วไป & Google API
+        </button>
+        <button class="tab-btn" data-tab="tab-courses">
+          <i data-lucide="graduation-cap"></i> จัดการคอร์สวิชา & ห้องเรียน
+        </button>
+        <button class="tab-btn" data-tab="tab-auto-date">
+          <i data-lucide="calendar"></i> รันวันที่สอนอัตโนมัติ
+        </button>
+        <button class="tab-btn" data-tab="tab-edit-lessons">
+          <i data-lucide="edit"></i> แก้ไขแผนหลักย้อนหลัง
+        </button>
       </div>
+
+      <div class="modal-body">
+        
+        <!-- Tab 1: General Profile & Google API Connection -->
+        <div class="tab-content active" id="tab-general">
+          <div class="settings-grid">
+            <div class="settings-col">
+              <h3><i data-lucide="user"></i> ข้อมูลผู้สอนและโรงเรียน</h3>
+              
+              <div class="form-group">
+                <label for="input-teacher-name">ชื่อครูผู้สอน (ลงท้ายเอกสาร)</label>
+                <input type="text" id="input-teacher-name" placeholder="เช่น นายฮัมบาลีย์ วาจิ">
+              </div>
+
+              <div class="form-group">
+                <label for="input-hod-name">ชื่อหัวหน้ากลุ่มสาระ (ลงท้ายเอกสาร)</label>
+                <input type="text" id="input-hod-name" placeholder="เช่น นางมารียานี แวนาแฮ">
+              </div>
+
+              <div class="form-group">
+                <label for="input-school-name">กลุ่มสาระการเรียนรู้</label>
+                <input type="text" id="input-school-name" placeholder="เช่น คณิตศาสตร์">
+              </div>
+            </div>
+
+            <div class="settings-col">
+              <h3><i data-lucide="link"></i> การเชื่อมต่อฐานข้อมูล Google</h3>
+              
+              <div class="form-group">
+                <label for="input-gas-url">Google Apps Script Web App URL</label>
+                <input type="url" id="input-gas-url" placeholder="https://script.google.com/macros/s/.../exec">
+              </div>
+
+              <div class="form-group">
+                <label for="input-drive-folder">Google Drive Folder ID (จัดเก็บ PDF)</label>
+                <input type="text" id="input-drive-folder" placeholder="ปล่อยว่างระบบจะจัดสร้างอัตโนมัติ">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Courses and Class Rooms Builder -->
+        <div class="tab-content" id="tab-courses">
+          <div class="settings-grid">
+            <div class="settings-col">
+              <h3><i data-lucide="check-square"></i> เลือกคอร์สวิชาและชั้นเรียนที่กำลังสอน</h3>
+              
+              <div class="form-group">
+                <label for="select-active-course">เลือกวิชาที่สอน</label>
+                <select id="select-active-course">
+                  <!-- Generated dynamically -->
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="select-active-class">เลือกห้องเรียน/ชั้นเรียน</label>
+                <select id="select-active-class">
+                  <!-- Generated dynamically -->
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-col">
+              <h3><i data-lucide="plus-circle"></i> เพิ่มคอร์สวิชาและชั้นเรียนใหม่</h3>
+              
+              <div class="add-builder-box">
+                <h4>1. เพิ่มรายวิชาใหม่</h4>
+                <div class="row-inputs">
+                  <input type="text" id="input-new-course-name" placeholder="ชื่อวิชา เช่น คณิตศาสตร์พื้นฐาน">
+                  <input type="text" id="input-new-course-code" placeholder="รหัสวิชา เช่น ค32101">
+                </div>
+                <button type="button" id="btn-add-course" class="btn btn-secondary btn-full">เพิ่มรายวิชา</button>
+              </div>
+
+              <div class="add-builder-box">
+                <h4>2. เพิ่มห้องเรียนใหม่</h4>
+                <input type="text" id="input-new-class-name" placeholder="ชื่อชั้นเรียน เช่น มัธยมศึกษาปีที่ 5/2 Delima">
+                <button type="button" id="btn-add-class" class="btn btn-secondary btn-full">เพิ่มห้องเรียน</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Automatic Date runner script calculation -->
+        <div class="tab-content" id="tab-auto-date">
+          <p class="tab-intro">ระบบจะช่วยคำนวณวันที่สอนของแต่ละคาบ (ทั้ง 17 ครั้ง) โดยระบุวันเริ่มสอนครั้งแรก และวันปกติที่มีการเรียนการสอนในแต่ละสัปดาห์</p>
+          
+          <div class="settings-grid">
+            <div class="settings-col">
+              <h3><i data-lucide="calendar-plus"></i> ตั้งค่าระบบคำนวณวัน</h3>
+              
+              <div class="form-group">
+                <label for="input-start-date">วันที่เริ่มเรียนคาบแรกสุด (สัปดาห์ที่ 1 ครั้งที่ 1)</label>
+                <input type="date" id="input-start-date">
+              </div>
+
+              <div class="form-group">
+                <label>เลือกวันที่มีการเรียนการสอนในสัปดาห์ (ระบุ 1-2 วัน)</label>
+                <div class="days-checkbox-grid">
+                  <label class="checkbox-container">
+                    <input type="checkbox" name="teach-days" value="1"> จันทร์
+                  </label>
+                  <label class="checkbox-container">
+                    <input type="checkbox" name="teach-days" value="2"> อังคาร
+                  </label>
+                  <label class="checkbox-container">
+                    <input type="checkbox" name="teach-days" value="3"> พุธ
+                  </label>
+                  <label class="checkbox-container">
+                    <input type="checkbox" name="teach-days" value="4"> พฤหัสบดี
+                  </label>
+                  <label class="checkbox-container">
+                    <input type="checkbox" name="teach-days" value="5"> ศุกร์
+                  </label>
+                  <label class="checkbox-container">
+                    <input type="checkbox" name="teach-days" value="6"> เสาร์
+                  </label>
+                  <label class="checkbox-container">
+                    <input type="checkbox" name="teach-days" value="0"> อาทิตย์
+                  </label>
+                </div>
+              </div>
+
+              <button type="button" id="btn-run-dates" class="btn btn-primary btn-full">
+                <i data-lucide="play"></i> คำนวณและอัปเดตวันที่สอนทั้งหมด
+              </button>
+            </div>
+
+            <div class="settings-col">
+              <h3>💡 ผลลัพธ์ตัวอย่างการกระจายวันที่</h3>
+              <div class="date-preview-list" id="date-preview-list">
+                <!-- Preview will render dynamically -->
+                <span class="text-muted">กำหนดข้อมูลด้านซ้ายแล้วกดปุ่มคำนวณเพื่อจำลองวันที่...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Inline Edit Lesson details database -->
+        <div class="tab-content" id="tab-edit-lessons">
+          <div class="lesson-edit-controller">
+            <div class="form-group">
+              <label for="select-edit-lesson-index">เลือกแผนการสอนครั้งที่ต้องการแก้ไข</label>
+              <select id="select-edit-lesson-index">
+                <!-- Dropdown populated via JS -->
+              </select>
+            </div>
+            
+            <div class="editor-fields-box">
+              <div class="form-group">
+                <label for="edit-lesson-topic">เรื่องที่สอน</label>
+                <input type="text" id="edit-lesson-topic">
+              </div>
+
+              <div class="form-group">
+                <label for="edit-lesson-standard">1. มาตรฐานการเรียนรู้ / ตัวชี้วัด</label>
+                <textarea id="edit-lesson-standard" rows="3"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="edit-lesson-objectives">2. จุดประสงค์การเรียนรู้</label>
+                <textarea id="edit-lesson-objectives" rows="3"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="edit-lesson-activities">3. กิจกรรมการเรียนรู้ (ขั้นนำ/ขั้นสอน/ขั้นสรุป)</label>
+                <textarea id="edit-lesson-activities" rows="5"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="edit-lesson-assessment">4. การวัดและประเมินผล</label>
+                <textarea id="edit-lesson-assessment" rows="2"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="edit-lesson-materials">5. สื่อการเรียนรู้</label>
+                <textarea id="edit-lesson-materials" rows="2"></textarea>
+              </div>
+
+              <button type="button" id="btn-save-edited-lesson" class="btn btn-success btn-full">บันทึกการแก้ไขข้อมูลแผนหลัก</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      
       <div class="modal-footer">
-        <button id="btn-save-settings" class="btn btn-primary btn-full">บันทึกการตั้งค่า</button>
+        <button id="btn-save-settings" class="btn btn-primary btn-full">บันทึกและปิดหน้าต่าง</button>
       </div>
     </div>
   </div>
 
-  <!-- Hidden Container for A4 Printing Generation (html2pdf target) -->
+  <!-- A4 Single-Page 2-Column PDF Document Template (Exactly matching user's image) -->
   <div id="print-template-container" class="print-container">
-    <div class="a4-page">
-      <div class="a4-header">
-        <div class="thai-crest-placeholder">
-          <!-- ครุฑไทยจำลองด้วย SVG ดึงจุดเด่นสไตล์ราชการ -->
-          <svg viewBox="0 0 100 100" class="crest-svg" width="65" height="65">
-            <path fill="#000" d="M50 2C48 10 40 18 35 25C31 22 25 21 20 22C24 28 28 35 30 42C23 41 15 37 10 33C14 42 20 50 28 55C22 58 15 60 8 62C16 64 24 62 30 60C28 68 25 76 20 84C28 80 34 74 38 68C38 74 38 80 38 86C43 82 47 78 50 72C53 78 57 82 62 86C62 80 62 74 62 68C66 74 72 80 80 84C75 76 72 68 70 60C76 62 84 64 92 62C85 60 78 58 72 55C80 50 86 42 90 33C85 37 77 41 70 42C72 35 76 28 80 22C75 21 69 22 65 25C60 18 52 10 50 2Z"/>
-          </svg>
+    <div class="a4-page single-page-pdf">
+      
+      <!-- Central Logo -->
+      <div class="pdf-logo-wrapper">
+        <svg viewBox="0 0 100 100" class="pdf-logo-svg" width="60" height="60">
+          <circle cx="50" cy="50" r="48" stroke="#000" stroke-width="1.5" fill="none" />
+          <circle cx="50" cy="50" r="43" stroke="#000" stroke-width="0.75" fill="none" />
+          <path d="M50 15 L50 85 M15 50 L85 50" stroke="#000" stroke-width="0.5" stroke-dasharray="1 1" />
+          <!-- Crest inner shape mimicking official look -->
+          <polygon points="50,22 75,40 65,75 35,75 25,40" stroke="#000" stroke-width="1" fill="none" />
+          <circle cx="50" cy="48" r="10" stroke="#000" stroke-width="1" fill="none"/>
+          <path d="M50 25 L50 40 M38 48 L46 48 M62 48 L54 48" stroke="#000" stroke-width="1" />
+          <text x="50" y="80" font-family="'Sarabun', sans-serif" font-size="6" font-weight="700" text-anchor="middle">OFFICIAL</text>
+        </svg>
+      </div>
+
+      <!-- Header Titles -->
+      <div class="pdf-header thai-font text-center">
+        <h1 class="pdf-title font-bold">แผนการจัดการเรียนรู้(หน้าเดียว)</h1>
+        <h2 class="pdf-subtitle" id="pdf-print-dept">กลุ่มสาระการเรียนรู้คณิตศาสตร์</h2>
+        <div class="pdf-meta-line font-medium">
+          วิชา <span id="pdf-print-course-name">-</span> 
+          รหัสวิชา <span id="pdf-print-course-code">-</span> 
+          ชั้นมัธยมศึกษาปีที่ <span id="pdf-print-class-name">-</span>
         </div>
-        <div class="header-titles">
-          <h2 class="thai-font text-center font-bold">แผนการจัดการเรียนรู้รายคาบ (หลังสอนเสร็จสิ้น)</h2>
-          <h3 class="thai-font text-center font-medium" id="print-school-info">โรงเรียนสาธิตอินเตอร์เนชั่นแนล / กลุ่มสาระการเรียนรู้คณิตศาสตร์</h3>
+        <div class="pdf-meta-line font-medium">
+          หน่วยการเรียนรู้ที่ <span id="pdf-print-unit">-</span> 
+          เรื่อง <span id="pdf-print-topic">-</span>
         </div>
       </div>
 
-      <div class="a4-body thai-font">
-        <div class="print-row border-bottom">
-          <div class="print-col col-4"><strong>สัปดาห์ที่:</strong> <span id="print-week">-</span></div>
-          <div class="print-col col-4"><strong>ครั้งที่สอน:</strong> <span id="print-once">-</span></div>
-          <div class="print-col col-4"><strong>วันที่สอน:</strong> <span id="print-date">-</span></div>
-        </div>
+      <!-- Time & Date Banner Row -->
+      <div class="pdf-banner-row thai-font">
+        <div class="pdf-banner-col col-left font-bold" id="pdf-print-once">ครั้งที่ -</div>
+        <div class="pdf-banner-col col-center font-bold" id="pdf-print-period-count">เวลา - ชั่วโมง</div>
+        <div class="pdf-banner-col col-right font-bold">วันที่ <span id="pdf-print-date">-</span></div>
+      </div>
 
-        <div class="print-row border-bottom">
-          <div class="print-col col-6"><strong>คาบที่สอน:</strong> <span id="print-period">-</span></div>
-          <div class="print-col col-6"><strong>จำนวนคาบ:</strong> <span id="print-period-count">- คาบ</span></div>
-        </div>
-
-        <div class="print-block">
-          <div class="block-title">หน่วยการเรียนรู้และหัวเรื่องที่สอน</div>
-          <div class="block-content">
-            <strong>หน่วยที่:</strong> <span id="print-unit">-</span> <br>
-            <strong>เรื่อง:</strong> <span id="print-topic">-</span>
+      <!-- Main 2-Column Content Split -->
+      <div class="pdf-columns-wrapper thai-font">
+        
+        <!-- Left Column: Standard, Objectives, Activities, Assessment -->
+        <div class="pdf-col pdf-col-left">
+          
+          <div class="pdf-block">
+            <div class="pdf-block-title font-bold">1.มาตรฐาน/ตัวชี้วัด (ผลการเรียนรู้)</div>
+            <div class="pdf-block-content" id="pdf-print-standard">-</div>
           </div>
-        </div>
 
-        <div class="print-block">
-          <div class="block-title">มาตรฐานการเรียนรู้ / ตัวชี้วัด</div>
-          <div class="block-content" id="print-standard">-</div>
-        </div>
-
-        <div class="print-block">
-          <div class="block-title">จุดประสงค์การเรียนรู้</div>
-          <div class="block-content" id="print-objectives">-</div>
-        </div>
-
-        <div class="print-block">
-          <div class="block-title">กิจกรรมการเรียนรู้</div>
-          <div class="block-content" id="print-activities">-</div>
-        </div>
-
-        <div class="print-row print-two-cols">
-          <div class="print-block print-half">
-            <div class="block-title">การวัดและประเมินผล</div>
-            <div class="block-content" id="print-assessment">-</div>
+          <div class="pdf-block">
+            <div class="pdf-block-title font-bold">2.จุดประสงค์การเรียนรู้</div>
+            <div class="pdf-block-content" id="pdf-print-objectives">-</div>
           </div>
-          <div class="print-block print-half">
-            <div class="block-title">สื่อการเรียนรู้</div>
-            <div class="block-content" id="print-materials">-</div>
+
+          <div class="pdf-block">
+            <div class="pdf-block-title font-bold">3.กิจกรรมการเรียนรู้</div>
+            <div class="pdf-block-content" id="pdf-print-activities">-</div>
           </div>
-        </div>
 
-        <!-- หน้า 2 หรือส่วนบันทึกหลังสอนอย่างละเอียด -->
-        <div class="page-break"></div>
-
-        <div class="a4-header compact">
-          <h2 class="thai-font text-center font-bold">บันทึกผลหลังการจัดกิจกรรมการเรียนรู้</h2>
-          <h4 class="thai-font text-center text-muted">แผนการสอนครั้งที่ <span id="print-once-header">-</span> เรื่อง <span id="print-topic-header">-</span></h4>
-        </div>
-
-        <div class="print-block">
-          <div class="block-title font-bold">1. ผลการจัดการเรียนรู้ (Teaching Outcomes)</div>
-          <div class="block-content text-justify padding-large" id="print-outcomes">
-            -
+          <div class="pdf-block">
+            <div class="pdf-block-title font-bold">4.การวัดและประเมินผล</div>
+            <div class="pdf-block-content" id="pdf-print-assessment">-</div>
           </div>
+          
         </div>
 
-        <div class="print-block">
-          <div class="block-title font-bold">2. ปัญหา อุปสรรค และแนวทางแก้ไข (Problems, Obstacles & Solutions)</div>
-          <div class="block-content text-justify padding-large" id="print-solutions">
-            -
+        <!-- Right Column: Materials, Signatures, Reflections, Suggestions, HOD Sign -->
+        <div class="pdf-col pdf-col-right">
+          
+          <div class="pdf-block">
+            <div class="pdf-block-title font-bold">5.สื่อการเรียนรู้</div>
+            <div class="pdf-block-content" id="pdf-print-materials">-</div>
           </div>
-        </div>
 
-        <!-- Signature Section -->
-        <div class="print-signature-section">
-          <div class="signature-wrapper">
-            <div class="signature-line">
-              <img id="print-signature-img" class="signature-image" alt="ลายเซ็นผู้สอน" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'></svg>">
+          <!-- Signatures Section 1 & 2 (Teacher & Room Leader) -->
+          <div class="pdf-signature-block-dual">
+            
+            <!-- Teacher Signature -->
+            <div class="pdf-sig-box text-center">
+              <div class="pdf-sig-line">
+                <img id="pdf-print-sig-teacher" class="pdf-signature-image" alt="ลายเซ็นผู้สอน">
+              </div>
+              <div class="pdf-sig-label">
+                ลงชื่อ ................................................. ครูผู้สอน<br>
+                ( <span id="pdf-print-teacher-name">-</span> )<br>
+                วันที่ <span id="pdf-print-date-sig-teacher">-</span>
+              </div>
             </div>
-            <div class="signature-details">
-              <p>ลงชื่อ..............................................................ผู้สอน</p>
-              <p>( นายแอนติกราวิตี้ ดีมายด์ )</p>
-              <p>ตำแหน่ง ครูผู้ช่วย กลุ่มสาระการเรียนรู้คณิตศาสตร์</p>
-              <p>วันที่ลงนาม: <span id="print-signature-date">-</span></p>
+
+            <!-- Room Leader Signature -->
+            <div class="pdf-sig-box text-center">
+              <div class="pdf-sig-line">
+                <!-- Room leader signature line remains blank for physical signing -->
+              </div>
+              <div class="pdf-sig-label">
+                ลงชื่อ ................................................. หัวหน้าห้อง<br>
+                ( &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )<br>
+                วันที่ <span id="pdf-print-date-sig-room">-</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Section 6: บันทึกหลังการสอน -->
+          <div class="pdf-block pdf-dashed-box">
+            <div class="pdf-dashed-box-title font-bold">บันทึกหลังการสอน</div>
+            <div class="pdf-dashed-lines" id="pdf-print-outcomes">
+              <!-- Written outcome formatted with lines -->
+              -
             </div>
           </div>
+
+          <!-- Section 7: ข้อเสนอแนะ -->
+          <div class="pdf-block pdf-dashed-box">
+            <div class="pdf-dashed-box-title font-bold">ข้อเสนอแนะ</div>
+            <div class="pdf-dashed-lines" id="pdf-print-solutions">
+              <!-- Suggestions formatted with lines -->
+              -
+            </div>
+          </div>
+
+          <!-- Section 8: HOD Signature -->
+          <div class="pdf-signature-block-single">
+            <div class="pdf-sig-box text-center">
+              <div class="pdf-sig-line">
+                <!-- Head signature line remains blank for physical sign -->
+              </div>
+              <div class="pdf-sig-label">
+                ลงชื่อ ................................................. หัวหน้ากลุ่มสาระ<br>
+                ( <span id="pdf-print-hod-name">-</span> )<br>
+                วันที่ <span id="pdf-print-date-sig-hod">-</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
+      
     </div>
   </div>
 
