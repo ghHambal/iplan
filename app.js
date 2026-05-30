@@ -376,6 +376,56 @@ function initializeUI() {
   document.getElementById('input-drive-folder').value = config.folderId;
   updateSyncStatusIndicator();
 
+  // Active Class Leader input binding
+  const currentClassObj = classes.find(c => c.id === activeClassId);
+  const classLeaderInput = document.getElementById('input-active-class-leader');
+  if (currentClassObj) {
+    classLeaderInput.value = currentClassObj.classLeader || '';
+  }
+  classLeaderInput.addEventListener('input', (e) => {
+    const leaderVal = e.target.value.trim();
+    const classIdx = classes.findIndex(c => c.id === activeClassId);
+    if (classIdx > -1) {
+      classes[classIdx].classLeader = leaderVal;
+      localStorage.setItem('iplane_classes', JSON.stringify(classes));
+    }
+  });
+
+  // School Logo Upload binding
+  const logoInput = document.getElementById('input-school-logo');
+  const logoPreviewContainer = document.getElementById('logo-preview-container');
+  const settingsLogoPreview = document.getElementById('settings-logo-preview');
+  const clearLogoBtn = document.getElementById('btn-clear-logo');
+
+  const savedLogo = localStorage.getItem('iplane_school_logo');
+  if (savedLogo) {
+    settingsLogoPreview.src = savedLogo;
+    logoPreviewContainer.style.display = 'flex';
+  }
+
+  logoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64Url = event.target.result;
+        localStorage.setItem('iplane_school_logo', base64Url);
+        settingsLogoPreview.src = base64Url;
+        logoPreviewContainer.style.display = 'flex';
+        alert('อัปโหลดและบันทึกโลโก้โรงเรียนเรียบร้อยแล้ว');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  clearLogoBtn.addEventListener('click', () => {
+    localStorage.removeItem('iplane_school_logo');
+    logoInput.value = '';
+    logoPreviewContainer.style.display = 'none';
+    settingsLogoPreview.src = '';
+    alert('ล้างข้อมูลโลโก้โรงเรียนเรียบร้อยแล้ว');
+  });
+
   // Settings Modal open/close controls
   const settingsModal = document.getElementById('settings-modal');
   document.getElementById('btn-settings').addEventListener('click', () => {
@@ -433,6 +483,11 @@ function initializeUI() {
     loadDatabaseState();
     renderSidebar();
     updateProfileLabels();
+    
+    // Load class leader
+    const activeCls = classes.find(c => c.id === activeClassId);
+    document.getElementById('input-active-class-leader').value = activeCls ? (activeCls.classLeader || '') : '';
+    
     selectLesson(0);
   });
 
@@ -616,6 +671,7 @@ function addNewCourse() {
 // Add New Classroom Room (Tab 2)
 function addNewClassRoom() {
   const name = document.getElementById('input-new-class-name').value.trim();
+  const leader = document.getElementById('input-new-class-leader').value.trim();
 
   if (!name) {
     alert('กรุณาระบุชื่อชั้นเรียน/ห้องเรียน');
@@ -623,11 +679,12 @@ function addNewClassRoom() {
   }
 
   const newId = 'cl_' + Date.now();
-  classes.push({ id: newId, name: name });
+  classes.push({ id: newId, name: name, classLeader: leader });
   
   localStorage.setItem('iplane_classes', JSON.stringify(classes));
   
   document.getElementById('input-new-class-name').value = '';
+  document.getElementById('input-new-class-leader').value = '';
   renderSettingsDropdowns();
 
   alert('เพิ่มชั้นเรียนเรียบร้อยแล้ว');
@@ -1005,12 +1062,34 @@ function populatePrintTemplate() {
   document.getElementById('pdf-print-outcomes').innerText = plan.outcomes || '-';
   document.getElementById('pdf-print-solutions').innerText = plan.solutions || '-';
 
+  // Apply custom school logo or SVG default
+  const customLogo = localStorage.getItem('iplane_school_logo');
+  const defaultLogoSvg = document.getElementById('pdf-default-logo-svg');
+  const customLogoImg = document.getElementById('pdf-custom-logo-img');
+
+  if (customLogo) {
+    if (defaultLogoSvg) defaultLogoSvg.style.display = 'none';
+    if (customLogoImg) {
+      customLogoImg.src = customLogo;
+      customLogoImg.style.display = 'block';
+    }
+  } else {
+    if (defaultLogoSvg) defaultLogoSvg.style.display = 'block';
+    if (customLogoImg) customLogoImg.style.display = 'none';
+  }
+
   // Apply signatures and dynamic thai formatted dates
   const sigImg = document.getElementById('pdf-print-sig-teacher');
-  sigImg.src = currentSignatureDataUrl;
+  if (sigImg) sigImg.src = currentSignatureDataUrl;
 
   document.getElementById('pdf-print-teacher-name').innerText = profile.teacherName;
   document.getElementById('pdf-print-hod-name').innerText = profile.hodName;
+
+  // Set Class Leader signature name
+  const classLeaderNameSpan = document.getElementById('pdf-print-leader-name');
+  if (classLeaderNameSpan) {
+    classLeaderNameSpan.innerText = (currentClass && currentClass.classLeader) ? currentClass.classLeader : '.................................................';
+  }
 
   // Dates underneath signature lines
   document.getElementById('pdf-print-date-sig-teacher').innerText = plan.date;

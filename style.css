@@ -895,7 +895,12 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pdf-header {
-  margin-bottom: 4mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 3.5mm;
 }
 
 .pdf-title {
@@ -951,6 +956,8 @@ textarea:focus, input:focus, select:focus {
   background-color: #fff;
   display: flex;
   flex-direction: column;
+  height: auto;
+  flex-shrink: 0; /* Prevents squishing and layout overlapping! */
 }
 
 .pdf-block-title {
@@ -972,6 +979,8 @@ textarea:focus, input:focus, select:focus {
 /* Custom dashed reflection styles */
 .pdf-dashed-box {
   border: none;
+  height: auto;
+  flex-shrink: 0; /* Prevents squishing! */
 }
 
 .pdf-dashed-box-title {
@@ -1000,14 +1009,20 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pdf-sig-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   width: 48%;
   font-size: 11px;
 }
 
 .pdf-sig-line {
   border-bottom: 1px dashed #000;
-  height: 10mm;
-  margin-bottom: 1mm;
+  width: 50mm; /* Centered fixed line width */
+  height: 8mm;
+  margin-bottom: 1.5mm;
   position: relative;
   display: flex;
   align-items: center;

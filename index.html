@@ -277,6 +277,16 @@
                 <label for="input-school-name">กลุ่มสาระการเรียนรู้</label>
                 <input type="text" id="input-school-name" placeholder="เช่น คณิตศาสตร์">
               </div>
+              
+              <div class="form-group" style="margin-top: 10px;">
+                <label for="input-school-logo">อัปโหลดโลโก้โรงเรียน (แทนรูปตราครุฑ)</label>
+                <input type="file" id="input-school-logo" accept="image/*">
+                <small class="form-help">รองรับไฟล์ PNG, JPG หรือ GIF (ระบบจะบันทึกรูปไว้บนเบราว์เซอร์)</small>
+                <div class="logo-preview-box" id="logo-preview-container" style="display:none; margin-top: 10px; align-items: center;">
+                  <img id="settings-logo-preview" style="max-height: 40px; border-radius: 4px;" alt="โลโก้ที่อัปโหลด">
+                  <button type="button" id="btn-clear-logo" class="btn btn-danger" style="padding: 6px 12px; font-size: 11px; margin-left: 10px;">ล้างโลโก้</button>
+                </div>
+              </div>
             </div>
 
             <div class="settings-col">
@@ -314,6 +324,11 @@
                   <!-- Generated dynamically -->
                 </select>
               </div>
+
+              <div class="form-group" style="margin-top: 10px;">
+                <label for="input-active-class-leader">ชื่อหัวหน้าห้องเรียน (สำหรับห้องเรียนที่เลือก)</label>
+                <input type="text" id="input-active-class-leader" placeholder="เช่น นายสมชาย ดีเด่น">
+              </div>
             </div>
 
             <div class="settings-col">
@@ -331,7 +346,8 @@
               <div class="add-builder-box">
                 <h4>2. เพิ่มห้องเรียนใหม่</h4>
                 <input type="text" id="input-new-class-name" placeholder="ชื่อชั้นเรียน เช่น มัธยมศึกษาปีที่ 5/2 Delima">
-                <button type="button" id="btn-add-class" class="btn btn-secondary btn-full">เพิ่มห้องเรียน</button>
+                <input type="text" id="input-new-class-leader" placeholder="ชื่อหัวหน้าห้อง เช่น นายสมชาย มั่งมี" style="margin-top: 8px;">
+                <button type="button" id="btn-add-class" class="btn btn-secondary btn-full" style="margin-top: 8px;">เพิ่มห้องเรียน</button>
               </div>
             </div>
           </div>
@@ -451,8 +467,8 @@
     <div class="a4-page single-page-pdf">
       
       <!-- Central Logo -->
-      <div class="pdf-logo-wrapper">
-        <svg viewBox="0 0 100 100" class="pdf-logo-svg" width="60" height="60">
+      <div class="pdf-logo-wrapper" id="pdf-print-logo-container">
+        <svg viewBox="0 0 100 100" class="pdf-logo-svg" id="pdf-default-logo-svg" width="60" height="60">
           <circle cx="50" cy="50" r="48" stroke="#000" stroke-width="1.5" fill="none" />
           <circle cx="50" cy="50" r="43" stroke="#000" stroke-width="0.75" fill="none" />
           <path d="M50 15 L50 85 M15 50 L85 50" stroke="#000" stroke-width="0.5" stroke-dasharray="1 1" />
@@ -462,6 +478,7 @@
           <path d="M50 25 L50 40 M38 48 L46 48 M62 48 L54 48" stroke="#000" stroke-width="1" />
           <text x="50" y="80" font-family="'Sarabun', sans-serif" font-size="6" font-weight="700" text-anchor="middle">OFFICIAL</text>
         </svg>
+        <img id="pdf-custom-logo-img" style="display:none; max-height: 16mm; max-width: 16mm; object-fit: contain;" alt="โลโก้โรงเรียน">
       </div>
 
       <!-- Header Titles -->
@@ -544,7 +561,7 @@
               </div>
               <div class="pdf-sig-label">
                 ลงชื่อ ................................................. หัวหน้าห้อง<br>
-                ( &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )<br>
+                ( <span id="pdf-print-leader-name">-</span> )<br>
                 วันที่ <span id="pdf-print-date-sig-room">-</span>
               </div>
             </div>
