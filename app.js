@@ -615,7 +615,7 @@ async function syncToGoogleSheets() {
     }
   } catch (error) {
     console.error(error);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย หรือ โดนบล็อกสิทธิ์ CORS โปรดตรวจสอบ Apps Script deployment URL');
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย หรือ โดนบล็อกสิทธิ์ CORS\n\nคำแนะนำในการแก้ไข:\n1. ตรวจสอบว่าใน Apps Script ตอน Deploy ได้เลือก Who has access เป็น "Anyone" (ทุกคน) แล้วหรือยัง\n2. ตรวจสอบว่าคัดลอก URL ของ Web App มาวางถูกต้อง (ลิงก์ต้องลงท้ายด้วย /exec เท่านั้น)\n3. มั่นใจว่าได้กดให้สิทธิ์การใช้งานบัญชีกับสคริปต์ (Authorize Access) ตอน Deploy แล้ว');
   } finally {
     syncBtnText.innerText = 'ส่งข้อมูล & อัปโหลด Drive';
     syncBtn.disabled = false;
@@ -739,6 +739,11 @@ function setupSignaturePad() {
   
   // Mouse Draw
   canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    if (canvas.width === 0 || canvas.height === 0 || canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+      resizeCanvas();
+      drawStrokes();
+    }
     drawing = true;
     placeholder.style.display = 'none';
     const pos = getPos(e);
@@ -779,6 +784,11 @@ function setupSignaturePad() {
   // Touch Screen Draw (iPad/iPhone/Android)
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault(); // Prevents page from scrolling down while drawing
+    const rect = canvas.getBoundingClientRect();
+    if (canvas.width === 0 || canvas.height === 0 || canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+      resizeCanvas();
+      drawStrokes();
+    }
     placeholder.style.display = 'none';
     drawing = true;
     const pos = getPos(e.touches[0]);
