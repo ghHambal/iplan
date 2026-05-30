@@ -355,8 +355,8 @@ function doPost(e) {
     } else {
       const outcomeColIndex = headers.indexOf('ผลการจัดการเรียนรู้');
       const solutionColIndex = headers.indexOf('แนวทางแก้ปัญหา');
-      if (outcomeColIndex > -1) sheet.getCell(targetRowIndex, outcomeColIndex + 1).setValue(payload.outcomes || '');
-      if (solutionColIndex > -1) sheet.getCell(targetRowIndex, solutionColIndex + 1).setValue(payload.solutions || '');
+      if (outcomeColIndex > -1) sheet.getRange(targetRowIndex, outcomeColIndex + 1).setValue(payload.outcomes || '');
+      if (solutionColIndex > -1) sheet.getRange(targetRowIndex, solutionColIndex + 1).setValue(payload.solutions || '');
     }
     
     let pdfUrl = '';
@@ -383,8 +383,8 @@ function doPost(e) {
       
       const pdfColIndex = headers.indexOf('ลิงก์ไฟล์ PDF');
       let actualPdfCol = pdfColIndex === -1 ? headers.length : pdfColIndex;
-      if (pdfColIndex === -1) sheet.getCell(1, actualPdfCol + 1).setValue('ลิงก์ไฟล์ PDF');
-      sheet.getCell(targetRowIndex, actualPdfCol + 1).setValue(pdfUrl);
+      if (pdfColIndex === -1) sheet.getRange(1, actualPdfCol + 1).setValue('ลิงก์ไฟล์ PDF');
+      sheet.getRange(targetRowIndex, actualPdfCol + 1).setValue(pdfUrl);
     }
     
     return corsResponse({
