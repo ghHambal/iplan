@@ -929,6 +929,55 @@
     </div>
   </div>
 
+  <!-- Classroom Schedule & Periods Interactive Table Modal -->
+  <div class="modal-backdrop" id="schedule-table-modal">
+    <div class="modal glass-card modal-wide" style="max-width: 1280px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; background: rgba(20, 24, 46, 0.99); border: 1px solid rgba(99, 102, 241, 0.5); box-shadow: 0 25px 65px rgba(0,0,0,0.95);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--card-border); padding: 18px 24px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <i data-lucide="table" class="modal-header-icon" style="color: var(--primary);"></i>
+          <h2 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0;">ตารางจัดการแผนการจัดการเรียนรู้หน้าเดียวรายห้อง (แบบละเอียดทุกช่อง)</h2>
+        </div>
+        <button class="modal-close" id="btn-close-schedule-table">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 24px;">
+        <p class="text-muted" style="margin-bottom: 20px; font-size: 13.5px; line-height: 1.5; color: var(--text-muted);">
+          คุณสามารถแก้ไขข้อมูลแผนการสอนทุกช่องของห้องเรียนนี้ได้โดยตรงจากตารางจำลองสเปรดชีตด้านล่างนี้ (พิมพ์แก้ไขได้ทั้งวันที่, คาบที่สอน, เรื่อง, มาตรฐาน, กิจกรรม ฯลฯ) ข้อมูลที่บันทึกจะซิงก์กลับไปยัง Google Sheets รายห้องทันทีและเป็นฐานข้อมูลหลัก
+        </p>
+        
+        <div class="table-responsive" style="border-radius: var(--radius-md); border: 1px solid var(--card-border); overflow: auto; background: rgba(0,0,0,0.4); max-height: 60vh;">
+          <table class="schedule-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; table-layout: auto;">
+            <thead>
+              <tr style="background: rgba(99,102,241,0.2); border-bottom: 2px solid var(--card-border); color: var(--text-main); position: sticky; top: 0; z-index: 10; white-space: nowrap;">
+                <th style="padding: 12px 10px; font-weight: 700; width: 60px; text-align: center;">ครั้งที่</th>
+                <th style="padding: 12px 10px; font-weight: 700; width: 70px; text-align: center;">สัปดาห์</th>
+                <th style="padding: 12px 10px; font-weight: 700; width: 105px;">คาบที่สอน</th>
+                <th style="padding: 12px 10px; font-weight: 700; width: 120px;">วันที่สอนจริง</th>
+                <th style="padding: 12px 10px; font-weight: 700; width: 75px; text-align: center;">หน่วยที่</th>
+                <th style="padding: 12px 10px; font-weight: 700; min-width: 180px;">เรื่อง/หัวข้อที่สอน</th>
+                <th style="padding: 12px 10px; font-weight: 700; width: 75px; text-align: center;">จำนวนคาบ</th>
+                <th style="padding: 12px 10px; font-weight: 700; min-width: 220px;">มาตรฐานการเรียนรู้/ตัวชี้วัด</th>
+                <th style="padding: 12px 10px; font-weight: 700; min-width: 220px;">จุดประสงค์การเรียนรู้</th>
+                <th style="padding: 12px 10px; font-weight: 700; min-width: 260px;">กิจกรรมการเรียนรู้</th>
+                <th style="padding: 12px 10px; font-weight: 700; min-width: 180px;">การวัดและประเมินผล</th>
+                <th style="padding: 12px 10px; font-weight: 700; min-width: 180px;">สื่อการเรียนรู้</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-table-body" style="color: var(--text-muted);">
+              <!-- Dynamically populated in app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--card-border); display: flex; justify-content: flex-end; gap: 12px; background: rgba(0,0,0,0.3);">
+        <button id="btn-cancel-schedule-table" class="btn btn-secondary" style="padding: 10px 18px; font-size: 13px;">ยกเลิก</button>
+        <button id="btn-save-schedule-table" class="btn btn-primary" style="padding: 10px 24px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+          <i data-lucide="save" style="width:15px; height:15px;"></i>
+          <span>บันทึกตารางเรียนและแผนการสอน</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

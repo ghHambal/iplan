@@ -346,6 +346,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Register window resize listener for responsive scaling
+  window.addEventListener('resize', adjustPreviewScale);
+
   // อัปเดตส่วนนำเข้าข้ามเครื่องใน settings
   updateEasySetupShareSection();
 });
@@ -410,6 +413,7 @@ function loadCombinedLessons(courseId, classId) {
         week: p.week || '1',
         date: p.date || '',
         period: p.period || '1-2',
+        periodCount: String(p.periodCount || '2'),
         outcomes: p.outcomes || '-',
         solutions: p.solutions || '-',
         pdfUrl: p.pdfUrl || ''
@@ -420,6 +424,7 @@ function loadCombinedLessons(courseId, classId) {
         week: String(Math.floor(idx / 2) + 1),
         date: '',
         period: '1-2',
+        periodCount: String(p.periodCount || '2'),
         outcomes: '-',
         solutions: '-',
         pdfUrl: ''
@@ -448,6 +453,7 @@ function loadCombinedLessons(courseId, classId) {
       week: String(Math.floor(i / 2) + 1),
       date: '',
       period: '1-2',
+      periodCount: '2',
       outcomes: '-',
       solutions: '-',
       pdfUrl: ''
@@ -485,6 +491,7 @@ function saveClassLessons(classId, runtimePlans) {
     week: String(p.week || '1'),
     date: p.date || '',
     period: p.period || '1-2',
+    periodCount: String(p.periodCount || '2'),
     outcomes: p.outcomes || '-',
     solutions: p.solutions || '-',
     pdfUrl: p.pdfUrl || ''
@@ -667,6 +674,26 @@ function initializeUI() {
   const btnWorkspaceSettings = document.getElementById('btn-workspace-settings');
   if (btnWorkspaceSettings) {
     btnWorkspaceSettings.addEventListener('click', openSettings);
+  }
+
+  const btnWorkspaceSchedule = document.getElementById('btn-workspace-schedule');
+  if (btnWorkspaceSchedule) {
+    btnWorkspaceSchedule.addEventListener('click', openScheduleTableModal);
+  }
+  
+  const btnCloseScheduleTable = document.getElementById('btn-close-schedule-table');
+  if (btnCloseScheduleTable) {
+    btnCloseScheduleTable.addEventListener('click', closeScheduleTableModal);
+  }
+
+  const btnCancelScheduleTable = document.getElementById('btn-cancel-schedule-table');
+  if (btnCancelScheduleTable) {
+    btnCancelScheduleTable.addEventListener('click', closeScheduleTableModal);
+  }
+
+  const btnSaveScheduleTable = document.getElementById('btn-save-schedule-table');
+  if (btnSaveScheduleTable) {
+    btnSaveScheduleTable.addEventListener('click', saveScheduleTable);
   }
   
   document.getElementById('btn-close-settings').addEventListener('click', () => {
@@ -1276,6 +1303,14 @@ function selectLesson(index) {
   document.getElementById('selected-week-title').innerText = `สัปดาห์ที่ ${plan.week} - แผนการสอนครั้งที่ ${plan.once}`;
   document.getElementById('selected-week-subtitle').innerText = `เรื่อง: ${plan.topic} (วันที่สอน: ${displayDate})`;
   
+  // Set Mobile Reflect context banner
+  const reflectTitleEl = document.getElementById('mobile-reflect-lesson-title');
+  const reflectDateEl = document.getElementById('mobile-reflect-date-badge');
+  const reflectTopicEl = document.getElementById('mobile-reflect-topic');
+  if (reflectTitleEl) reflectTitleEl.innerText = `สัปดาห์ที่ ${plan.week} - ครั้งที่ ${plan.once}`;
+  if (reflectDateEl) reflectDateEl.innerText = displayDate || 'ยังไม่ได้ระบุวันที่';
+  if (reflectTopicEl) reflectTopicEl.innerText = `เรื่อง: ${plan.topic}`;
+  
   document.getElementById('lesson-date-badge').innerText = displayDate;
   document.getElementById('lbl-week').innerText = plan.week;
   document.getElementById('lbl-once').innerText = plan.once;
@@ -1296,8 +1331,9 @@ function selectLesson(index) {
   document.getElementById('txt-outcomes').value = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
   document.getElementById('txt-solutions').value = (plan.solutions === '-') ? '' : (plan.solutions || '');
 
-  // Safety clear signature pad
-  clearSignature();
+  // Load and draw global signature if exists, instead of erasing it!
+  strokes = [];
+  drawStrokes();
   
   document.querySelector('.app-main').scrollTop = 0;
 }
@@ -1845,23 +1881,42 @@ async function syncAllLessonsToCloud() {
   const currentClass = classes.find(c => c.id === activeClassId);
   if (!currentCourse || !currentClass) return;
 
-  const sheetTabName = getSafeSheetName(currentCourse.code, currentClass.name);
+  const courseSheetName = getSafeSheetName(currentCourse.code, '');
+  const classSheetName = getSafeSheetName(currentCourse.code, currentClass.name);
 
   try {
-    const payload = {
+    // 1. Sync academic details to Course Sheet tab
+    const coursePayload = {
       action: 'saveAllLessons',
-      sheetName: sheetTabName,
+      sheetName: courseSheetName,
       lessons: lessonPlans
     };
-    const response = await fetch(config.gasUrl, {
+    const courseSync = fetch(config.gasUrl, {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(coursePayload)
     });
-    const result = await response.json();
-    if (result.status === 'success') {
-      showToast('ซิงค์แผนการสอนทั้งหมดขึ้น Cloud เรียบร้อยแล้ว ✓');
+
+    // 2. Sync classroom-specific details to Classroom Sheet tab
+    const classPayload = {
+      action: 'saveAllLessons',
+      sheetName: classSheetName,
+      lessons: lessonPlans
+    };
+    const classSync = fetch(config.gasUrl, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(classPayload)
+    });
+
+    const [res1, res2] = await Promise.all([courseSync, classSync]);
+    const r1 = await res1.json();
+    const r2 = await res2.json();
+
+    if (r1.status === 'success' && r2.status === 'success') {
+      showToast('ซิงค์หลักสูตรและข้อมูลห้องเรียนขึ้น Cloud สำเร็จ ✓');
     }
   } catch (err) {
     console.error('syncAllLessonsToCloud error:', err);
@@ -1978,36 +2033,42 @@ async function fetchLiveGoogleData() {
       const course = courses.find(c => c.id === cls.courseId);
       if (!course) return;
 
-      const sheetTabName = getSafeSheetName(course.code, cls.name);
-      const url = `${config.gasUrl}?sheetName=${encodeURIComponent(sheetTabName)}`;
+      const classSheetName = getSafeSheetName(course.code, cls.name);
+      const courseSheetName = getSafeSheetName(course.code, ''); // e.g. 'ค32101'
+      
+      const classUrl = `${config.gasUrl}?sheetName=${encodeURIComponent(classSheetName)}`;
+      const courseUrl = `${config.gasUrl}?sheetName=${encodeURIComponent(courseSheetName)}`;
 
       try {
-        const response = await fetch(url);
-        const result = await response.json();
+        // 1. ลองดึงข้อมูลทั้งหมดจากชีทห้องเรียนก่อน เผื่อครูเข้ามาพิมพ์แก้ไขฐานข้อมูลชีทโดยตรง
+        const classResponse = await fetch(classUrl);
+        const classResult = await classResponse.json();
 
-        if (result.status === 'success' && result.data && result.data.length > 0) {
-          // Map remote columns to full lesson plan properties
-          const remoteLessons = result.data.map(sheetItem => ({
+        if (classResult.status === 'success' && classResult.data && classResult.data.length > 0) {
+          // ในชีทห้องเรียนมีแถวข้อมูลสมบูรณ์ → โหลดข้อมูลทุกช่อง (รวมทั้งข้อมูลแผนหลักเชิงวิชาการด้วย)
+          const remoteLessons = classResult.data.map(sheetItem => ({
             once: String(sheetItem['ครั้งที่'] || ''),
             week: String(sheetItem['Week'] || '1'),
-            period: String(sheetItem['คาบที่สอน'] || '1-2'),
             date: String(sheetItem['วว/ดด/ปป ที่สอน'] || ''),
+            period: String(sheetItem['คาบที่สอน'] || '1-2'),
+            periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
+            outcomes: String(sheetItem['ผลการจัดการเรียนรู้'] || '-'),
+            solutions: String(sheetItem['แนวทางแก้ปัญหา'] || '-'),
+            pdfUrl: String(sheetItem['ลิงก์ไฟล์ PDF'] || ''),
+            
+            // คอลัมน์ทางวิชาการ (ดึงตรงจากชีทห้องเรียน เผื่อกรณีครูแก้ไขผ่าน Google ชีทในแท็บห้อง)
             unit: String(sheetItem['หน่วยการเรียนรู้ที่'] || '1'),
             topic: String(sheetItem['เรื่อง'] || ''),
-            periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
             standard: String(sheetItem['มาตรฐานการเรียนรู้/ตัวชี้วัด'] || ''),
             objectives: String(sheetItem['จุดประสงค์การเรียนรู้'] || ''),
             activities: String(sheetItem['กิจกรรมการเรียนรู้'] || ''),
             assessment: String(sheetItem['การวัดและประเมินผล'] || ''),
-            materials: String(sheetItem['สื่อการเรียนรู้'] || ''),
-            outcomes: String(sheetItem['ผลการจัดการเรียนรู้'] || '-'),
-            solutions: String(sheetItem['แนวทางแก้ปัญหา'] || '-'),
-            pdfUrl: String(sheetItem['ลิงก์ไฟล์ PDF'] || '')
+            materials: String(sheetItem['สื่อการเรียนรู้'] || '')
           }));
 
-          // Split into courseLessons and classLessons
           const courseLessons = remoteLessons.map(p => ({
             once: p.once,
+            week: p.week,
             unit: p.unit,
             topic: p.topic,
             periodCount: p.periodCount,
@@ -2023,6 +2084,7 @@ async function fetchLiveGoogleData() {
             week: p.week,
             date: p.date,
             period: p.period,
+            periodCount: p.periodCount,
             outcomes: p.outcomes,
             solutions: p.solutions,
             pdfUrl: p.pdfUrl
@@ -2030,31 +2092,76 @@ async function fetchLiveGoogleData() {
 
           localStorage.setItem(`iplane_course_lessons_${cls.courseId}`, JSON.stringify(courseLessons));
           localStorage.setItem(`iplane_class_lessons_${cls.id}`, JSON.stringify(classLessons));
-        } else if (result.status === 'success' && (!result.data || result.data.length === 0)) {
-          // If the sheet in the cloud is empty/newly created, push local default data to it in background
-          const localPlans = loadCombinedLessons(cls.courseId, cls.id);
-          if (localPlans.length > 0) {
-            const payload = {
-              action: 'saveAllLessons',
-              sheetName: sheetTabName,
-              lessons: localPlans
-            };
-            fetch(config.gasUrl, {
-              method: 'POST',
-              mode: 'cors',
-              headers: { 'Content-Type': 'text/plain' },
-              body: JSON.stringify(payload)
-            }).catch(e => console.error('Error auto-populating sheet:', e));
+        } else {
+          // 2. หากชีทห้องเรียนไม่มีข้อมูล (ว่างเปล่า) → ให้ลองไปโหลดแม่แบบแผนหลักจากชีทรายวิชากลาง
+          const courseResponse = await fetch(courseUrl);
+          const courseResult = await courseResponse.json();
+
+          let courseLessons = [];
+          if (courseResult.status === 'success' && courseResult.data && courseResult.data.length > 0) {
+            courseLessons = courseResult.data.map(sheetItem => ({
+              once: String(sheetItem['ครั้งที่'] || ''),
+              week: String(sheetItem['Week'] || '1'),
+              unit: String(sheetItem['หน่วยการเรียนรู้ที่'] || '1'),
+              topic: String(sheetItem['เรื่อง'] || ''),
+              periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
+              standard: String(sheetItem['มาตรฐานการเรียนรู้/ตัวชี้วัด'] || ''),
+              objectives: String(sheetItem['จุดประสงค์การเรียนรู้'] || ''),
+              activities: String(sheetItem['กิจกรรมการเรียนรู้'] || ''),
+              assessment: String(sheetItem['การวัดและประเมินผล'] || ''),
+              materials: String(sheetItem['สื่อการเรียนรู้'] || '')
+            }));
+            localStorage.setItem(`iplane_course_lessons_${cls.courseId}`, JSON.stringify(courseLessons));
+          } else {
+            // โหลดดึงจากค่า Local Fallback
+            const savedLocal = localStorage.getItem(`iplane_course_lessons_${cls.courseId}`);
+            if (savedLocal) {
+              try { courseLessons = JSON.parse(savedLocal); } catch(e){}
+            }
+            if (!courseLessons || courseLessons.length === 0) {
+              courseLessons = JSON.parse(JSON.stringify(DEFAULT_LESSON_PLANS));
+            }
           }
+
+          // สร้างรายละเอียดกำหนดการสำหรับห้องเรียนนี้
+          const classLessons = courseLessons.map((p, idx) => ({
+            once: p.once,
+            week: p.week,
+            date: '',
+            period: '1-2',
+            periodCount: p.periodCount,
+            outcomes: '-',
+            solutions: '-',
+            pdfUrl: ''
+          }));
+          localStorage.setItem(`iplane_class_lessons_${cls.id}`, JSON.stringify(classLessons));
+
+          // เขียนบันทึกตารางเรียนตั้งต้นขึ้น Google ชีทในแท็บห้องเรียนทันที
+          const combined = courseLessons.map((p, idx) => ({
+            ...p,
+            ...classLessons[idx]
+          }));
+
+          const payload = {
+            action: 'saveAllLessons',
+            sheetName: classSheetName,
+            lessons: combined
+          };
+          fetch(config.gasUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+          }).catch(e => console.error('Error auto-populating classroom sheet:', e));
         }
       } catch (err) {
-        console.error('Error fetching data for class:', cls.name, err);
+        console.error('Error fetching data for classroom:', cls.name, err);
       }
     });
 
     await Promise.all(fetchPromises);
 
-    // Reload into active state and render
+    // รีโหลดโครงสร้างข้อมูลรายวิชาและห้องเรียนหลักที่ใช้งานอยู่และแสดงผล
     lessonPlans = loadCombinedLessons(activeCourseId, activeClassId);
 
     renderDashboard();
@@ -2897,6 +3004,27 @@ function parseCSV(text) {
 // ==========================================
 // 11. Immersive A4 Print Preview Modal Control
 // ==========================================
+function adjustPreviewScale() {
+  const host = document.getElementById('preview-page-host');
+  if (!host) return;
+  const parent = host.parentElement; // .modal-body
+  if (!parent) return;
+
+  const parentWidth = parent.clientWidth - 48; // Subtract typical modal paddings
+  const a4Width = 794; // Exact A4 width in px at 96 dpi
+
+  let scale = 1;
+  if (parentWidth < a4Width) {
+    scale = parentWidth / a4Width;
+  }
+
+  host.style.transform = `scale(${scale})`;
+  
+  // Offsets negative height gap to pull content scroll area height inline
+  const heightDifference = 1123 * (1 - scale);
+  host.style.marginBottom = `-${heightDifference}px`;
+}
+
 function openA4PreviewModal() {
   populatePrintTemplate();
 
@@ -2913,6 +3041,9 @@ function openA4PreviewModal() {
   // Toggle open
   document.getElementById('preview-modal').classList.add('open');
   lucide.createIcons();
+  
+  // Recalculate dynamic responsive scale immediately
+  setTimeout(adjustPreviewScale, 100);
 }
 
 function closeA4PreviewModal() {
@@ -2922,5 +3053,128 @@ function closeA4PreviewModal() {
     printEl.style.display = 'none';
     document.body.appendChild(printEl);
   }
+}
+
+// ==========================================
+// 12. Classroom Schedule Table Modal Logic
+// ==========================================
+function openScheduleTableModal() {
+  const modal = document.getElementById('schedule-table-modal');
+  const tbody = document.getElementById('schedule-table-body');
+  if (!modal || !tbody) return;
+
+  tbody.innerHTML = '';
+  
+  lessonPlans.forEach((plan, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding: 8px; text-align: center; font-weight: 700; color: var(--text-main);">${plan.once}</td>
+      <td style="padding: 8px; text-align: center; font-weight: 600;">
+        <input type="text" class="sched-week" data-index="${idx}" value="${plan.week || ''}" style="padding: 4px 8px; text-align: center; width: 45px;">
+      </td>
+      <td style="padding: 8px;">
+        <input type="text" class="sched-period" data-index="${idx}" value="${plan.period || ''}" placeholder="เช่น 6-7" style="padding: 4px 8px; width: 85px;">
+      </td>
+      <td style="padding: 8px;">
+        <input type="text" class="sched-date" data-index="${idx}" value="${plan.date || ''}" placeholder="เช่น 12/05/2568" style="padding: 4px 8px; width: 105px;">
+      </td>
+      <td style="padding: 8px;">
+        <input type="text" class="sched-unit" data-index="${idx}" value="${plan.unit || ''}" style="padding: 4px 8px; text-align: center; width: 60px;">
+      </td>
+      <td style="padding: 8px;">
+        <input type="text" class="sched-topic" data-index="${idx}" value="${plan.topic || ''}" placeholder="ระบุเรื่อง" style="padding: 4px 8px; min-width: 150px;">
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <input type="text" class="sched-period-count" data-index="${idx}" value="${plan.periodCount || '2'}" style="padding: 4px 8px; text-align: center; width: 45px;">
+      </td>
+      <td style="padding: 8px;">
+        <textarea class="sched-standard" data-index="${idx}" rows="2" style="min-width: 200px; resize: vertical;">${plan.standard || ''}</textarea>
+      </td>
+      <td style="padding: 8px;">
+        <textarea class="sched-objectives" data-index="${idx}" rows="2" style="min-width: 200px; resize: vertical;">${plan.objectives || ''}</textarea>
+      </td>
+      <td style="padding: 8px;">
+        <textarea class="sched-activities" data-index="${idx}" rows="2" style="min-width: 230px; resize: vertical;">${plan.activities || ''}</textarea>
+      </td>
+      <td style="padding: 8px;">
+        <textarea class="sched-assessment" data-index="${idx}" rows="2" style="min-width: 160px; resize: vertical;">${plan.assessment || ''}</textarea>
+      </td>
+      <td style="padding: 8px;">
+        <textarea class="sched-materials" data-index="${idx}" rows="2" style="min-width: 160px; resize: vertical;">${plan.materials || ''}</textarea>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  modal.classList.add('open');
+  lucide.createIcons();
+}
+
+function closeScheduleTableModal() {
+  const modal = document.getElementById('schedule-table-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function saveScheduleTable() {
+  const tbody = document.getElementById('schedule-table-body');
+  if (!tbody) return;
+
+  const weekInputs = tbody.querySelectorAll('.sched-week');
+  const periodInputs = tbody.querySelectorAll('.sched-period');
+  const dateInputs = tbody.querySelectorAll('.sched-date');
+  const unitInputs = tbody.querySelectorAll('.sched-unit');
+  const topicInputs = tbody.querySelectorAll('.sched-topic');
+  const periodCountInputs = tbody.querySelectorAll('.sched-period-count');
+  
+  const standardTextareas = tbody.querySelectorAll('.sched-standard');
+  const objectivesTextareas = tbody.querySelectorAll('.sched-objectives');
+  const activitiesTextareas = tbody.querySelectorAll('.sched-activities');
+  const assessmentTextareas = tbody.querySelectorAll('.sched-assessment');
+  const materialsTextareas = tbody.querySelectorAll('.sched-materials');
+
+  let hasChanges = false;
+  
+  const updateField = (inputs, key) => {
+    inputs.forEach(input => {
+      const idx = parseInt(input.dataset.index);
+      const val = input.value.trim();
+      if (lessonPlans[idx][key] !== val) {
+        lessonPlans[idx][key] = val;
+        hasChanges = true;
+      }
+    });
+  };
+
+  updateField(weekInputs, 'week');
+  updateField(periodInputs, 'period');
+  updateField(dateInputs, 'date');
+  updateField(unitInputs, 'unit');
+  updateField(topicInputs, 'topic');
+  updateField(periodCountInputs, 'periodCount');
+  
+  updateField(standardTextareas, 'standard');
+  updateField(objectivesTextareas, 'objectives');
+  updateField(activitiesTextareas, 'activities');
+  updateField(assessmentTextareas, 'assessment');
+  updateField(materialsTextareas, 'materials');
+
+  if (hasChanges) {
+    // เซฟลงฐานข้อมูล LocalStorage
+    saveClassLessons(activeClassId, lessonPlans);
+    saveCourseLessons(activeCourseId, lessonPlans);
+    
+    // อัปเดตรีเฟรชหน้าจอ UI ฝั่งซ้ายและขวาตรงจุดทำงานหลักทันที
+    selectLesson(selectedIndex);
+
+    // ซิงก์ขึ้น Google Sheets
+    if (config.gasUrl) {
+      showToast('กำลังบันทึกข้อมูลตารางและแผนการสอนขึ้น Cloud...');
+      await syncAllLessonsToCloud();
+    } else {
+      showToast('บันทึกแผนและตารางเรียนลงเครื่องสำเร็จ ✓');
+    }
+  }
+
+  closeScheduleTableModal();
 }
 

@@ -171,7 +171,7 @@ function doGet(e) {
       sheet = createAndSetupSheet(ss, sheetName);
     }
     
-    const rows = sheet.getDataRange().getValues();
+    const rows = sheet.getDataRange().getDisplayValues();
     if (rows.length <= 1) {
       return corsResponse({ status: 'success', data: [] });
     }
@@ -265,7 +265,7 @@ function doPost(e) {
       
       const lessons = payload.lessons || [];
       if (lessons.length > 0) {
-        const headers = sheet.getDataRange().getValues()[0].map(h => String(h).trim());
+        const headers = sheet.getDataRange().getDisplayValues()[0].map(h => String(h).trim());
         const rowsToAppend = [];
         
         lessons.forEach(p => {
@@ -310,7 +310,7 @@ function doPost(e) {
       sheet = createAndSetupSheet(ss, sheetName);
     }
     
-    let values = sheet.getDataRange().getValues();
+    let values = sheet.getDataRange().getDisplayValues();
     let headers = values[0].map(h => String(h).trim());
     
     const onceValue = String(payload.once).trim();
@@ -350,7 +350,7 @@ function doPost(e) {
         if (fieldMappings[header] !== undefined) newRow[index] = fieldMappings[header];
       });
       sheet.appendRow(newRow);
-      values = sheet.getDataRange().getValues();
+      values = sheet.getDataRange().getDisplayValues();
       targetRowIndex = values.length;
     } else {
       const outcomeColIndex = headers.indexOf('ผลการจัดการเรียนรู้');

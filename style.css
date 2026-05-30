@@ -1734,3 +1734,62 @@ body.workspace-active .wtab-content {
   }
 }
 
+/* ==========================================
+   11. Classroom Schedule Table Modal Styles
+   ========================================== */
+.schedule-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.schedule-table th, .schedule-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--card-border);
+  vertical-align: middle;
+}
+.schedule-table tbody tr {
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.schedule-table tbody tr:hover {
+  background-color: rgba(99, 102, 241, 0.03);
+}
+.schedule-table input {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.schedule-table input:focus {
+  border-color: var(--primary);
+  background-color: rgba(0, 0, 0, 0.7);
+  outline: none;
+}
+
+.schedule-table textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  overflow-y: auto;
+}
+.schedule-table textarea:focus {
+  border-color: var(--primary);
+  background-color: rgba(0, 0, 0, 0.7);
+  outline: none;
+}
+
+
+
