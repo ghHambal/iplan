@@ -264,3 +264,24 @@ function doPost(e) {
     return corsResponse({ status: 'error', message: err.toString() });
   }
 }
+
+/**
+ * ฟังก์ชันทดสอบการทำงาน: คุณครูสามารถเลือกฟังก์ชัน "testRun" ในแถบด้านบนแล้วกดปุ่ม "เรียกใช้" (Run) เพื่อทดสอบสคริปต์ได้
+ */
+function testRun() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const testSheetName = 'ทดสอบ_สร้างแท็บอัตโนมัติ';
+  
+  Logger.log('--- เริ่มการทดสอบ iPlane Backend ---');
+  let sheet = ss.getSheetByName(testSheetName);
+  
+  if (!sheet) {
+    Logger.log('ไม่พบแผ่นงานเดิม... กำลังทดสอบสร้างแท็บใหม่: ' + testSheetName);
+    sheet = createAndSetupSheet(ss, testSheetName);
+    Logger.log('สร้างและย้อมสีหัวตารางแผ่นงานสำเร็จ!');
+  } else {
+    Logger.log('พบแผ่นงานทดสอบเดิมอยู่แล้วในระบบ');
+  }
+  
+  Logger.log('เสร็จสิ้นการทดสอบโดยสมบูรณ์!');
+}
