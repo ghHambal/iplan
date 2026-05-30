@@ -1636,11 +1636,11 @@ body.workspace-active #dashboard-view {
 }
 
 /* Adjustments for showing/hiding dashboard vs workspace */
-.wtab-content, .app-header, .mobile-week-scroller, .workspace-tabs-bar {
-  display: none !important;
-}
-
-.content-grid {
+body:not(.workspace-active) .wtab-content,
+body:not(.workspace-active) .app-header,
+body:not(.workspace-active) .mobile-week-scroller,
+body:not(.workspace-active) .workspace-tabs-bar,
+body:not(.workspace-active) .content-grid {
   display: none !important;
 }
 
@@ -1666,6 +1666,10 @@ body:not(.workspace-active) .nav-section-title {
 }
 
 @media (max-width: 1024px) {
+  body.workspace-active .app-header {
+    display: flex !important;
+  }
+
   body.workspace-active .content-grid {
     display: block !important; /* parent must be visible so tabs can display! */
     padding: 16px;
@@ -1684,6 +1688,10 @@ body:not(.workspace-active) .nav-section-title {
   }
   
   body.workspace-active .workspace-tabs-bar {
+    display: flex !important;
+  }
+
+  .mobile-only-reflect-banner {
     display: flex !important;
   }
   

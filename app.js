@@ -1048,6 +1048,13 @@ function updateProfileLabels() {
   const currentCourse = courses.find(c => c.id === activeCourseId);
   const currentClass = classes.find(c => c.id === activeClassId);
 
+  // Update mobile reflection classroom banner
+  const mobileReflectClassroom = document.getElementById('mobile-reflect-classroom-name');
+  if (mobileReflectClassroom && currentCourse && currentClass) {
+    mobileReflectClassroom.innerHTML = `<i data-lucide="graduation-cap" style="width: 16px; height: 16px;"></i> <span>${currentCourse.code} - ${currentClass.name}</span>`;
+    lucide.createIcons();
+  }
+
   if (currentCourse) {
     document.getElementById('active-course-label').innerText = `วิชา: ${currentCourse.name} (${currentCourse.code})`;
     
