@@ -324,6 +324,148 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Decoupled Course and Classroom Data Loader and Savers
+function loadCombinedLessons(courseId, classId) {
+  // 1. Load course-specific academic details
+  const courseKey = `iplane_course_lessons_${courseId}`;
+  let coursePlans = null;
+  const savedCoursePlans = localStorage.getItem(courseKey);
+  if (savedCoursePlans) {
+    try {
+      coursePlans = JSON.parse(savedCoursePlans);
+    } catch(e) {}
+  }
+
+  // 2. Load classroom-specific schedule & outcomes
+  const classKey = `iplane_class_lessons_${classId}`;
+  let classPlans = null;
+  const savedClassPlans = localStorage.getItem(classKey);
+  if (savedClassPlans) {
+    try {
+      classPlans = JSON.parse(savedClassPlans);
+    } catch(e) {}
+  }
+
+  // 3. Fallback to Legacy Single Key if either is missing
+  const legacyKey = `iplane_lessons_${courseId}_${classId}`;
+  const legacyData = localStorage.getItem(legacyKey);
+  let legacyPlans = null;
+  if (legacyData) {
+    try {
+      legacyPlans = JSON.parse(legacyData);
+    } catch(e) {}
+  }
+
+  // 4. Initialize Course Plans if not present
+  if (!coursePlans) {
+    if (legacyPlans && legacyPlans.length > 0) {
+      coursePlans = legacyPlans.map(p => ({
+        once: String(p.once),
+        unit: p.unit || '1',
+        topic: p.topic || `เรื่องการเรียนรู้ครั้งที่ ${p.once}`,
+        periodCount: String(p.periodCount || '2'),
+        standard: p.standard || 'มาตรฐานการเรียนรู้ ค1.1...',
+        objectives: p.objectives || '- เพื่อให้นักเรียนเข้าใจเนื้อหาบทเรียน',
+        activities: p.activities || 'ขั้นนำ:\n- ครูให้นักเรียนกันร่วมกันอธิบายการเขียนเลขยกกำลัง ให้อยู่ในรูปรากที่ n หรือกรณฑ์\n\nขั้นสอน\n- ครูตั้งคำถามปลายเปิดว่าเราสามารถนำความรู้เรื่องเลขยกกำลังไปประยุกต์ใช้ในชีวิตประจำวัน และสามารถแก้สมการบางอย่างได้หรือไม่?\n- ครูแนะนำว่าเราสามารถแก้สมการที่อยู่ในรูปยกกำลังได้\n- ครูยกตัวอย่างมา 2-3 ข้อ\n- นักเรียนร่วมกันทำแบบฝึกทักษะหน้าที่ 8 โดยมีครูคอยให้คำแนะนำ\n\nขั้นสรุป\n- นักเรียนและครูร่วมกันสรุปเกี่ยวกับการหาคำตอบของสมการที่อยู่ในรูปเลขยกกำลัง',
+        assessment: p.assessment || '- สังเกตจากการสอบถามระหว่างเรียน\n- ตรวจแบบฝึกทักษะ หน้าที่ 8 โดยผ่านเกณฑ์ 70% ขึ้นไป',
+        materials: p.materials || '- หนังสือเรียนคณิตศาสตร์พื้นฐาน ม.5\n- แบบฝึกทักษะ เรื่องเลขยกกำลัง'
+      }));
+    } else {
+      coursePlans = JSON.parse(JSON.stringify(DEFAULT_LESSON_PLANS));
+    }
+    localStorage.setItem(courseKey, JSON.stringify(coursePlans));
+  }
+
+  // 5. Initialize Class Plans if not present
+  if (!classPlans) {
+    if (legacyPlans && legacyPlans.length > 0) {
+      classPlans = legacyPlans.map(p => ({
+        once: String(p.once),
+        week: p.week || '1',
+        date: p.date || '',
+        period: p.period || '1-2',
+        outcomes: p.outcomes || '-',
+        solutions: p.solutions || '-',
+        pdfUrl: p.pdfUrl || ''
+      }));
+    } else {
+      classPlans = coursePlans.map((p, idx) => ({
+        once: String(p.once),
+        week: String(Math.floor(idx / 2) + 1),
+        date: '',
+        period: '1-2',
+        outcomes: '-',
+        solutions: '-',
+        pdfUrl: ''
+      }));
+    }
+    localStorage.setItem(classKey, JSON.stringify(classPlans));
+  }
+
+  // 6. Merge Academic & Classroom specific data
+  const combined = [];
+  const totalLength = Math.max(coursePlans.length, classPlans.length);
+  for (let i = 0; i < totalLength; i++) {
+    const coursePlan = coursePlans[i] || {
+      once: String(i + 1),
+      unit: '1',
+      topic: `เรื่องการเรียนรู้ครั้งที่ ${i + 1}`,
+      periodCount: '2',
+      standard: 'มาตรฐานการเรียนรู้...',
+      objectives: '- เพื่อให้นักเรียนเข้าใจเนื้อหาบทเรียน',
+      activities: 'ขั้นนำ:\n- ทักทาย\n\nขั้นสอน:\n- บรรยาย\n\nขั้นสรุป:\n- สรุป',
+      assessment: '- สังเกตพฤติกรรมในคาบเรียน',
+      materials: '- หนังสือเรียน'
+    };
+    const classPlan = classPlans[i] || {
+      once: String(i + 1),
+      week: String(Math.floor(i / 2) + 1),
+      date: '',
+      period: '1-2',
+      outcomes: '-',
+      solutions: '-',
+      pdfUrl: ''
+    };
+
+    combined.push({
+      ...coursePlan,
+      ...classPlan
+    });
+  }
+
+  return combined;
+}
+
+function saveCourseLessons(courseId, runtimePlans) {
+  const courseKey = `iplane_course_lessons_${courseId}`;
+  const coursePlans = runtimePlans.map(p => ({
+    once: String(p.once),
+    unit: p.unit || '1',
+    topic: p.topic || '',
+    periodCount: String(p.periodCount || '2'),
+    standard: p.standard || '',
+    objectives: p.objectives || '',
+    activities: p.activities || '',
+    assessment: p.assessment || '',
+    materials: p.materials || ''
+  }));
+  localStorage.setItem(courseKey, JSON.stringify(coursePlans));
+}
+
+function saveClassLessons(classId, runtimePlans) {
+  const classKey = `iplane_class_lessons_${classId}`;
+  const classPlans = runtimePlans.map(p => ({
+    once: String(p.once),
+    week: String(p.week || '1'),
+    date: p.date || '',
+    period: p.period || '1-2',
+    outcomes: p.outcomes || '-',
+    solutions: p.solutions || '-',
+    pdfUrl: p.pdfUrl || ''
+  }));
+  localStorage.setItem(classKey, JSON.stringify(classPlans));
+}
+
 // Load variables from LocalStorage or fallbacks
 function loadDatabaseState() {
   // Load Courses
@@ -348,19 +490,8 @@ function loadDatabaseState() {
     localStorage.setItem('iplane_classes', JSON.stringify(classes));
   }
 
-  // Load Lesson plans list for active Course-Class combination
-  const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
-  const savedLessons = localStorage.getItem(storageKey);
-  if (savedLessons) {
-    try {
-      lessonPlans = JSON.parse(savedLessons);
-    } catch (e) {
-      lessonPlans = JSON.parse(JSON.stringify(DEFAULT_LESSON_PLANS));
-    }
-  } else {
-    lessonPlans = JSON.parse(JSON.stringify(DEFAULT_LESSON_PLANS));
-    localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
-  }
+  // Load Lesson plans list for active Course-Class combination using the Decoupled Schema
+  lessonPlans = loadCombinedLessons(activeCourseId, activeClassId);
 }
 
 // Bind all UI Actions, tabs, and modal controllers
@@ -512,8 +643,39 @@ function initializeUI() {
 
   // Layout action button bindings
   document.getElementById('btn-save-offline').addEventListener('click', () => saveLessonProgress(true));
-  document.getElementById('btn-sync-google').addEventListener('click', syncToGoogleSheets);
-  document.getElementById('btn-export-pdf').addEventListener('click', exportPDFDocument);
+  document.getElementById('btn-sync-google').addEventListener('click', openA4PreviewModal);
+  document.getElementById('btn-export-pdf').addEventListener('click', openA4PreviewModal);
+
+  // Immersive A4 Print Preview Modal bindings
+  document.getElementById('btn-close-preview').addEventListener('click', closeA4PreviewModal);
+  document.getElementById('btn-preview-close').addEventListener('click', closeA4PreviewModal);
+  document.getElementById('btn-preview-save-offline').addEventListener('click', () => saveLessonProgress(true));
+  
+  document.getElementById('btn-preview-sync-google').addEventListener('click', () => {
+    const saved = saveLessonProgress(false);
+    if (!saved) {
+      alert('กรุณากรอกบันทึกหลังสอนและเขียนลายเซ็นก่อนส่งข้อมูล');
+      return;
+    }
+    if (!isSignatureDrawn) {
+      alert('กรุณาเซ็นชื่อผู้สอนเพื่อแนบลงในรายงานแผนการสอนก่อนทำการซิงก์');
+      return;
+    }
+    syncToGoogleSheets();
+  });
+
+  document.getElementById('btn-preview-export-pdf').addEventListener('click', () => {
+    const saved = saveLessonProgress(false);
+    if (!saved) {
+      alert('กรุณากรอกบันทึกหลังสอนก่อนดึงเอกสาร PDF');
+      return;
+    }
+    if (!isSignatureDrawn) {
+      alert('กรุณาเขียนลายเซ็นดิจิทัลในแอปเพื่อลงนามแนบท้ายเอกสาร');
+      return;
+    }
+    exportPDFDocument();
+  });
 
   // Active dropdown switch updates
   document.getElementById('select-active-course').addEventListener('change', (e) => {
@@ -723,9 +885,8 @@ function saveLessonProgress(showNotification = false) {
   lessonPlans[selectedIndex].outcomes = outcomeText;
   lessonPlans[selectedIndex].solutions = solutionText;
 
-  // Save to active course-class local state key
-  const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
-  localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
+  // Save to classroom local state using decouple saver
+  saveClassLessons(activeClassId, lessonPlans);
   
   renderSidebar();
 
@@ -871,9 +1032,9 @@ function runAutoDateRunner() {
   // Write new array to the global state
   lessonPlans = newPlans;
 
-  // Save new progress dataset to LocalStorage
-  const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
-  localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
+  // Save new progress dataset to LocalStorage using decoupled savers
+  saveCourseLessons(activeCourseId, lessonPlans);
+  saveClassLessons(activeClassId, lessonPlans);
 
   // Render calculated list preview inside box
   const previewBox = document.getElementById('date-preview-list');
@@ -945,9 +1106,9 @@ function saveInlineEditedLesson() {
   plan.assessment = document.getElementById('edit-lesson-assessment').value.trim();
   plan.materials = document.getElementById('edit-lesson-materials').value.trim();
 
-  // Save full array to LocalStorage
-  const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
-  localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
+  // Save full array to LocalStorage using decoupled savers
+  saveCourseLessons(activeCourseId, lessonPlans);
+  saveClassLessons(activeClassId, lessonPlans);
   
   // Rebuild selections and previews
   renderSidebar();
@@ -1036,8 +1197,7 @@ async function fetchLiveGoogleData() {
         }
       });
 
-      const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
-      localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
+      saveClassLessons(activeClassId, lessonPlans);
       renderSidebar();
       // Only select if workspace is active
       if (document.body.classList.contains('workspace-active')) {
@@ -1072,7 +1232,8 @@ async function syncToGoogleSheets() {
     return;
   }
 
-  const syncBtn = document.getElementById('btn-sync-google');
+  const isPreviewOpen = document.getElementById('preview-modal').classList.contains('open');
+  const syncBtn = isPreviewOpen ? document.getElementById('btn-preview-sync-google') : document.getElementById('btn-sync-google');
   const syncBtnText = syncBtn.querySelector('span');
   
   syncBtnText.innerText = 'กำลังส่งข้อมูล...';
@@ -1093,7 +1254,9 @@ async function syncToGoogleSheets() {
 
     // Generate PDF inside html2pdf and output base64 data uri
     const pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
-    printEl.style.display = 'none';
+    if (!isPreviewOpen) {
+      printEl.style.display = 'none';
+    }
 
     // Route active classroom specific sheet name
     const currentCourse = courses.find(c => c.id === activeCourseId);
@@ -1160,7 +1323,8 @@ function exportPDFDocument() {
     return;
   }
 
-  const exportBtn = document.getElementById('btn-export-pdf');
+  const isPreviewOpen = document.getElementById('preview-modal').classList.contains('open');
+  const exportBtn = isPreviewOpen ? document.getElementById('btn-preview-export-pdf') : document.getElementById('btn-export-pdf');
   const exportText = exportBtn.querySelector('span');
   exportText.innerText = 'กำลังสร้างไฟล์ PDF...';
   exportBtn.disabled = true;
@@ -1179,7 +1343,9 @@ function exportPDFDocument() {
     };
 
     html2pdf().set(opt).from(printEl).save().then(() => {
-      printEl.style.display = 'none';
+      if (!isPreviewOpen) {
+        printEl.style.display = 'none';
+      }
       exportText.innerText = 'ดาวน์โหลด PDF (หน้าเดียว)';
       exportBtn.disabled = false;
     });
@@ -1503,18 +1669,12 @@ function renderDashboard() {
   let completedLessonsCount = 0;
   
   classes.forEach(cls => {
-    const storageKey = `iplane_lessons_${cls.courseId}_${cls.id}`;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        const plans = JSON.parse(saved);
-        plans.forEach(p => {
-          if (p.outcomes && p.outcomes !== '-' && p.outcomes.trim() !== '') {
-            completedLessonsCount++;
-          }
-        });
-      } catch(e) {}
-    }
+    const plans = loadCombinedLessons(cls.courseId, cls.id);
+    plans.forEach(p => {
+      if (p.outcomes && p.outcomes !== '-' && p.outcomes.trim() !== '') {
+        completedLessonsCount++;
+      }
+    });
   });
   
   const progressPercent = totalLessonsCount > 0 ? Math.round((completedLessonsCount / totalLessonsCount) * 100) : 0;
@@ -1576,20 +1736,14 @@ function renderDashboard() {
     } else {
       bodyHtml += `<div class="classroom-list">`;
       courseClasses.forEach(cls => {
-        // Compute classroom specific progress
+        // Compute classroom specific progress using decoupled loader
         let classProgress = 0;
-        const storageKey = `iplane_lessons_${course.id}_${cls.id}`;
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          try {
-            const plans = JSON.parse(saved);
-            plans.forEach(p => {
-              if (p.outcomes && p.outcomes !== '-' && p.outcomes.trim() !== '') {
-                classProgress++;
-              }
-            });
-          } catch(e) {}
-        }
+        const plans = loadCombinedLessons(course.id, cls.id);
+        plans.forEach(p => {
+          if (p.outcomes && p.outcomes !== '-' && p.outcomes.trim() !== '') {
+            classProgress++;
+          }
+        });
         const classPercent = Math.round((classProgress / 17) * 100);
         
         bodyHtml += `
@@ -1766,10 +1920,10 @@ function importCSVData() {
         return;
       }
       
-      // Overwrite local dataset for the active course and classroom
+      // Overwrite local dataset for the active course and classroom using decoupled savers
       lessonPlans = newPlans;
-      const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
-      localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
+      saveCourseLessons(activeCourseId, lessonPlans);
+      saveClassLessons(activeClassId, lessonPlans);
       
       alert(`นำเข้าข้อมูลแผนการสอนสำเร็จจำนวน ${newPlans.length} คาบเรียนเรียบร้อยแล้ว!`);
       
@@ -1822,3 +1976,34 @@ function parseCSV(text) {
   }
   return lines;
 }
+
+// ==========================================
+// 11. Immersive A4 Print Preview Modal Control
+// ==========================================
+function openA4PreviewModal() {
+  populatePrintTemplate();
+
+  const printEl = document.getElementById('print-template-container');
+  const hostEl = document.getElementById('preview-page-host');
+
+  if (!printEl || !hostEl) return;
+
+  // Clean host container and append print elements
+  hostEl.innerHTML = '';
+  hostEl.appendChild(printEl);
+  printEl.style.display = 'block';
+
+  // Toggle open
+  document.getElementById('preview-modal').classList.add('open');
+  lucide.createIcons();
+}
+
+function closeA4PreviewModal() {
+  document.getElementById('preview-modal').classList.remove('open');
+  const printEl = document.getElementById('print-template-container');
+  if (printEl) {
+    printEl.style.display = 'none';
+    document.body.appendChild(printEl);
+  }
+}
+
