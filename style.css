@@ -1650,22 +1650,29 @@ body:not(.workspace-active) .nav-section-title {
   display: none !important;
 }
 
-/* When workspace mode is active */
-body.workspace-active .app-header {
-  display: flex !important;
-}
+/* When workspace mode is active (Desktop) */
+@media (min-width: 1025px) {
+  body.workspace-active .app-header {
+    display: flex !important;
+  }
 
-body.workspace-active .content-grid {
-  display: grid !important;
-}
+  body.workspace-active .content-grid {
+    display: grid !important;
+  }
 
-body.workspace-active .wtab-content {
-  display: block !important;
+  body.workspace-active .wtab-content {
+    display: block !important;
+  }
 }
 
 @media (max-width: 1024px) {
   body.workspace-active .content-grid {
-    display: none !important; /* Managed by tabs */
+    display: block !important; /* parent must be visible so tabs can display! */
+    padding: 16px;
+  }
+  
+  body.workspace-active .wtab-content {
+    display: none !important; /* hide by default on mobile, managed by active class */
   }
   
   body.workspace-active .wtab-content.active {
