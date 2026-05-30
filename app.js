@@ -565,18 +565,57 @@ function initializeUI() {
     logoPreviewContainer.style.display = 'flex';
   }
 
+  // Helper to resize and compress logo to stay under Google Sheets cell size limits
+  function resizeAndSaveLogo(file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvasEl = document.createElement('canvas');
+        const canvasCtx = canvasEl.getContext('2d');
+        
+        // Calculate new dimensions preserving aspect ratio (max 180px)
+        const maxDim = 180;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        
+        canvasEl.width = width;
+        canvasEl.height = height;
+        canvasCtx.drawImage(img, 0, 0, width, height);
+        
+        // Compress as JPEG to keep it extremely small (<10KB)
+        const compressedBase64 = canvasEl.toDataURL('image/jpeg', 0.75);
+        
+        localStorage.setItem('iplane_school_logo', compressedBase64);
+        settingsLogoPreview.src = compressedBase64;
+        logoPreviewContainer.style.display = 'flex';
+        
+        // Auto-sync config to Google Sheets
+        if (config.gasUrl) {
+          syncConfigToCloud();
+        }
+        alert('อัปโหลดและบีบอัดโลโก้โรงเรียนพร้อมซิงก์ขึ้น Google Sheets สำเร็จ! ✓');
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   logoInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64Url = event.target.result;
-        localStorage.setItem('iplane_school_logo', base64Url);
-        settingsLogoPreview.src = base64Url;
-        logoPreviewContainer.style.display = 'flex';
-        alert('อัปโหลดและบันทึกโลโก้โรงเรียนเรียบร้อยแล้ว');
-      };
-      reader.readAsDataURL(file);
+      resizeAndSaveLogo(file);
     }
   });
 
@@ -585,6 +624,9 @@ function initializeUI() {
     logoInput.value = '';
     logoPreviewContainer.style.display = 'none';
     settingsLogoPreview.src = '';
+    if (config.gasUrl) {
+      syncConfigToCloud();
+    }
     alert('ล้างข้อมูลโลโก้โรงเรียนเรียบร้อยแล้ว');
   });
 
@@ -1688,6 +1730,23 @@ async function fetchConfigFromCloud() {
       if (gasUrlInput) gasUrlInput.value = config.gasUrl;
       changed = true;
     }
+    if (remoteConfig.schoolLogo) {
+      localStorage.setItem('iplane_school_logo', remoteConfig.schoolLogo);
+      const settingsLogoPreview = document.getElementById('settings-logo-preview');
+      const logoPreviewContainer = document.getElementById('logo-preview-container');
+      if (settingsLogoPreview && logoPreviewContainer) {
+        settingsLogoPreview.src = remoteConfig.schoolLogo;
+        logoPreviewContainer.style.display = 'flex';
+      }
+      changed = true;
+    }
+    if (remoteConfig.teacherSignature) {
+      localStorage.setItem('iplane_teacher_signature', remoteConfig.teacherSignature);
+      setTimeout(() => {
+        drawStrokes();
+      }, 100);
+      changed = true;
+    }
 
     if (changed) {
       // Validate active IDs still exist after merge
@@ -1740,7 +1799,9 @@ async function syncConfigToCloud() {
       teacherName: profile.teacherName,
       hodName: profile.hodName,
       schoolName: profile.schoolName,
-      folderId: config.folderId
+      folderId: config.folderId,
+      schoolLogo: localStorage.getItem('iplane_school_logo') || '',
+      teacherSignature: localStorage.getItem('iplane_teacher_signature') || ''
     };
     const response = await fetch(config.gasUrl, {
       method: 'POST',
@@ -2202,6 +2263,7 @@ function setupSignaturePad() {
   const placeholder = document.getElementById('sig-placeholder');
 
   resizeCanvas();
+  drawStrokes();
   window.addEventListener('resize', () => {
     resizeCanvas();
     drawStrokes();
@@ -2254,12 +2316,14 @@ function setupSignaturePad() {
     if (!drawing) return;
     drawing = false;
     currentSignatureDataUrl = canvas.toDataURL('image/png');
+    saveSignatureToStorage(currentSignatureDataUrl);
   });
 
   canvas.addEventListener('mouseleave', () => {
     if (drawing) {
       drawing = false;
       currentSignatureDataUrl = canvas.toDataURL('image/png');
+      saveSignatureToStorage(currentSignatureDataUrl);
     }
   });
 
@@ -2299,6 +2363,7 @@ function setupSignaturePad() {
   canvas.addEventListener('touchend', () => {
     drawing = false;
     currentSignatureDataUrl = canvas.toDataURL('image/png');
+    saveSignatureToStorage(currentSignatureDataUrl);
   });
 }
 
@@ -2323,14 +2388,34 @@ function resizeCanvas() {
 
 function drawStrokes() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
   if (strokes.length === 0) {
-    document.getElementById('sig-placeholder').style.display = 'flex';
-    isSignatureDrawn = false;
-    currentSignatureDataUrl = '';
+    const savedSig = localStorage.getItem('iplane_teacher_signature');
+    if (savedSig) {
+      const placeholder = document.getElementById('sig-placeholder');
+      if (placeholder) placeholder.style.display = 'none';
+      isSignatureDrawn = true;
+      currentSignatureDataUrl = savedSig;
+      
+      const img = new Image();
+      img.onload = () => {
+        if (ctx && canvas) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+      };
+      img.src = savedSig;
+    } else {
+      const placeholder = document.getElementById('sig-placeholder');
+      if (placeholder) placeholder.style.display = 'flex';
+      isSignatureDrawn = false;
+      currentSignatureDataUrl = '';
+    }
     return;
   }
 
-  document.getElementById('sig-placeholder').style.display = 'none';
+  const placeholder = document.getElementById('sig-placeholder');
+  if (placeholder) placeholder.style.display = 'none';
   isSignatureDrawn = true;
 
   strokes.forEach(stroke => {
@@ -2352,6 +2437,15 @@ function drawStrokes() {
   currentSignatureDataUrl = canvas.toDataURL('image/png');
 }
 
+function saveSignatureToStorage(dataUrl) {
+  if (dataUrl) {
+    localStorage.setItem('iplane_teacher_signature', dataUrl);
+    if (config.gasUrl) {
+      syncConfigToCloud();
+    }
+  }
+}
+
 function clearSignature() {
   strokes = [];
   if (ctx && canvas) {
@@ -2363,11 +2457,28 @@ function clearSignature() {
   }
   isSignatureDrawn = false;
   currentSignatureDataUrl = '';
+  localStorage.removeItem('iplane_teacher_signature');
+  if (config.gasUrl) {
+    syncConfigToCloud();
+  }
 }
 
 function undoSignatureStroke() {
   strokes.pop();
   drawStrokes();
+  
+  if (strokes.length === 0) {
+    isSignatureDrawn = false;
+    currentSignatureDataUrl = '';
+    localStorage.removeItem('iplane_teacher_signature');
+  } else {
+    isSignatureDrawn = true;
+    currentSignatureDataUrl = canvas.toDataURL('image/png');
+    localStorage.setItem('iplane_teacher_signature', currentSignatureDataUrl);
+  }
+  if (config.gasUrl) {
+    syncConfigToCloud();
+  }
 }
 
 // ==========================================
