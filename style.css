@@ -1659,6 +1659,10 @@ body.workspace-active .content-grid {
   display: grid !important;
 }
 
+body.workspace-active .wtab-content {
+  display: block !important;
+}
+
 @media (max-width: 1024px) {
   body.workspace-active .content-grid {
     display: none !important; /* Managed by tabs */

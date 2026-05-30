@@ -1213,12 +1213,13 @@ function selectLesson(index) {
   });
 
   const plan = lessonPlans[index];
+  const displayDate = formatDisplayDate(plan.date);
 
   // Set Labels & Headers
   document.getElementById('selected-week-title').innerText = `สัปดาห์ที่ ${plan.week} - แผนการสอนครั้งที่ ${plan.once}`;
-  document.getElementById('selected-week-subtitle').innerText = `เรื่อง: ${plan.topic} (วันที่สอน: ${plan.date})`;
+  document.getElementById('selected-week-subtitle').innerText = `เรื่อง: ${plan.topic} (วันที่สอน: ${displayDate})`;
   
-  document.getElementById('lesson-date-badge').innerText = plan.date;
+  document.getElementById('lesson-date-badge').innerText = displayDate;
   document.getElementById('lbl-week').innerText = plan.week;
   document.getElementById('lbl-once').innerText = plan.once;
   document.getElementById('lbl-period').innerText = plan.period;
@@ -1478,6 +1479,43 @@ function formatThaiDateString(date) {
   const ceYear = date.getFullYear();
   const BEYear = ceYear + 543;
   return `${day}/${month}/${BEYear}`;
+}
+
+// Convert ugly Date / ISO / raw strings to Thai formatted string (DD/MM/YYYY)
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return '-';
+  
+  // If it's already in the DD/MM/YYYY format, return it as is
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  try {
+    const dateObj = new Date(dateStr);
+    if (!isNaN(dateObj.getTime())) {
+      let year = dateObj.getFullYear();
+      if (year < 2400) {
+        year += 543; // Convert CE to BE
+      }
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    }
+  } catch (e) {
+    console.error('Error formatting date:', dateStr, e);
+  }
+  
+  // Fallback split for ISO timezone
+  if (String(dateStr).includes('T')) {
+    const parts = String(dateStr).split('T')[0].split('-');
+    if (parts.length === 3) {
+      let year = parseInt(parts[0]);
+      if (year < 2400) year += 543;
+      return `${parts[2]}/${parts[1]}/${year}`;
+    }
+  }
+  
+  return dateStr;
 }
 
 // Tab 4: Inline lesson details editor index populate
