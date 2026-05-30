@@ -1,5 +1,5 @@
 /**
- * Google Apps Script Backend for Single-Page Lesson Plan Manager
+ * Google Apps Script Backend for Single-Page Lesson Plan Manager (iPlane)
  * 
  * วิธีการติดตั้งใช้งาน:
  * 1. เปิด Google Sheet ของคุณ
@@ -14,89 +14,149 @@
  *    - Who has access: Anyone (ทุกคน) -> *สำคัญมาก เพื่อให้แอปยิงเชื่อมต่อได้โดยตรง*
  * 9. กด Deploy และทำการให้สิทธิ์การเข้าถึง (Authorize Access) กับบัญชี Google ของคุณ
  * 10. คัดลอก URL ของ Web App ที่ได้ ไปใส่ในช่องตั้งค่าในตัวเว็บแอปพลิเคชัน iPlane
+ *
+ * [v2] เพิ่ม __CONFIG__ sheet สำหรับ sync ข้อมูลคอร์ส/ห้องเรียน/โปรไฟล์ข้ามอุปกรณ์
  */
 
-// ฟังก์ชันสำหรับ CORS Headers
+// ==========================================
+// CORS Response Helper
+// ==========================================
 function corsResponse(data) {
   const jsonString = JSON.stringify(data);
   return ContentService.createTextOutput(jsonString)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * ฟังก์ชันผู้ช่วย: สร้างและเซตอัพแผ่นงาน (Sheet Tab) อัตโนมัติหากยังไม่มีในระบบ
- */
-function createAndSetupSheet(ss, sheetName) {
-  const sheet = ss.insertSheet(sheetName);
-  
-  // หัวข้อคอลัมน์มาตรฐาน 15 หัวข้อตรงตามแผนจัดการเรียนรู้
-  const headers = [
-    'Week',
-    'ครั้งที่',
-    'คาบที่สอน',
-    'วว/ดด/ปป ที่สอน',
-    'หน่วยการเรียนรู้ที่',
-    'เรื่อง',
-    'จำนวนคาบ',
-    'มาตรฐานการเรียนรู้/ตัวชี้วัด',
-    'จุดประสงค์การเรียนรู้',
-    'กิจกรรมการเรียนรู้',
-    'การวัดและประเมินผล',
-    'สื่อการเรียนรู้',
-    'ผลการจัดการเรียนรู้',
-    'แนวทางแก้ปัญหา',
-    'ลิงก์ไฟล์ PDF'
-  ];
-  
-  // 1. เขียนหัวตารางในแถวที่ 1
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  
-  // 2. ตกแต่งหัวตารางให้อ่านง่ายเป็นระเบียบ
-  const headerRange = sheet.getRange(1, 1, 1, headers.length);
-  headerRange.setFontWeight('bold');
-  headerRange.setBackground('#dcfce7'); // สีเขียวอ่อนแบบตารางวิชาการ
-  headerRange.setFontColor('#14532d');  // ข้อความสีเขียวเข้ม
-  headerRange.setHorizontalAlignment('center');
-  headerRange.setVerticalAlignment('middle');
-  sheet.setRowHeight(1, 28);
-  
-  // 3. ตรึงแถวแรกไว้ (Freeze) เพื่อให้เลื่อนดูข้อมูลได้สะดวก
-  sheet.setFrozenRows(1);
-  
-  // 4. ตั้งค่าหน้าตากว้างความกว้างคอลัมน์เบื้องต้น
-  sheet.setColumnWidth(1, 60);  // Week
-  sheet.setColumnWidth(2, 70);  // ครั้งที่
-  sheet.setColumnWidth(3, 80);  // คาบที่สอน
-  sheet.setColumnWidth(4, 110); // วันที่สอน
-  sheet.setColumnWidth(5, 120); // หน่วยที่
-  sheet.setColumnWidth(6, 180); // เรื่อง
-  sheet.setColumnWidth(7, 80);  // จำนวนคาบ
-  
-  // คอลัมน์ข้อความยาวๆ ให้ขยายกว้างเป็นพิเศษ
-  sheet.setColumnWidth(8, 250); // มาตรฐาน
-  sheet.setColumnWidth(9, 250); // จุดประสงค์
-  sheet.setColumnWidth(10, 300); // กิจกรรม
-  sheet.setColumnWidth(11, 180); // การวัดผล
-  sheet.setColumnWidth(12, 180); // สื่อ
-  sheet.setColumnWidth(13, 250); // ผลการสอน
-  sheet.setColumnWidth(14, 250); // ปัญหาแก้
-  sheet.setColumnWidth(15, 200); // PDF Link
-
+// ==========================================
+// CONFIG Sheet Helper (สำหรับ sync ข้ามอุปกรณ์)
+// ==========================================
+function getOrCreateConfigSheet(ss) {
+  let sheet = ss.getSheetByName('__CONFIG__');
+  if (!sheet) {
+    sheet = ss.insertSheet('__CONFIG__');
+    // สร้างหัวตาราง
+    sheet.getRange(1, 1, 1, 2).setValues([['key', 'value']]);
+    const headerRange = sheet.getRange(1, 1, 1, 2);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#dbeafe');
+    headerRange.setFontColor('#1e3a8a');
+    headerRange.setHorizontalAlignment('center');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 180);
+    sheet.setColumnWidth(2, 600);
+    Logger.log('สร้าง __CONFIG__ sheet ใหม่เรียบร้อย');
+  }
   return sheet;
 }
 
 /**
- * GET Request: ดึงข้อมูลทั้งหมดจาก Google Sheet
- * ตัวแอปจะเรียกใช้ตอนโหลดหน้าเว็บ เพื่ออัปเดตข้อมูลให้เป็นปัจจุบัน
+ * อ่าน config ทั้งหมดจาก __CONFIG__ sheet เป็น object {key: value}
  */
+function readAllConfig(ss) {
+  const sheet = getOrCreateConfigSheet(ss);
+  const data = sheet.getDataRange().getValues();
+  const config = {};
+  for (let i = 1; i < data.length; i++) {
+    const key = String(data[i][0]).trim();
+    const val = data[i][1];
+    if (key) config[key] = val;
+  }
+  return config;
+}
+
+/**
+ * เขียน key-value ลง __CONFIG__ sheet (upsert)
+ */
+function writeConfig(ss, key, value) {
+  const sheet = getOrCreateConfigSheet(ss);
+  const data = sheet.getDataRange().getValues();
+  let found = false;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === key) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    sheet.appendRow([key, value]);
+  }
+}
+
+// ==========================================
+// Lesson Plan Sheet Helper
+// ==========================================
+function createAndSetupSheet(ss, sheetName) {
+  const sheet = ss.insertSheet(sheetName);
+  
+  const headers = [
+    'Week', 'ครั้งที่', 'คาบที่สอน', 'วว/ดด/ปป ที่สอน',
+    'หน่วยการเรียนรู้ที่', 'เรื่อง', 'จำนวนคาบ',
+    'มาตรฐานการเรียนรู้/ตัวชี้วัด', 'จุดประสงค์การเรียนรู้',
+    'กิจกรรมการเรียนรู้', 'การวัดและประเมินผล', 'สื่อการเรียนรู้',
+    'ผลการจัดการเรียนรู้', 'แนวทางแก้ปัญหา', 'ลิงก์ไฟล์ PDF'
+  ];
+  
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  
+  const headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setFontWeight('bold');
+  headerRange.setBackground('#dcfce7');
+  headerRange.setFontColor('#14532d');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setVerticalAlignment('middle');
+  sheet.setRowHeight(1, 28);
+  sheet.setFrozenRows(1);
+  
+  sheet.setColumnWidth(1, 60);
+  sheet.setColumnWidth(2, 70);
+  sheet.setColumnWidth(3, 80);
+  sheet.setColumnWidth(4, 110);
+  sheet.setColumnWidth(5, 120);
+  sheet.setColumnWidth(6, 180);
+  sheet.setColumnWidth(7, 80);
+  sheet.setColumnWidth(8, 250);
+  sheet.setColumnWidth(9, 250);
+  sheet.setColumnWidth(10, 300);
+  sheet.setColumnWidth(11, 180);
+  sheet.setColumnWidth(12, 180);
+  sheet.setColumnWidth(13, 250);
+  sheet.setColumnWidth(14, 250);
+  sheet.setColumnWidth(15, 200);
+
+  return sheet;
+}
+
+// ==========================================
+// GET Request Handler
+// ==========================================
 function doGet(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const action = (e.parameter && e.parameter.action) ? e.parameter.action : '';
+
+    // --- [NEW] GET Config: ดึงการตั้งค่าคอร์ส/ห้องเรียน/โปรไฟล์ ---
+    if (action === 'getConfig') {
+      const config = readAllConfig(ss);
+      // parse JSON fields
+      const result = {};
+      ['courses', 'classes'].forEach(key => {
+        if (config[key]) {
+          try { result[key] = JSON.parse(config[key]); }
+          catch(e) { result[key] = []; }
+        } else {
+          result[key] = [];
+        }
+      });
+      ['teacherName', 'hodName', 'schoolName'].forEach(key => {
+        result[key] = config[key] || '';
+      });
+      return corsResponse({ status: 'success', config: result });
+    }
+
+    // --- GET Lesson Plans: ดึงข้อมูลแผนการสอนจาก sheet tab ---
     const sheetName = (e.parameter && e.parameter.sheetName) ? e.parameter.sheetName : 'Sheet1';
-    
     let sheet = ss.getSheetByName(sheetName);
-    
-    // หากไม่พบแผ่นงานชื่อนี้ ให้สร้างตารางโครงสร้างขึ้นมาให้อัตโนมัติ!
     if (!sheet) {
       sheet = createAndSetupSheet(ss, sheetName);
     }
@@ -106,31 +166,28 @@ function doGet(e) {
       return corsResponse({ status: 'success', data: [] });
     }
     
-    const headers = rows[0]; // หัวข้อคอลัมน์
+    const headers = rows[0];
     const data = [];
-    
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const record = {};
       headers.forEach((header, index) => {
         const key = String(header).trim();
-        if (key) {
-          record[key] = row[index];
-        }
+        if (key) record[key] = row[index];
       });
-      record['rowIndex'] = i + 1; // ลำดับแถวจริงใน Sheet (เอาไว้ใช้อ้างอิงตอนอัปเดต)
+      record['rowIndex'] = i + 1;
       data.push(record);
     }
-    
     return corsResponse({ status: 'success', data: data });
+
   } catch (err) {
     return corsResponse({ status: 'error', message: err.toString() });
   }
 }
 
-/**
- * POST Request: บันทึกข้อมูลหลังการสอน และ อัปโหลดไฟล์ PDF ลายเซ็นลง Google Drive
- */
+// ==========================================
+// POST Request Handler
+// ==========================================
 function doPost(e) {
   try {
     let payload;
@@ -141,20 +198,38 @@ function doPost(e) {
     }
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // --- [NEW] SAVE Config: บันทึกการตั้งค่าคอร์ส/ห้องเรียน/โปรไฟล์ ---
+    if (payload.action === 'saveConfig') {
+      if (payload.courses !== undefined) {
+        writeConfig(ss, 'courses', JSON.stringify(payload.courses));
+      }
+      if (payload.classes !== undefined) {
+        writeConfig(ss, 'classes', JSON.stringify(payload.classes));
+      }
+      if (payload.teacherName !== undefined) {
+        writeConfig(ss, 'teacherName', payload.teacherName);
+      }
+      if (payload.hodName !== undefined) {
+        writeConfig(ss, 'hodName', payload.hodName);
+      }
+      if (payload.schoolName !== undefined) {
+        writeConfig(ss, 'schoolName', payload.schoolName);
+      }
+      return corsResponse({ status: 'success', message: 'บันทึก config เรียบร้อยแล้ว' });
+    }
+
+    // --- SAVE Lesson Plan: บันทึกหลังการสอน + PDF ---
     const sheetName = payload.sheetName || 'Sheet1';
-    
     let sheet = ss.getSheetByName(sheetName);
-    
-    // หากไม่มีแผ่นงานแท็บนี้ในแผ่นงาน Google Sheets ให้สร้างแท็บใหม่และเซตหัวตารางให้อัตโนมัติ!
     if (!sheet) {
       sheet = createAndSetupSheet(ss, sheetName);
     }
     
-    // ดึงรายชื่อหัวตารางล่าสุด
     let values = sheet.getDataRange().getValues();
     let headers = values[0].map(h => String(h).trim());
     
-    const onceValue = String(payload.once).trim(); // ค้นหาด้วย 'ครั้งที่'
+    const onceValue = String(payload.once).trim();
     const onceColIndex = headers.indexOf('ครั้งที่');
     
     if (onceColIndex === -1) {
@@ -162,8 +237,6 @@ function doPost(e) {
     }
     
     let targetRowIndex = -1;
-    
-    // ค้นหาแถวที่ 'ครั้งที่' ตรงกัน
     for (let i = 1; i < values.length; i++) {
       if (String(values[i][onceColIndex]).trim() === onceValue) {
         targetRowIndex = i + 1;
@@ -171,11 +244,8 @@ function doPost(e) {
       }
     }
     
-    // หากไม่พบแถวข้อมูลเดิม ให้ทำการสร้างแถวใหม่โดยใส่แผนการสอนหลักลงไปอัตโนมัติ
     if (targetRowIndex === -1) {
       const newRow = new Array(headers.length).fill('');
-      
-      // แมปปิ้งฟิลด์จาก payload สู่คอลัมน์ต่างๆ ในชีตใหม่
       const fieldMappings = {
         'Week': payload.week || '',
         'ครั้งที่': payload.once || '',
@@ -192,52 +262,35 @@ function doPost(e) {
         'ผลการจัดการเรียนรู้': payload.outcomes || '',
         'แนวทางแก้ปัญหา': payload.solutions || ''
       };
-      
       headers.forEach((header, index) => {
-        if (fieldMappings[header] !== undefined) {
-          newRow[index] = fieldMappings[header];
-        }
+        if (fieldMappings[header] !== undefined) newRow[index] = fieldMappings[header];
       });
-      
       sheet.appendRow(newRow);
-      
-      // อัปเดตรายชื่อและแถวข้อมูลใหม่
       values = sheet.getDataRange().getValues();
       targetRowIndex = values.length;
     } else {
-      // หากพบแถวข้อมูลเดิม ให้เขียนทับ ผลการจัดการเรียนรู้ และ แนวทางแก้ปัญหา
       const outcomeColIndex = headers.indexOf('ผลการจัดการเรียนรู้');
       const solutionColIndex = headers.indexOf('แนวทางแก้ปัญหา');
-      
       if (outcomeColIndex > -1) sheet.getCell(targetRowIndex, outcomeColIndex + 1).setValue(payload.outcomes || '');
       if (solutionColIndex > -1) sheet.getCell(targetRowIndex, solutionColIndex + 1).setValue(payload.solutions || '');
     }
     
-    // บันทึกและอัปโหลดไฟล์ PDF ไปยัง Google Drive (หากส่งมา)
     let pdfUrl = '';
     if (payload.pdfBase64) {
       let base64Data = payload.pdfBase64;
       if (base64Data.indexOf('base64,') > -1) {
         base64Data = base64Data.split('base64,')[1];
       }
-      
       const decodedPdf = Utilities.base64Decode(base64Data);
-      const pdfBlob = Utilities.newBlob(decodedPdf, 'application/pdf', payload.pdfFileName || ('Lesson_Plan_Week_' + onceValue + '.pdf'));
+      const pdfBlob = Utilities.newBlob(decodedPdf, 'application/pdf', payload.pdfFileName || ('Lesson_Plan_' + onceValue + '.pdf'));
       
       let folder;
       if (payload.folderId) {
-        try {
-          folder = DriveApp.getFolderById(payload.folderId);
-        } catch (e) {
-          folder = DriveApp.getRootFolder();
-        }
+        try { folder = DriveApp.getFolderById(payload.folderId); }
+        catch (e) { folder = DriveApp.getRootFolder(); }
       } else {
         const folders = DriveApp.getFoldersByName('iPlane_PDFs');
-        if (folders.hasNext()) {
-          folder = folders.next();
-        } else {
-          folder = DriveApp.createFolder('iPlane_PDFs');
-        }
+        folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('iPlane_PDFs');
       }
       
       const file = folder.createFile(pdfBlob);
@@ -245,11 +298,8 @@ function doPost(e) {
       pdfUrl = file.getUrl();
       
       const pdfColIndex = headers.indexOf('ลิงก์ไฟล์ PDF');
-      let actualPdfCol = pdfColIndex;
-      if (actualPdfCol === -1) {
-        actualPdfCol = headers.length;
-        sheet.getCell(1, actualPdfCol + 1).setValue('ลิงก์ไฟล์ PDF');
-      }
+      let actualPdfCol = pdfColIndex === -1 ? headers.length : pdfColIndex;
+      if (pdfColIndex === -1) sheet.getCell(1, actualPdfCol + 1).setValue('ลิงก์ไฟล์ PDF');
       sheet.getCell(targetRowIndex, actualPdfCol + 1).setValue(pdfUrl);
     }
     
@@ -266,22 +316,24 @@ function doPost(e) {
 }
 
 /**
- * ฟังก์ชันทดสอบการทำงาน: คุณครูสามารถเลือกฟังก์ชัน "testRun" ในแถบด้านบนแล้วกดปุ่ม "เรียกใช้" (Run) เพื่อทดสอบสคริปต์ได้
+ * ฟังก์ชันทดสอบการทำงาน
  */
 function testRun() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const testSheetName = 'ทดสอบ_สร้างแท็บอัตโนมัติ';
+  Logger.log('--- เริ่มการทดสอบ iPlane Backend v2 ---');
   
-  Logger.log('--- เริ่มการทดสอบ iPlane Backend ---');
+  // ทดสอบ CONFIG sheet
+  const configSheet = getOrCreateConfigSheet(ss);
+  writeConfig(ss, 'testKey', 'testValue_' + new Date().getTime());
+  const config = readAllConfig(ss);
+  Logger.log('Config sheet data: ' + JSON.stringify(config));
+  
+  // ทดสอบ Lesson sheet
+  const testSheetName = 'ทดสอบ_v2';
   let sheet = ss.getSheetByName(testSheetName);
-  
   if (!sheet) {
-    Logger.log('ไม่พบแผ่นงานเดิม... กำลังทดสอบสร้างแท็บใหม่: ' + testSheetName);
     sheet = createAndSetupSheet(ss, testSheetName);
-    Logger.log('สร้างและย้อมสีหัวตารางแผ่นงานสำเร็จ!');
-  } else {
-    Logger.log('พบแผ่นงานทดสอบเดิมอยู่แล้วในระบบ');
+    Logger.log('สร้างแผ่นงานทดสอบ: ' + testSheetName);
   }
-  
   Logger.log('เสร็จสิ้นการทดสอบโดยสมบูรณ์!');
 }

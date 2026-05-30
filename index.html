@@ -470,6 +470,21 @@
                 <label for="input-drive-folder">Google Drive Folder ID (จัดเก็บ PDF)</label>
                 <input type="text" id="input-drive-folder" placeholder="ปล่อยว่างระบบจะจัดสร้างอัตโนมัติ">
               </div>
+
+              <!-- Cross-device sync banner -->
+              <div style="margin-top: 14px; padding: 13px 16px; background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.3); border-left: 3px solid #10b981; border-radius: 10px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                  <i data-lucide="smartphone" style="width:15px; height:15px; color:#10b981; flex-shrink:0;"></i>
+                  <span style="font-size:12.5px; font-weight:700; color:#10b981;">ซิงค์ข้อมูลข้ามอุปกรณ์</span>
+                </div>
+                <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.6;">
+                  เมื่อกด "บันทึกและปิด" ระบบจะ sync คอร์ส/ห้องเรียน/โปรไฟล์ขึ้น Cloud อัตโนมัติ<br>
+                  เปิดจากมือถือ → ใส่ GAS URL เดิม → กด "บันทึก" → ข้อมูลครบทันที
+                </p>
+                <button type="button" id="btn-fetch-config" class="btn btn-secondary btn-full" style="font-size:12px; padding:8px 14px;">
+                  <i data-lucide="download-cloud"></i> <span>โหลดข้อมูลจาก Cloud ตอนนี้</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

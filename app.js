@@ -321,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (config.gasUrl) {
     fetchLiveGoogleData();
+    fetchConfigFromCloud(); // sync courses/classes/profile from cloud
   }
 });
 
@@ -641,6 +642,24 @@ function initializeUI() {
   document.getElementById('btn-save-settings').addEventListener('click', saveModalSettings);
   document.getElementById('btn-download-template').addEventListener('click', downloadCSVTemplate);
   document.getElementById('btn-process-csv').addEventListener('click', importCSVData);
+  document.getElementById('btn-fetch-config').addEventListener('click', async () => {
+    const urlInput = document.getElementById('input-gas-url').value.trim();
+    if (!urlInput) {
+      alert('กรุณากรอก Google Apps Script URL ในช่องด้านบนก่อน');
+      return;
+    }
+    // Temporarily use the typed URL even before saving
+    const prevUrl = config.gasUrl;
+    config.gasUrl = urlInput;
+    const btn = document.getElementById('btn-fetch-config');
+    const btnSpan = btn.querySelector('span');
+    btnSpan.innerText = 'กำลังโหลด...';
+    btn.disabled = true;
+    await fetchConfigFromCloud();
+    btnSpan.innerText = 'โหลดข้อมูลจาก Cloud ตอนนี้';
+    btn.disabled = false;
+    if (!prevUrl) config.gasUrl = ''; // restore if was empty before
+  });
 
   // --- Tab: Auto-date class selector ---
   document.getElementById('select-autodate-class').addEventListener('change', (e) => {
@@ -723,6 +742,7 @@ function initializeUI() {
       renderWorkspaceDropdowns();
       updateProfileLabels();
       lucide.createIcons();
+      if (config.gasUrl) syncConfigToCloud();
       showToast('บันทึกชื่อคอร์สวิชาเรียบร้อยแล้ว ✓');
     }
   });
@@ -740,6 +760,7 @@ function initializeUI() {
       renderWorkspaceDropdowns();
       updateProfileLabels();
       lucide.createIcons();
+      if (config.gasUrl) syncConfigToCloud();
       showToast('บันทึกชื่อห้องเรียนเรียบร้อยแล้ว ✓');
     }
   });
@@ -1248,6 +1269,9 @@ function addNewCourse() {
   document.getElementById('input-new-course-code').value = '';
   renderSettingsDropdowns();
   
+  // Sync to cloud
+  if (config.gasUrl) syncConfigToCloud();
+  
   alert('เพิ่มรายวิชาเรียบร้อยแล้ว');
 }
 
@@ -1270,6 +1294,9 @@ function addNewClassRoom() {
   document.getElementById('input-new-class-name').value = '';
   document.getElementById('input-new-class-leader').value = '';
   renderSettingsDropdowns();
+
+  // Sync to cloud
+  if (config.gasUrl) syncConfigToCloud();
 
   alert('เพิ่มชั้นเรียนเรียบร้อยแล้ว');
 }
@@ -1466,6 +1493,11 @@ function saveModalSettings() {
   updateProfileLabels();
   selectLesson(selectedIndex);
   
+  // Sync config to cloud whenever settings are saved
+  if (config.gasUrl) {
+    syncConfigToCloud();
+  }
+  
   document.getElementById('settings-modal').classList.remove('open');
 }
 
@@ -1480,6 +1512,122 @@ function updateSyncStatusIndicator() {
   } else {
     syncStatus.className = 'status-indicator offline';
     label.innerText = 'ระบบออฟไลน์ (บันทึกเฉพาะที่เครื่อง)';
+  }
+}
+
+// ==========================================
+// Cross-Device Config Sync Functions
+// ==========================================
+
+/**
+ * ดึงการตั้งค่า (courses, classes, profile) จาก Google Sheets __CONFIG__ sheet
+ * เรียกอัตโนมัติเมื่อโหลดหน้าเว็บและมี GAS URL
+ */
+async function fetchConfigFromCloud() {
+  if (!config.gasUrl) return;
+  try {
+    const url = `${config.gasUrl}?action=getConfig`;
+    const response = await fetch(url);
+    const result = await response.json();
+
+    if (result.status !== 'success' || !result.config) return;
+    const remoteConfig = result.config;
+
+    let changed = false;
+
+    // Merge courses: ถ้า remote มีข้อมูลให้ใช้ remote เป็นหลัก (override local)
+    if (remoteConfig.courses && remoteConfig.courses.length > 0) {
+      courses = remoteConfig.courses;
+      localStorage.setItem('iplane_courses', JSON.stringify(courses));
+      changed = true;
+    }
+
+    // Merge classes: เช่นเดียวกัน
+    if (remoteConfig.classes && remoteConfig.classes.length > 0) {
+      classes = remoteConfig.classes;
+      // Ensure all classes have courseId
+      classes.forEach(c => { if (!c.courseId) c.courseId = courses[0]?.id || 'c1'; });
+      localStorage.setItem('iplane_classes', JSON.stringify(classes));
+      changed = true;
+    }
+
+    // Merge profile (ถ้ามีข้อมูลใน cloud)
+    if (remoteConfig.teacherName) {
+      profile.teacherName = remoteConfig.teacherName;
+      localStorage.setItem('iplane_teacher_name', profile.teacherName);
+      changed = true;
+    }
+    if (remoteConfig.hodName) {
+      profile.hodName = remoteConfig.hodName;
+      localStorage.setItem('iplane_hod_name', profile.hodName);
+      changed = true;
+    }
+    if (remoteConfig.schoolName) {
+      profile.schoolName = remoteConfig.schoolName;
+      localStorage.setItem('iplane_school_name', profile.schoolName);
+      changed = true;
+    }
+
+    if (changed) {
+      // Validate active IDs still exist after merge
+      if (!courses.find(c => c.id === activeCourseId)) {
+        activeCourseId = courses[0]?.id || activeCourseId;
+        localStorage.setItem('iplane_active_course_id', activeCourseId);
+      }
+      if (!classes.find(c => c.id === activeClassId)) {
+        const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+        activeClassId = courseClasses[0]?.id || classes[0]?.id || activeClassId;
+        localStorage.setItem('iplane_active_class_id', activeClassId);
+      }
+
+      lessonPlans = loadCombinedLessons(activeCourseId, activeClassId);
+      renderSidebar();
+      renderSettingsDropdowns();
+      renderWorkspaceDropdowns();
+      updateProfileLabels();
+
+      // Update settings form values if modal is open
+      const teacherInput = document.getElementById('input-teacher-name');
+      const hodInput = document.getElementById('input-hod-name');
+      const schoolInput = document.getElementById('input-school-name');
+      if (teacherInput) teacherInput.value = profile.teacherName;
+      if (hodInput) hodInput.value = profile.hodName;
+      if (schoolInput) schoolInput.value = profile.schoolName;
+
+      showToast('โหลดข้อมูลจาก Cloud เรียบร้อยแล้ว ✓');
+    }
+  } catch (err) {
+    console.error('fetchConfigFromCloud error:', err);
+  }
+}
+
+/**
+ * บันทึกการตั้งค่า (courses, classes, profile) ขึ้น Google Sheets __CONFIG__ sheet
+ * เรียกอัตโนมัติเมื่อมีการเปลี่ยนแปลงข้อมูลสำคัญ
+ */
+async function syncConfigToCloud() {
+  if (!config.gasUrl) return;
+  try {
+    const payload = {
+      action: 'saveConfig',
+      courses: courses,
+      classes: classes,
+      teacherName: profile.teacherName,
+      hodName: profile.hodName,
+      schoolName: profile.schoolName
+    };
+    const response = await fetch(config.gasUrl, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('ซิงค์การตั้งค่าขึ้น Cloud เรียบร้อยแล้ว ✓');
+    }
+  } catch (err) {
+    console.error('syncConfigToCloud error:', err);
   }
 }
 
