@@ -609,8 +609,8 @@ function initializeUI() {
         canvasEl.height = height;
         canvasCtx.drawImage(img, 0, 0, width, height);
         
-        // Compress as JPEG to keep it extremely small (<10KB)
-        const compressedBase64 = canvasEl.toDataURL('image/jpeg', 0.75);
+        // Compress as PNG to preserve alpha transparency and prevent black backgrounds
+        const compressedBase64 = canvasEl.toDataURL('image/png');
         
         localStorage.setItem('iplane_school_logo', compressedBase64);
         settingsLogoPreview.src = compressedBase64;
