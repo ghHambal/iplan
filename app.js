@@ -712,9 +712,26 @@ function updateProfileLabels() {
 
   if (currentCourse) {
     document.getElementById('active-course-label').innerText = `วิชา: ${currentCourse.name} (${currentCourse.code})`;
+    
+    // Decoupled Course Scope Settings Indicators
+    const labelCourse = document.getElementById('label-edit-lesson-coursename');
+    if (labelCourse) {
+      labelCourse.innerText = `${currentCourse.name} (${currentCourse.code})`;
+    }
+    const labelCsvCourse = document.getElementById('label-csv-course-name');
+    if (labelCsvCourse) {
+      labelCsvCourse.innerText = `${currentCourse.name} (${currentCourse.code})`;
+    }
   }
+  
   if (currentClass) {
     document.getElementById('active-class-label').innerText = `ชั้นเรียน: ${currentClass.name}`;
+    
+    // Decoupled Classroom Scope Settings Indicators
+    const labelClass = document.getElementById('label-auto-date-classname');
+    if (labelClass) {
+      labelClass.innerText = currentClass.name;
+    }
   }
 }
 

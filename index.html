@@ -502,7 +502,11 @@
 
         <!-- Tab 3: Automatic Date runner script calculation -->
         <div class="tab-content" id="tab-auto-date">
-          <p class="tab-intro">ระบบจะช่วยคำนวณวันที่สอนของแต่ละคาบ (ทั้ง 17 ครั้ง) โดยระบุวันเริ่มสอนครั้งแรก และวันปกติที่มีการเรียนการสอนในแต่ละสัปดาห์</p>
+          <p class="tab-intro" style="margin-bottom: 8px;">ระบบจะช่วยคำนวณวันที่สอนของแต่ละคาบ โดยระบุวันเริ่มสอนครั้งแรก และวันปกติที่มีการเรียนการสอนในแต่ละสัปดาห์</p>
+          <p class="tab-intro" style="margin-bottom: 24px; font-weight: 500;">
+            <i data-lucide="info" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px; color:var(--primary);"></i>
+            ห้องเรียนที่กำลังตั้งค่าวันที่: <span id="label-auto-date-classname" style="font-weight: 700; color: var(--primary);">[ชื่อห้องเรียน]</span>
+          </p>
           
           <div class="settings-grid">
             <div class="settings-col">
@@ -568,6 +572,10 @@
 
         <!-- Tab 4: Inline Edit Lesson details database -->
         <div class="tab-content" id="tab-edit-lessons">
+          <p class="tab-intro" style="margin-bottom: 20px; font-weight: 500;">
+            <i data-lucide="info" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px; color:var(--danger);"></i>
+            รายวิชาที่กำลังแก้ไขเนื้อหาแผนการสอน: <span id="label-edit-lesson-coursename" style="font-weight: 700; color: var(--danger);">[ชื่อรายวิชา]</span> *(มีผลต่อทุกห้องเรียนในรายวิชานี้)*
+          </p>
           <div class="lesson-edit-controller">
             <div class="form-group">
               <label for="select-edit-lesson-index">เลือกแผนการสอนครั้งที่ต้องการแก้ไข</label>
@@ -614,7 +622,11 @@
 
         <!-- Tab 5: CSV Semester bulk import & Template download -->
         <div class="tab-content" id="tab-csv-import">
-          <p class="tab-intro" style="margin-bottom: 20px;">ดาวน์โหลดเทมเพลตไฟล์ CSV เพื่อกรอกข้อมูลแผนการสอนทั้ง 17 คาบเรียน จากนั้นอัปโหลดกลับเข้ามาในระบบเพื่อเขียนเปลี่ยนทับแผนการจัดการเรียนรู้หลักทั้งหมดของห้องนี้พร้อมกัน</p>
+          <p class="tab-intro" style="margin-bottom: 8px;">ดาวน์โหลดเทมเพลตไฟล์ CSV เพื่อกรอกข้อมูลแผนการสอนทั้งหมด จากนั้นอัปโหลดกลับเข้ามาในระบบเพื่อเขียนเปลี่ยนทับแผนการจัดการเรียนรู้หลักทั้งหมดของวิชานี้พร้อมกัน</p>
+          <p class="tab-intro" style="margin-bottom: 20px; font-weight: 500;">
+            <i data-lucide="info" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px; color:var(--danger);"></i>
+            รายวิชาที่เข้าข่ายนำเข้าแผนหลัก: <span id="label-csv-course-name" style="font-weight: 700; color: var(--danger);">[ชื่อรายวิชา]</span> *(มีผลต่อทุกห้องเรียนในรายวิชานี้)*
+          </p>
           
           <div class="settings-grid">
             <div class="settings-col">
