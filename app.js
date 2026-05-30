@@ -454,6 +454,31 @@ function initializeUI() {
     });
   });
 
+  // Workspace Mobile/Tablet Tab Switching Logic
+  const workspaceTabButtons = document.querySelectorAll('.w-tab-btn');
+  workspaceTabButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const tabTarget = e.currentTarget.dataset.wtab;
+      
+      workspaceTabButtons.forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      
+      document.querySelectorAll('.wtab-content').forEach(c => c.classList.remove('active'));
+      const targetEl = document.getElementById(tabTarget);
+      if (targetEl) {
+        targetEl.classList.add('active');
+      }
+      
+      // If reflection tab is opened, resize signature pad
+      if (tabTarget === 'wtab-reflect') {
+        setTimeout(() => {
+          resizeCanvas();
+          drawStrokes();
+        }, 50);
+      }
+    });
+  });
+
   // Action listeners inside Modal
   document.getElementById('btn-add-course').addEventListener('click', addNewCourse);
   document.getElementById('btn-add-class').addEventListener('click', addNewClassRoom);
@@ -543,6 +568,29 @@ function renderSidebar() {
       class: 'status-badge-icon'
     }
   });
+  
+  // Also render mobile week scroller
+  renderMobileWeekScroller();
+}
+
+// Render Mobile Week Scroller
+function renderMobileWeekScroller() {
+  const scroller = document.getElementById('mobile-week-scroller');
+  if (!scroller) return;
+  
+  scroller.innerHTML = '';
+  
+  lessonPlans.forEach((plan, index) => {
+    const chip = document.createElement('div');
+    chip.className = `mobile-week-chip ${index === selectedIndex ? 'active' : ''}`;
+    chip.innerText = `ครั้งที่ ${plan.once}`;
+    
+    chip.addEventListener('click', () => {
+      selectLesson(index);
+    });
+    
+    scroller.appendChild(chip);
+  });
 }
 
 // Load dropdown options inside Modal tabs
@@ -579,6 +627,17 @@ function selectLesson(index) {
       item.classList.add('active');
     } else {
       item.classList.remove('active');
+    }
+  });
+
+  // Highlight in mobile week scroller
+  const chips = document.querySelectorAll('.mobile-week-chip');
+  chips.forEach((chip, idx) => {
+    if (idx === index) {
+      chip.classList.add('active');
+      chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    } else {
+      chip.classList.remove('active');
     }
   });
 

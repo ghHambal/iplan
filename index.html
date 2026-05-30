@@ -82,11 +82,28 @@
         </div>
       </header>
 
+      <!-- Horizontal week scroller for mobile -->
+      <div class="mobile-week-scroller" id="mobile-week-scroller">
+        <!-- Generated Dynamically via JS -->
+      </div>
+
+      <!-- Segmented Tab Switcher for mobile/tablet workspace -->
+      <div class="workspace-tabs-bar" id="workspace-tabs-bar">
+        <button class="w-tab-btn active" data-wtab="wtab-reflect">
+          <i data-lucide="edit-3"></i>
+          <span>บันทึกหลังสอน & ลายเซ็น</span>
+        </button>
+        <button class="w-tab-btn" data-wtab="wtab-lesson">
+          <i data-lucide="book-open"></i>
+          <span>รายละเอียดแผนหลัก</span>
+        </button>
+      </div>
+
       <!-- Grid Column split -->
       <div class="content-grid">
         
         <!-- Left: Static Lesson Plan Preview (Editable via Settings) -->
-        <div class="content-left">
+        <div class="content-left wtab-content" id="wtab-lesson">
           <div class="card glass-card">
             <div class="card-header">
               <i data-lucide="file-text" class="card-icon info-icon"></i>
@@ -163,7 +180,7 @@
         </div>
 
         <!-- Right: Reflections & Interactive Digital Signature Pad -->
-        <div class="content-right">
+        <div class="content-right wtab-content active" id="wtab-reflect">
           
           <!-- Reflection Box -->
           <div class="card glass-card form-card">
