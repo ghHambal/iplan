@@ -788,6 +788,8 @@ function addNewClassRoom() {
 // Tab 3: Automatic Date Runner calculation
 function runAutoDateRunner() {
   const startDateVal = document.getElementById('input-start-date').value;
+  const weeks = parseInt(document.getElementById('input-teach-weeks').value) || 18;
+  const periodsPerSession = parseInt(document.getElementById('input-session-periods').value) || 2;
   
   // Find selected checkboxes for teaching days
   const checkedBoxes = document.querySelectorAll('input[name="teach-days"]:checked');
@@ -803,11 +805,14 @@ function runAutoDateRunner() {
     return;
   }
 
+  const sessionsPerWeek = daysOfWeek.length;
+  const totalSessions = weeks * sessionsPerWeek;
+
   // Calculate dates array
   const calculatedDates = [];
   let currentDate = new Date(startDateVal);
   
-  for (let i = 0; i < 17; i++) {
+  for (let i = 0; i < totalSessions; i++) {
     if (i === 0) {
       calculatedDates.push(formatThaiDateString(currentDate));
     } else {
@@ -823,27 +828,69 @@ function runAutoDateRunner() {
     }
   }
 
-  // Render calculated list preview inside box
-  const previewBox = document.getElementById('date-preview-list');
-  previewBox.innerHTML = '';
-  
-  calculatedDates.forEach((d, idx) => {
-    const item = document.createElement('div');
-    item.className = 'date-preview-item';
-    item.innerHTML = `<span>ครั้งที่ ${idx + 1}:</span> <span class="highlight">${d}</span>`;
-    previewBox.appendChild(item);
-  });
+  // Rebuild the lessonPlans array dynamically to match the configured structure!
+  const newPlans = [];
+  for (let i = 0; i < totalSessions; i++) {
+    const weekNum = Math.floor(i / sessionsPerWeek) + 1;
+    const sessionNum = i + 1;
+    
+    // Attempt to map from existing or default plan templates
+    let baseTemplate = DEFAULT_LESSON_PLANS[i % DEFAULT_LESSON_PLANS.length];
+    
+    // Default period range placeholder
+    let periodRange = '1-2';
+    if (periodsPerSession === 1) periodRange = '1';
+    else if (periodsPerSession === 3) periodRange = '1-3';
+    else if (periodsPerSession === 4) periodRange = '1-4';
+    else if (periodsPerSession === 5) periodRange = '1-5';
 
-  // Attach calculated dates to our temporary local lessonPlans state
-  lessonPlans.forEach((plan, idx) => {
-    plan.date = calculatedDates[idx];
-  });
-  
-  // Save progress key
+    // Preserve outcomes/solutions if they were already recorded, else set to '-'
+    let recordedPlan = lessonPlans.find(p => String(p.once) === String(sessionNum));
+    let outcomes = (recordedPlan && recordedPlan.outcomes) ? recordedPlan.outcomes : '-';
+    let solutions = (recordedPlan && recordedPlan.solutions) ? recordedPlan.solutions : '-';
+
+    const plan = {
+      week: String(weekNum),
+      once: String(sessionNum),
+      period: periodRange,
+      date: calculatedDates[i],
+      unit: baseTemplate ? baseTemplate.unit : '1',
+      topic: baseTemplate ? baseTemplate.topic : `เรื่องการเรียนรู้ครั้งที่ ${sessionNum}`,
+      periodCount: String(periodsPerSession),
+      standard: baseTemplate ? baseTemplate.standard : 'มาตรฐานการเรียนรู้ ค1.1...',
+      objectives: baseTemplate ? baseTemplate.objectives : '- เพื่อให้นักเรียนเข้าใจเนื้อหาบทเรียน',
+      activities: baseTemplate ? baseTemplate.activities : 'ขั้นนำ:\n- ทักทาย\n\nขั้นสอน:\n- บรรยายกิจกรรมการเรียนรู้\n\nขั้นสรุป:\n- สรุปเนื้อหาร่วมกัน',
+      assessment: baseTemplate ? baseTemplate.assessment : '- สังเกตพฤติกรรมในคาบเรียน',
+      materials: baseTemplate ? baseTemplate.materials : '- หนังสือเรียน',
+      outcomes: outcomes,
+      solutions: solutions
+    };
+    newPlans.push(plan);
+  }
+
+  // Write new array to the global state
+  lessonPlans = newPlans;
+
+  // Save new progress dataset to LocalStorage
   const storageKey = `iplane_lessons_${activeCourseId}_${activeClassId}`;
   localStorage.setItem(storageKey, JSON.stringify(lessonPlans));
 
-  alert('คำนวณรันวันที่สอนทั้ง 17 คาบเสร็จสิ้นและเขียนค่าเข้าฐานข้อมูลแล้ว');
+  // Render calculated list preview inside box
+  const previewBox = document.getElementById('date-preview-list');
+  previewBox.innerHTML = '';
+  calculatedDates.forEach((d, idx) => {
+    const item = document.createElement('div');
+    item.className = 'date-preview-item';
+    item.innerHTML = `<span>ครั้งที่ ${idx + 1} (สัปดาห์ ${Math.floor(idx / sessionsPerWeek) + 1}):</span> <span class="highlight">${d}</span>`;
+    previewBox.appendChild(item);
+  });
+
+  // Re-initialize dynamic selects, sidebars, scrollers, and selections
+  populateLessonEditorIndexSelect();
+  renderSidebar();
+  selectLesson(0);
+
+  alert(`คำนวณและวางโครงสร้างการสอนทั้งหมด ${totalSessions} ครั้งสำเร็จเรียบร้อยแล้ว!`);
 }
 
 // Convert native Date objects into Sarabun official Thai string outputs

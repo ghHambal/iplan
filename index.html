@@ -473,6 +473,17 @@
             <div class="settings-col">
               <h3><i data-lucide="calendar-plus"></i> ตั้งค่าระบบคำนวณวัน</h3>
               
+              <div class="form-group" style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label for="input-teach-weeks" style="font-size:12px; font-weight:600;">จำนวนสัปดาห์ที่สอน</label>
+                  <input type="number" id="input-teach-weeks" value="18" min="10" max="22" style="padding: 10px 14px; margin-top:4px;">
+                </div>
+                <div>
+                  <label for="input-session-periods" style="font-size:12px; font-weight:600;">จำนวนคาบเรียนต่อครั้ง</label>
+                  <input type="number" id="input-session-periods" value="2" min="1" max="5" style="padding: 10px 14px; margin-top:4px;">
+                </div>
+              </div>
+
               <div class="form-group">
                 <label for="input-start-date">วันที่เริ่มเรียนคาบแรกสุด (สัปดาห์ที่ 1 ครั้งที่ 1)</label>
                 <input type="date" id="input-start-date">

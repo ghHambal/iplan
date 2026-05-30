@@ -702,6 +702,88 @@ textarea:focus, input:focus, select:focus {
   overflow: hidden;
 }
 
+/* Fullscreen Settings Modal */
+#settings-modal .modal {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0;
+  border: none;
+  background-color: #0b0f19;
+}
+
+/* Beautiful Modal Header, Body, Close, Footer Layout */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-header-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-size: 24px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.modal-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-backdrop .modal {
+  transform: translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-backdrop.open .modal {
+  transform: translateY(0);
+}
+
 .modal-tabs {
   display: flex;
   background-color: rgba(0,0,0,0.25);
@@ -1560,6 +1642,12 @@ body.workspace-active #dashboard-view {
 }
 
 .content-grid {
+  display: none !important;
+}
+
+/* Hide week navigation in sidebar on large screens when Dashboard is active */
+body:not(.workspace-active) #week-list,
+body:not(.workspace-active) .nav-section-title {
   display: none !important;
 }
 
