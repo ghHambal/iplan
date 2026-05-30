@@ -360,6 +360,39 @@
               </div>
             </div>
           </div>
+
+          <!-- Digital Signature Canvas Board for Student Representative -->
+          <div class="card glass-card signature-card" style="margin-top: 20px;">
+            <div class="card-header">
+              <i data-lucide="user-check" class="card-icon pen-icon"></i>
+              <h2>เขียนลงลายเซ็นดิจิทัลหัวหน้าห้อง / ตัวแทนนักเรียน</h2>
+            </div>
+            <div class="card-body">
+              <div class="signature-container">
+                <canvas id="signature-pad-student" class="sig-pad"></canvas>
+                <div class="sig-placeholder" id="sig-placeholder-student">
+                  <i data-lucide="edit-2"></i>
+                  <span>สัมผัสหน้าจอหรือใช้เมาส์ให้หัวหน้าห้องเซ็นตรงนี้</span>
+                </div>
+              </div>
+              
+              <div class="signature-actions">
+                <div class="pen-colors">
+                  <button type="button" class="color-dot-student active" data-color="#0000FF" style="background-color: #0000FF;" title="สีน้ำเงิน"></button>
+                  <button type="button" class="color-dot-student" data-color="#000000" style="background-color: #000000;" title="สีดำ"></button>
+                </div>
+                <div class="sig-buttons">
+                  <button type="button" id="btn-sig-undo-student" class="btn btn-icon-only btn-secondary" title="Undo">
+                    <i data-lucide="undo-2"></i>
+                  </button>
+                  <button type="button" id="btn-sig-clear-student" class="btn btn-secondary">
+                    <i data-lucide="trash-2"></i>
+                    <span>ล้างช่องเซ็น</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -882,7 +915,7 @@
             <!-- Room Leader Signature -->
             <div class="pdf-sig-box text-center">
               <div class="pdf-sig-line">
-                <!-- Room leader signature line remains blank for physical signing -->
+                <img id="pdf-print-sig-room" class="pdf-signature-image" alt="ลายเซ็นหัวหน้าห้อง" style="display: none;">
               </div>
               <div class="pdf-sig-label">
                 ลงชื่อ ................................................. หัวหน้าห้อง<br>

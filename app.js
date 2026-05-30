@@ -310,6 +310,14 @@ let currentStroke = [];
 let penColor = '#0000FF'; 
 const penWidth = 2.5;
 
+let canvasStudent, ctxStudent;
+let drawingStudent = false;
+let strokesStudent = [];
+let currentStrokeStudent = [];
+let penColorStudent = '#0000FF';
+const penWidthStudent = 2.5;
+let currentSignatureStudentDataUrl = '';
+
 // 5. App Initialization on DOM Load
 document.addEventListener('DOMContentLoaded', () => {
   // Check URL parameters for auto configuration (useful for easy setup across devices)
@@ -737,6 +745,8 @@ function initializeUI() {
         setTimeout(() => {
           resizeCanvas();
           drawStrokes();
+          resizeCanvasStudent();
+          drawStrokesStudent();
         }, 50);
       }
     });
@@ -1341,6 +1351,8 @@ function selectLesson(index) {
   // Load and draw global signature if exists, instead of erasing it!
   strokes = [];
   drawStrokes();
+  strokesStudent = [];
+  drawStrokesStudent();
   
   document.querySelector('.app-main').scrollTop = 0;
 }
@@ -2385,6 +2397,17 @@ function populatePrintTemplate() {
   const sigImg = document.getElementById('pdf-print-sig-teacher');
   if (sigImg) sigImg.src = currentSignatureDataUrl;
 
+  const sigRoomImg = document.getElementById('pdf-print-sig-room');
+  if (sigRoomImg) {
+    if (currentSignatureStudentDataUrl) {
+      sigRoomImg.src = currentSignatureStudentDataUrl;
+      sigRoomImg.style.display = 'block';
+    } else {
+      sigRoomImg.src = '';
+      sigRoomImg.style.display = 'none';
+    }
+  }
+
   document.getElementById('pdf-print-teacher-name').innerText = profile.teacherName;
   document.getElementById('pdf-print-hod-name').innerText = profile.hodName;
 
@@ -2512,6 +2535,214 @@ function setupSignaturePad() {
     currentSignatureDataUrl = canvas.toDataURL('image/png');
     saveSignatureToStorage(currentSignatureDataUrl);
   });
+
+  // Initialize Student Signature Pad
+  canvasStudent = document.getElementById('signature-pad-student');
+  ctxStudent = canvasStudent.getContext('2d');
+  
+  const placeholderStudent = document.getElementById('sig-placeholder-student');
+
+  resizeCanvasStudent();
+  drawStrokesStudent();
+  
+  window.addEventListener('resize', () => {
+    resizeCanvasStudent();
+    drawStrokesStudent();
+  });
+
+  const colorDotsStudent = document.querySelectorAll('.color-dot-student');
+  colorDotsStudent.forEach(dot => {
+    dot.addEventListener('click', (e) => {
+      colorDotsStudent.forEach(d => d.classList.remove('active'));
+      e.target.classList.add('active');
+      penColorStudent = e.target.dataset.color;
+    });
+  });
+
+  document.getElementById('btn-sig-clear-student').addEventListener('click', clearStudentSignature);
+  document.getElementById('btn-sig-undo-student').addEventListener('click', undoStudentSignatureStroke);
+
+  // Mouse actions for Student
+  canvasStudent.addEventListener('mousedown', (e) => {
+    const rect = canvasStudent.getBoundingClientRect();
+    if (canvasStudent.width === 0 || canvasStudent.height === 0 || canvasStudent.width !== Math.floor(rect.width) || canvasStudent.height !== Math.floor(rect.height)) {
+      resizeCanvasStudent();
+      drawStrokesStudent();
+    }
+    drawingStudent = true;
+    placeholderStudent.style.display = 'none';
+    const pos = getPosStudent(e);
+    currentStrokeStudent = [{ x: pos.x, y: pos.y }];
+    strokesStudent.push(currentStrokeStudent);
+    
+    ctxStudent.beginPath();
+    ctxStudent.moveTo(pos.x, pos.y);
+    ctxStudent.lineWidth = penWidthStudent;
+    ctxStudent.lineCap = 'round';
+    ctxStudent.lineJoin = 'round';
+    ctxStudent.strokeStyle = penColorStudent;
+  });
+
+  canvasStudent.addEventListener('mousemove', (e) => {
+    if (!drawingStudent) return;
+    const pos = getPosStudent(e);
+    currentStrokeStudent.push({ x: pos.x, y: pos.y });
+
+    ctxStudent.lineTo(pos.x, pos.y);
+    ctxStudent.stroke();
+  });
+
+  canvasStudent.addEventListener('mouseup', () => {
+    if (!drawingStudent) return;
+    drawingStudent = false;
+    currentSignatureStudentDataUrl = canvasStudent.toDataURL('image/png');
+    saveStudentSignatureToStorage(currentSignatureStudentDataUrl);
+  });
+
+  canvasStudent.addEventListener('mouseleave', () => {
+    if (drawingStudent) {
+      drawingStudent = false;
+      currentSignatureStudentDataUrl = canvasStudent.toDataURL('image/png');
+      saveStudentSignatureToStorage(currentSignatureStudentDataUrl);
+    }
+  });
+
+  // Touch actions for Student
+  canvasStudent.addEventListener('touchstart', (e) => {
+    e.preventDefault(); 
+    const rect = canvasStudent.getBoundingClientRect();
+    if (canvasStudent.width === 0 || canvasStudent.height === 0 || canvasStudent.width !== Math.floor(rect.width) || canvasStudent.height !== Math.floor(rect.height)) {
+      resizeCanvasStudent();
+      drawStrokesStudent();
+    }
+    placeholderStudent.style.display = 'none';
+    drawingStudent = true;
+    const pos = getPosStudent(e.touches[0]);
+    currentStrokeStudent = [{ x: pos.x, y: pos.y }];
+    strokesStudent.push(currentStrokeStudent);
+    
+    ctxStudent.beginPath();
+    ctxStudent.moveTo(pos.x, pos.y);
+    ctxStudent.lineWidth = penWidthStudent;
+    ctxStudent.lineCap = 'round';
+    ctxStudent.lineJoin = 'round';
+    ctxStudent.strokeStyle = penColorStudent;
+  });
+
+  canvasStudent.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!drawingStudent) return;
+    const pos = getPosStudent(e.touches[0]);
+    currentStrokeStudent.push({ x: pos.x, y: pos.y });
+
+    ctxStudent.lineTo(pos.x, pos.y);
+    ctxStudent.stroke();
+  });
+
+  canvasStudent.addEventListener('touchend', () => {
+    drawingStudent = false;
+    currentSignatureStudentDataUrl = canvasStudent.toDataURL('image/png');
+    saveStudentSignatureToStorage(currentSignatureStudentDataUrl);
+  });
+}
+
+function getPosStudent(e) {
+  const rect = canvasStudent.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+}
+
+function resizeCanvasStudent() {
+  const rect = canvasStudent.getBoundingClientRect();
+  canvasStudent.width = rect.width;
+  canvasStudent.height = rect.height;
+  
+  ctxStudent.lineWidth = penWidthStudent;
+  ctxStudent.lineCap = 'round';
+  ctxStudent.lineJoin = 'round';
+  ctxStudent.strokeStyle = penColorStudent;
+}
+
+function drawStrokesStudent() {
+  ctxStudent.clearRect(0, 0, canvasStudent.width, canvasStudent.height);
+  
+  if (strokesStudent.length === 0) {
+    const savedSig = localStorage.getItem('iplane_student_signature_' + activeClassId);
+    if (savedSig) {
+      const placeholder = document.getElementById('sig-placeholder-student');
+      if (placeholder) placeholder.style.display = 'none';
+      currentSignatureStudentDataUrl = savedSig;
+      
+      const img = new Image();
+      img.onload = () => {
+        if (ctxStudent && canvasStudent) {
+          ctxStudent.clearRect(0, 0, canvasStudent.width, canvasStudent.height);
+          ctxStudent.drawImage(img, 0, 0, canvasStudent.width, canvasStudent.height);
+        }
+      };
+      img.src = savedSig;
+    } else {
+      const placeholder = document.getElementById('sig-placeholder-student');
+      if (placeholder) placeholder.style.display = 'flex';
+      currentSignatureStudentDataUrl = '';
+    }
+    return;
+  }
+
+  const placeholder = document.getElementById('sig-placeholder-student');
+  if (placeholder) placeholder.style.display = 'none';
+
+  strokesStudent.forEach(stroke => {
+    if (stroke.length === 0) return;
+    
+    ctxStudent.beginPath();
+    ctxStudent.moveTo(stroke[0].x, stroke[0].y);
+    ctxStudent.lineWidth = penWidthStudent;
+    ctxStudent.lineCap = 'round';
+    ctxStudent.lineJoin = 'round';
+    ctxStudent.strokeStyle = penColorStudent;
+
+    for (let i = 1; i < stroke.length; i++) {
+      ctxStudent.lineTo(stroke[i].x, stroke[i].y);
+    }
+    ctxStudent.stroke();
+  });
+
+  currentSignatureStudentDataUrl = canvasStudent.toDataURL('image/png');
+}
+
+function saveStudentSignatureToStorage(dataUrl) {
+  if (dataUrl) {
+    localStorage.setItem('iplane_student_signature_' + activeClassId, dataUrl);
+  }
+}
+
+function clearStudentSignature() {
+  strokesStudent = [];
+  if (ctxStudent && canvasStudent) {
+    ctxStudent.clearRect(0, 0, canvasStudent.width, canvasStudent.height);
+  }
+  const placeholder = document.getElementById('sig-placeholder-student');
+  if (placeholder) {
+    placeholder.style.display = 'flex';
+  }
+  currentSignatureStudentDataUrl = '';
+  localStorage.removeItem('iplane_student_signature_' + activeClassId);
+}
+
+function undoStudentSignatureStroke() {
+  strokesStudent.pop();
+  drawStrokesStudent();
+  
+  if (strokesStudent.length === 0) {
+    currentSignatureStudentDataUrl = '';
+    localStorage.removeItem('iplane_student_signature_' + activeClassId);
+  } else {
+    currentSignatureStudentDataUrl = canvasStudent.toDataURL('image/png');
+    localStorage.setItem('iplane_student_signature_' + activeClassId, currentSignatureStudentDataUrl);
+  }
 }
 
 function getPos(e) {
