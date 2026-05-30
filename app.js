@@ -1321,12 +1321,43 @@ function runAutoDateRunner() {
     return;
   }
 
+  // --- แปลงวันที่ input เป็น Date object ที่ถูกต้อง ---
+  // input[type="date"] ส่งค่า ISO YYYY-MM-DD (ค.ศ.) เสมอ
+  // แต่กรณีที่ browser แสดง พ.ศ. หรือผู้ใช้พิมพ์ปี พ.ศ. ให้ตรวจจับและแปลงก่อน
+  let parsedDate;
+  if (startDateVal.includes('-')) {
+    // ISO format: YYYY-MM-DD
+    const parts = startDateVal.split('-');
+    let year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1;
+    const day = parseInt(parts[2]);
+    // ถ้าปี > 2400 แสดงว่าเป็น พ.ศ. → แปลงเป็น ค.ศ.
+    if (year > 2400) year = year - 543;
+    parsedDate = new Date(year, month, day);
+  } else {
+    // fallback: DD/MM/YYYY หรือรูปแบบอื่น
+    const parts = startDateVal.split('/');
+    let year = parseInt(parts[2]);
+    const month = parseInt(parts[1]) - 1;
+    const day = parseInt(parts[0]);
+    if (year > 2400) year = year - 543;
+    parsedDate = new Date(year, month, day);
+  }
+
+  if (isNaN(parsedDate.getTime())) {
+    alert('รูปแบบวันที่ไม่ถูกต้อง กรุณาเลือกวันที่ผ่าน date picker');
+    return;
+  }
+
   const sessionsPerWeek = daysOfWeek.length;
   const totalSessions = weeks * sessionsPerWeek;
 
+  // Sort daysOfWeek in Sunday-first order (0=Sun, 1=Mon, ... 6=Sat)
+  daysOfWeek.sort((a, b) => a - b);
+
   // Calculate dates array
   const calculatedDates = [];
-  let currentDate = new Date(startDateVal);
+  let currentDate = new Date(parsedDate);
   
   for (let i = 0; i < totalSessions; i++) {
     if (i === 0) {
@@ -1409,11 +1440,14 @@ function runAutoDateRunner() {
   alert(`คำนวณและวางโครงสร้างการสอนทั้งหมด ${totalSessions} ครั้งสำเร็จเรียบร้อยแล้ว!`);
 }
 
-// Convert native Date objects into Sarabun official Thai string outputs
+// Convert native Date objects into Thai date string (DD/MM/YYYY พ.ศ.)
 function formatThaiDateString(date) {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
-  const BEYear = date.getFullYear() + 543;
+  // date.getFullYear() always returns CE year (from ISO date input),
+  // so we simply add 543 to convert to BE year.
+  const ceYear = date.getFullYear();
+  const BEYear = ceYear + 543;
   return `${day}/${month}/${BEYear}`;
 }
 
