@@ -648,6 +648,21 @@ function initializeUI() {
   if (btnDashboardSettings) {
     btnDashboardSettings.addEventListener('click', openSettings);
   }
+
+  const btnDashboardSync = document.getElementById('btn-dashboard-sync');
+  if (btnDashboardSync) {
+    btnDashboardSync.addEventListener('click', async () => {
+      const span = btnDashboardSync.querySelector('span');
+      const originalText = span.innerText;
+      span.innerText = 'กำลังซิงก์...';
+      btnDashboardSync.disabled = true;
+      
+      await fetchLiveGoogleData();
+      
+      span.innerText = originalText;
+      btnDashboardSync.disabled = false;
+    });
+  }
   
   const btnWorkspaceSettings = document.getElementById('btn-workspace-settings');
   if (btnWorkspaceSettings) {
@@ -1956,80 +1971,98 @@ function getSafeSheetName(courseCode, className) {
 
 // Fetch live sheet data from Apps Script backend on startup
 async function fetchLiveGoogleData() {
-  if (!config.gasUrl) return;
-
-  const currentCourse = courses.find(c => c.id === activeCourseId);
-  const currentClass = classes.find(c => c.id === activeClassId);
-  if (!currentCourse || !currentClass) return;
-
-  const sheetTabName = getSafeSheetName(currentCourse.code, currentClass.name);
+  if (!config.gasUrl || classes.length === 0) return;
 
   try {
-    const url = `${config.gasUrl}?sheetName=${encodeURIComponent(sheetTabName)}`;
-    const response = await fetch(url);
-    const result = await response.json();
+    const fetchPromises = classes.map(async (cls) => {
+      const course = courses.find(c => c.id === cls.courseId);
+      if (!course) return;
 
-    if (result.status === 'success' && result.data && result.data.length > 0) {
-      // Map remote columns to full lesson plan properties
-      const remoteLessons = result.data.map(sheetItem => {
-        return {
-          once: String(sheetItem['ครั้งที่'] || ''),
-          week: String(sheetItem['Week'] || '1'),
-          period: String(sheetItem['คาบที่สอน'] || '1-2'),
-          date: String(sheetItem['วว/ดด/ปป ที่สอน'] || ''),
-          unit: String(sheetItem['หน่วยการเรียนรู้ที่'] || '1'),
-          topic: String(sheetItem['เรื่อง'] || ''),
-          periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
-          standard: String(sheetItem['มาตรฐานการเรียนรู้/ตัวชี้วัด'] || ''),
-          objectives: String(sheetItem['จุดประสงค์การเรียนรู้'] || ''),
-          activities: String(sheetItem['กิจกรรมการเรียนรู้'] || ''),
-          assessment: String(sheetItem['การวัดและประเมินผล'] || ''),
-          materials: String(sheetItem['สื่อการเรียนรู้'] || ''),
-          outcomes: String(sheetItem['ผลการจัดการเรียนรู้'] || '-'),
-          solutions: String(sheetItem['แนวทางแก้ปัญหา'] || '-'),
-          pdfUrl: String(sheetItem['ลิงก์ไฟล์ PDF'] || '')
-        };
-      });
+      const sheetTabName = getSafeSheetName(course.code, cls.name);
+      const url = `${config.gasUrl}?sheetName=${encodeURIComponent(sheetTabName)}`;
 
-      // Split into courseLessons and classLessons
-      const courseLessons = remoteLessons.map(p => ({
-        once: p.once,
-        unit: p.unit,
-        topic: p.topic,
-        periodCount: p.periodCount,
-        standard: p.standard,
-        objectives: p.objectives,
-        activities: p.activities,
-        assessment: p.assessment,
-        materials: p.materials
-      }));
+      try {
+        const response = await fetch(url);
+        const result = await response.json();
 
-      const classLessons = remoteLessons.map(p => ({
-        once: p.once,
-        week: p.week,
-        date: p.date,
-        period: p.period,
-        outcomes: p.outcomes,
-        solutions: p.solutions,
-        pdfUrl: p.pdfUrl
-      }));
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+          // Map remote columns to full lesson plan properties
+          const remoteLessons = result.data.map(sheetItem => ({
+            once: String(sheetItem['ครั้งที่'] || ''),
+            week: String(sheetItem['Week'] || '1'),
+            period: String(sheetItem['คาบที่สอน'] || '1-2'),
+            date: String(sheetItem['วว/ดด/ปป ที่สอน'] || ''),
+            unit: String(sheetItem['หน่วยการเรียนรู้ที่'] || '1'),
+            topic: String(sheetItem['เรื่อง'] || ''),
+            periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
+            standard: String(sheetItem['มาตรฐานการเรียนรู้/ตัวชี้วัด'] || ''),
+            objectives: String(sheetItem['จุดประสงค์การเรียนรู้'] || ''),
+            activities: String(sheetItem['กิจกรรมการเรียนรู้'] || ''),
+            assessment: String(sheetItem['การวัดและประเมินผล'] || ''),
+            materials: String(sheetItem['สื่อการเรียนรู้'] || ''),
+            outcomes: String(sheetItem['ผลการจัดการเรียนรู้'] || '-'),
+            solutions: String(sheetItem['แนวทางแก้ปัญหา'] || '-'),
+            pdfUrl: String(sheetItem['ลิงก์ไฟล์ PDF'] || '')
+          }));
 
-      localStorage.setItem(`iplane_course_lessons_${activeCourseId}`, JSON.stringify(courseLessons));
-      localStorage.setItem(`iplane_class_lessons_${activeClassId}`, JSON.stringify(classLessons));
+          // Split into courseLessons and classLessons
+          const courseLessons = remoteLessons.map(p => ({
+            once: p.once,
+            unit: p.unit,
+            topic: p.topic,
+            periodCount: p.periodCount,
+            standard: p.standard,
+            objectives: p.objectives,
+            activities: p.activities,
+            assessment: p.assessment,
+            materials: p.materials
+          }));
 
-      // Reload into active state and render
-      lessonPlans = loadCombinedLessons(activeCourseId, activeClassId);
+          const classLessons = remoteLessons.map(p => ({
+            once: p.once,
+            week: p.week,
+            date: p.date,
+            period: p.period,
+            outcomes: p.outcomes,
+            solutions: p.solutions,
+            pdfUrl: p.pdfUrl
+          }));
 
-      renderSidebar();
-      if (document.body.classList.contains('workspace-active')) {
-        selectLesson(selectedIndex);
+          localStorage.setItem(`iplane_course_lessons_${cls.courseId}`, JSON.stringify(courseLessons));
+          localStorage.setItem(`iplane_class_lessons_${cls.id}`, JSON.stringify(classLessons));
+        } else if (result.status === 'success' && (!result.data || result.data.length === 0)) {
+          // If the sheet in the cloud is empty/newly created, push local default data to it in background
+          const localPlans = loadCombinedLessons(cls.courseId, cls.id);
+          if (localPlans.length > 0) {
+            const payload = {
+              action: 'saveAllLessons',
+              sheetName: sheetTabName,
+              lessons: localPlans
+            };
+            fetch(config.gasUrl, {
+              method: 'POST',
+              mode: 'cors',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify(payload)
+            }).catch(e => console.error('Error auto-populating sheet:', e));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching data for class:', cls.name, err);
       }
-      showToast('ซิงก์ข้อมูลแผนจาก Google Sheets ลงในเครื่องเรียบร้อยแล้ว ✓');
-    } else if (result.status === 'success' && (!result.data || result.data.length === 0)) {
-      // If the sheet in the cloud is empty/newly created, push our current local data to it
-      console.log('Cloud sheet is empty, pushing local database state to cloud...');
-      await syncAllLessonsToCloud();
+    });
+
+    await Promise.all(fetchPromises);
+
+    // Reload into active state and render
+    lessonPlans = loadCombinedLessons(activeCourseId, activeClassId);
+
+    renderDashboard();
+    renderSidebar();
+    if (document.body.classList.contains('workspace-active')) {
+      selectLesson(selectedIndex);
     }
+    showToast('ซิงก์ข้อมูลแผนของทุกห้องเรียนจาก Google Sheets สำเร็จ ✓');
   } catch (error) {
     console.error('ไม่สามารถดึงข้อมูลจาก Google Sheets ได้:', error);
   }
@@ -2542,11 +2575,12 @@ function renderDashboard() {
   document.getElementById('stat-total-courses').innerText = courses.length;
   document.getElementById('stat-total-classes').innerText = classes.length;
   
-  let totalLessonsCount = classes.length * 17;
+  let totalLessonsCount = 0;
   let completedLessonsCount = 0;
   
   classes.forEach(cls => {
     const plans = loadCombinedLessons(cls.courseId, cls.id);
+    totalLessonsCount += plans.length;
     plans.forEach(p => {
       if (p.outcomes && p.outcomes !== '-' && p.outcomes.trim() !== '') {
         completedLessonsCount++;
@@ -2621,7 +2655,9 @@ function renderDashboard() {
             classProgress++;
           }
         });
-        const classPercent = Math.round((classProgress / 17) * 100);
+        
+        const totalClassSessions = plans.length || 17;
+        const classPercent = totalClassSessions > 0 ? Math.round((classProgress / totalClassSessions) * 100) : 0;
         
         bodyHtml += `
           <div class="classroom-item">
@@ -2634,7 +2670,7 @@ function renderDashboard() {
                 <div class="classroom-progress-bg">
                   <div class="classroom-progress-fill" style="width: ${classPercent}%;"></div>
                 </div>
-                <span class="classroom-progress-text">${classPercent}% (${classProgress}/17)</span>
+                <span class="classroom-progress-text">${classPercent}% (${classProgress}/${totalClassSessions})</span>
               </div>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="openClassroomWorkspace('${course.id}', '${cls.id}')" style="padding: 8px 12px; font-size: 11.5px;">
