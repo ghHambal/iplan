@@ -2267,7 +2267,8 @@ async function syncToGoogleSheets() {
       solutions: lessonPlans[selectedIndex].solutions,
       pdfBase64: pdfDataUri,
       pdfFileName: `LessonPlan_Once_${lessonPlans[selectedIndex].once}.pdf`,
-      folderId: config.folderId
+      folderId: config.folderId,
+      teacherName: profile.teacherName || 'ครูฮัมบาลีย์ วาจิ'
     };
 
     const response = await fetch(config.gasUrl, {

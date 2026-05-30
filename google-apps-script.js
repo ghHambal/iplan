@@ -370,8 +370,43 @@ function doPost(e) {
       
       let folder;
       if (payload.folderId) {
-        try { folder = DriveApp.getFolderById(payload.folderId); }
-        catch (e) { folder = DriveApp.getRootFolder(); }
+        try {
+          const parentFolder = DriveApp.getFolderById(payload.folderId);
+          
+          // 1. ค้นหาโฟลเดอร์สัปดาห์ เช่น "สัปดาห์ที่ 1"
+          const weekNum = payload.week || '1';
+          const weekName = 'สัปดาห์ที่ ' + weekNum;
+          const weekFolders = parentFolder.getFoldersByName(weekName);
+          let weekFolder;
+          
+          if (weekFolders.hasNext()) {
+            weekFolder = weekFolders.next();
+          } else {
+            // หากไม่พบโฟลเดอร์สัปดาห์ที่ตรงเป๊ะ ให้ลองหาแบบไม่มีคำว่า "ที่" เช่น "สัปดาห์ 1"
+            const altWeekName = 'สัปดาห์ ' + weekNum;
+            const altWeekFolders = parentFolder.getFoldersByName(altWeekName);
+            if (altWeekFolders.hasNext()) {
+              weekFolder = altWeekFolders.next();
+            } else {
+              // หากยังไม่เจอ ให้สร้างโฟลเดอร์สัปดาห์นั้นขึ้นมาใหม่
+              weekFolder = parentFolder.createFolder(weekName);
+            }
+          }
+          
+          // 2. ค้นหาโฟลเดอร์ชื่อครูผู้สอนด้านในสัปดาห์นั้น เช่น "ครูฮัมบาลีย์ วาจิ" หรือชื่อจากโปรไฟล์ครู
+          const teacherName = (payload.teacherName || 'ครูฮัมบาลีย์ วาจิ').trim();
+          const teacherFolders = weekFolder.getFoldersByName(teacherName);
+          if (teacherFolders.hasNext()) {
+            folder = teacherFolders.next();
+          } else {
+            folder = weekFolder.createFolder(teacherName);
+          }
+        }
+        catch (e) {
+          // หากเกิดข้อผิดพลาดในการเจาะโฟลเดอร์ ให้ย้อนกลับไปใช้โฟลเดอร์หลัก
+          try { folder = DriveApp.getFolderById(payload.folderId); }
+          catch (err) { folder = DriveApp.getRootFolder(); }
+        }
       } else {
         const folders = DriveApp.getFoldersByName('iPlane_PDFs');
         folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('iPlane_PDFs');
