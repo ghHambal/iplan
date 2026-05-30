@@ -314,8 +314,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Bind UI elements & events
-  initializeUI();
   setupSignaturePad();
+  initializeUI();
   
   // Try loading live data from Google Sheets if configured
   if (config.gasUrl) {
@@ -877,8 +877,13 @@ function drawStrokes() {
 // Clear all canvas drawings
 function clearSignature() {
   strokes = [];
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  document.getElementById('sig-placeholder').style.display = 'flex';
+  if (ctx && canvas) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  const placeholder = document.getElementById('sig-placeholder');
+  if (placeholder) {
+    placeholder.style.display = 'flex';
+  }
   isSignatureDrawn = false;
   currentSignatureDataUrl = '';
 }
