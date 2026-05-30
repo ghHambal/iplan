@@ -500,6 +500,7 @@ function initializeUI() {
   
   renderSidebar();
   renderSettingsDropdowns();
+  renderWorkspaceDropdowns();
   updateProfileLabels();
   
   // Set values inside Settings Form inputs
@@ -641,6 +642,108 @@ function initializeUI() {
   document.getElementById('btn-download-template').addEventListener('click', downloadCSVTemplate);
   document.getElementById('btn-process-csv').addEventListener('click', importCSVData);
 
+  // --- Tab: Auto-date class selector ---
+  document.getElementById('select-autodate-class').addEventListener('change', (e) => {
+    activeClassId = e.target.value;
+    localStorage.setItem('iplane_active_class_id', activeClassId);
+    loadDatabaseState();
+    renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
+    updateProfileLabels();
+    const activeCls = classes.find(c => c.id === activeClassId);
+    if (activeCls && document.getElementById('input-active-class-leader')) {
+      document.getElementById('input-active-class-leader').value = activeCls.classLeader || '';
+    }
+    selectLesson(0);
+  });
+
+  // --- Tab: Edit-lesson course selector ---
+  document.getElementById('select-editlessson-course').addEventListener('change', (e) => {
+    activeCourseId = e.target.value;
+    localStorage.setItem('iplane_active_course_id', activeCourseId);
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    if (courseClasses.length > 0) {
+      activeClassId = courseClasses[0].id;
+      localStorage.setItem('iplane_active_class_id', activeClassId);
+    }
+    loadDatabaseState();
+    renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
+    updateProfileLabels();
+    selectLesson(0);
+    loadLessonIntoInlineEditor();
+  });
+
+  // --- Tab: CSV import course selector ---
+  document.getElementById('select-csv-course').addEventListener('change', (e) => {
+    activeCourseId = e.target.value;
+    localStorage.setItem('iplane_active_course_id', activeCourseId);
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    if (courseClasses.length > 0) {
+      activeClassId = courseClasses[0].id;
+      localStorage.setItem('iplane_active_class_id', activeClassId);
+    }
+    loadDatabaseState();
+    renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
+    updateProfileLabels();
+    selectLesson(0);
+  });
+
+  // --- Inline editor: active-course select auto-fill name/code ---
+  document.getElementById('select-active-course').addEventListener('change', (e) => {
+    const editNameInput = document.getElementById('input-edit-course-name');
+    const editCodeInput = document.getElementById('input-edit-course-code');
+    const selected = courses.find(c => c.id === e.target.value);
+    if (selected && editNameInput) editNameInput.value = selected.name;
+    if (selected && editCodeInput) editCodeInput.value = selected.code;
+  });
+
+  document.getElementById('select-active-class').addEventListener('change', (e) => {
+    const editClassInput = document.getElementById('input-edit-class-name');
+    const selected = classes.find(c => c.id === e.target.value);
+    if (selected && editClassInput) editClassInput.value = selected.name;
+  });
+
+  // --- Save course name inline ---
+  document.getElementById('btn-save-course-name').addEventListener('click', () => {
+    const newName = document.getElementById('input-edit-course-name').value.trim();
+    const newCode = document.getElementById('input-edit-course-code').value.trim();
+    if (!newName) { alert('กรุณากรอกชื่อวิชาก่อนบันทึก'); return; }
+    const course = courses.find(c => c.id === activeCourseId);
+    if (course) {
+      course.name = newName;
+      if (newCode) course.code = newCode;
+      localStorage.setItem('iplane_courses', JSON.stringify(courses));
+      renderSidebar();
+      renderSettingsDropdowns();
+      renderWorkspaceDropdowns();
+      updateProfileLabels();
+      lucide.createIcons();
+      showToast('บันทึกชื่อคอร์สวิชาเรียบร้อยแล้ว ✓');
+    }
+  });
+
+  // --- Save class name inline ---
+  document.getElementById('btn-save-class-name').addEventListener('click', () => {
+    const newName = document.getElementById('input-edit-class-name').value.trim();
+    if (!newName) { alert('กรุณากรอกชื่อห้องเรียนก่อนบันทึก'); return; }
+    const cls = classes.find(c => c.id === activeClassId);
+    if (cls) {
+      cls.name = newName;
+      localStorage.setItem('iplane_classes', JSON.stringify(classes));
+      renderSidebar();
+      renderSettingsDropdowns();
+      renderWorkspaceDropdowns();
+      updateProfileLabels();
+      lucide.createIcons();
+      showToast('บันทึกชื่อห้องเรียนเรียบร้อยแล้ว ✓');
+    }
+  });
+
   // Layout action button bindings
   document.getElementById('btn-save-offline').addEventListener('click', () => saveLessonProgress(true));
   document.getElementById('btn-sync-google').addEventListener('click', openA4PreviewModal);
@@ -677,12 +780,22 @@ function initializeUI() {
     exportPDFDocument();
   });
 
-  // Active dropdown switch updates
+  // Active dropdown switch updates (Settings Modal)
   document.getElementById('select-active-course').addEventListener('change', (e) => {
     activeCourseId = e.target.value;
     localStorage.setItem('iplane_active_course_id', activeCourseId);
+    
+    // Auto-select first class under this course
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    if (courseClasses.length > 0) {
+      activeClassId = courseClasses[0].id;
+      localStorage.setItem('iplane_active_class_id', activeClassId);
+    }
+    
     loadDatabaseState();
     renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
     updateProfileLabels();
     selectLesson(0);
   });
@@ -692,6 +805,8 @@ function initializeUI() {
     localStorage.setItem('iplane_active_class_id', activeClassId);
     loadDatabaseState();
     renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
     updateProfileLabels();
     
     // Load class leader
@@ -699,6 +814,99 @@ function initializeUI() {
     document.getElementById('input-active-class-leader').value = activeCls ? (activeCls.classLeader || '') : '';
     
     selectLesson(0);
+  });
+
+  // Direct Workspace View course and classroom dropdown updates!
+  document.getElementById('select-workspace-course').addEventListener('change', (e) => {
+    activeCourseId = e.target.value;
+    localStorage.setItem('iplane_active_course_id', activeCourseId);
+    
+    // Auto-select first class under this course
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    if (courseClasses.length > 0) {
+      activeClassId = courseClasses[0].id;
+      localStorage.setItem('iplane_active_class_id', activeClassId);
+    }
+    
+    loadDatabaseState();
+    renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
+    updateProfileLabels();
+    selectLesson(0);
+    
+    // Automatically retrieve Sheets data if URL exists
+    if (config.gasUrl) fetchLiveGoogleData();
+  });
+
+  document.getElementById('select-workspace-class').addEventListener('change', (e) => {
+    activeClassId = e.target.value;
+    localStorage.setItem('iplane_active_class_id', activeClassId);
+    loadDatabaseState();
+    renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
+    updateProfileLabels();
+    
+    // Load class leader
+    const activeCls = classes.find(c => c.id === activeClassId);
+    document.getElementById('input-active-class-leader').value = activeCls ? (activeCls.classLeader || '') : '';
+    
+    selectLesson(0);
+    
+    // Automatically retrieve Sheets data if URL exists
+    if (config.gasUrl) fetchLiveGoogleData();
+  });
+
+  // --- Preview Modal: Course selector ---
+  document.getElementById('select-preview-course').addEventListener('change', (e) => {
+    activeCourseId = e.target.value;
+    localStorage.setItem('iplane_active_course_id', activeCourseId);
+    
+    // Auto-select first class under this course
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    if (courseClasses.length > 0) {
+      activeClassId = courseClasses[0].id;
+      localStorage.setItem('iplane_active_class_id', activeClassId);
+    }
+    
+    loadDatabaseState();
+    renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
+    updateProfileLabels();
+    selectLesson(0);
+    
+    // Refresh preview content immediately
+    populatePrintTemplate();
+    lucide.createIcons();
+    
+    if (config.gasUrl) fetchLiveGoogleData();
+  });
+
+  // --- Preview Modal: Class selector ---
+  document.getElementById('select-preview-class').addEventListener('change', (e) => {
+    activeClassId = e.target.value;
+    localStorage.setItem('iplane_active_class_id', activeClassId);
+    loadDatabaseState();
+    renderSidebar();
+    renderSettingsDropdowns();
+    renderWorkspaceDropdowns();
+    updateProfileLabels();
+    
+    // Load class leader
+    const activeCls = classes.find(c => c.id === activeClassId);
+    if (document.getElementById('input-active-class-leader')) {
+      document.getElementById('input-active-class-leader').value = activeCls ? (activeCls.classLeader || '') : '';
+    }
+    
+    selectLesson(0);
+    
+    // Refresh preview content immediately
+    populatePrintTemplate();
+    lucide.createIcons();
+    
+    if (config.gasUrl) fetchLiveGoogleData();
   });
 
   // Open Main Dashboard initially
@@ -826,6 +1034,109 @@ function renderSettingsDropdowns() {
       opt.value = c.id;
       opt.innerText = `${c.name} (${c.code})`;
       selectNewClassCourse.appendChild(opt);
+    });
+  }
+
+  // --- Auto-fill inline edit inputs for course/class ---
+  const activeCourse = courses.find(c => c.id === activeCourseId);
+  const activeClass = classes.find(c => c.id === activeClassId);
+  const editCourseNameInput = document.getElementById('input-edit-course-name');
+  const editCourseCodeInput = document.getElementById('input-edit-course-code');
+  const editClassNameInput = document.getElementById('input-edit-class-name');
+  if (editCourseNameInput && activeCourse) editCourseNameInput.value = activeCourse.name;
+  if (editCourseCodeInput && activeCourse) editCourseCodeInput.value = activeCourse.code;
+  if (editClassNameInput && activeClass) editClassNameInput.value = activeClass.name;
+
+  // --- Populate Auto-date class selector ---
+  const autodateClassSelect = document.getElementById('select-autodate-class');
+  if (autodateClassSelect) {
+    autodateClassSelect.innerHTML = '';
+    classes.forEach(cl => {
+      const opt = document.createElement('option');
+      opt.value = cl.id;
+      opt.innerText = cl.name;
+      opt.selected = cl.id === activeClassId;
+      autodateClassSelect.appendChild(opt);
+    });
+  }
+
+  // --- Populate Edit-lesson course selector ---
+  const editLessonCourseSelect = document.getElementById('select-editlessson-course');
+  if (editLessonCourseSelect) {
+    editLessonCourseSelect.innerHTML = '';
+    courses.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.innerText = `${c.name} (${c.code})`;
+      opt.selected = c.id === activeCourseId;
+      editLessonCourseSelect.appendChild(opt);
+    });
+  }
+
+  // --- Populate CSV import course selector ---
+  const csvCourseSelect = document.getElementById('select-csv-course');
+  if (csvCourseSelect) {
+    csvCourseSelect.innerHTML = '';
+    courses.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.innerText = `${c.name} (${c.code})`;
+      opt.selected = c.id === activeCourseId;
+      csvCourseSelect.appendChild(opt);
+    });
+  }
+}
+
+function renderWorkspaceDropdowns() {
+  const wsCourseSelect = document.getElementById('select-workspace-course');
+  if (wsCourseSelect) {
+    wsCourseSelect.innerHTML = '';
+    courses.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.innerText = `${c.code} - ${c.name}`;
+      opt.selected = c.id === activeCourseId;
+      wsCourseSelect.appendChild(opt);
+    });
+  }
+
+  const wsClassSelect = document.getElementById('select-workspace-class');
+  if (wsClassSelect) {
+    wsClassSelect.innerHTML = '';
+    // Filter classes to only show those belonging to the active course
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    courseClasses.forEach(cl => {
+      const opt = document.createElement('option');
+      opt.value = cl.id;
+      opt.innerText = cl.name;
+      opt.selected = cl.id === activeClassId;
+      wsClassSelect.appendChild(opt);
+    });
+  }
+
+  // --- Sync Preview Modal Selectors ---
+  const previewCourseSelect = document.getElementById('select-preview-course');
+  if (previewCourseSelect) {
+    previewCourseSelect.innerHTML = '';
+    courses.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.innerText = `${c.code} - ${c.name}`;
+      opt.selected = c.id === activeCourseId;
+      previewCourseSelect.appendChild(opt);
+    });
+  }
+
+  const previewClassSelect = document.getElementById('select-preview-class');
+  if (previewClassSelect) {
+    previewClassSelect.innerHTML = '';
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    courseClasses.forEach(cl => {
+      const opt = document.createElement('option');
+      opt.value = cl.id;
+      opt.innerText = cl.name;
+      opt.selected = cl.id === activeClassId;
+      previewClassSelect.appendChild(opt);
     });
   }
 }
@@ -1170,6 +1481,34 @@ function updateSyncStatusIndicator() {
     syncStatus.className = 'status-indicator offline';
     label.innerText = 'ระบบออฟไลน์ (บันทึกเฉพาะที่เครื่อง)';
   }
+}
+
+// Lightweight toast notification
+function showToast(message, duration = 2500) {
+  let toast = document.getElementById('iplane-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'iplane-toast';
+    toast.style.cssText = `
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(30,34,54,0.97); color: #fff;
+      padding: 12px 24px; border-radius: 50px;
+      font-size: 13.5px; font-weight: 600; font-family: 'Inter', sans-serif;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid rgba(99,102,241,0.4);
+      z-index: 99999; opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
+      display: flex; align-items: center; gap: 8px; pointer-events: none;
+      white-space: nowrap;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span style="color:#6ee7b7;">✓</span> ${message}`;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+  }, duration);
 }
 
 // Convert native sheet parameters to valid Google Sheets tab name
@@ -1658,6 +1997,7 @@ function openClassroomWorkspace(courseId, classId) {
   
   // Re-render settings modal selects to align
   renderSettingsDropdowns();
+  renderWorkspaceDropdowns();
   
   // Reload state
   loadDatabaseState();

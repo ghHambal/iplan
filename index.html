@@ -198,14 +198,26 @@
             </div>
             
             <div class="card-body">
-              <!-- Active Course/Class metadata -->
-              <div class="active-config-banner">
-                <i data-lucide="graduation-cap"></i>
-                <div>
-                  <span id="active-course-label">วิชา: -</span>
-                  <span class="divider">|</span>
-                  <span id="active-class-label">ชั้นเรียน: -</span>
+              <!-- Active Course/Class metadata selectors -->
+              <div class="active-config-banner" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: rgba(99, 102, 241, 0.08); border: 1px solid var(--card-border); padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 20px; border-left: 3px solid var(--primary);">
+                <div style="display: flex; align-items: center; gap: 6px; color: var(--primary); font-weight: 700; font-size: 12.5px;">
+                  <i data-lucide="graduation-cap" style="width: 16px; height: 16px;"></i>
+                  <span>เลือกสลับเรียน:</span>
                 </div>
+                
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 250px;">
+                  <select id="select-workspace-course" style="padding: 6px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: var(--radius-sm); color: var(--text-main); font-size: 12.5px; font-weight: 600; cursor: pointer; flex: 1; max-width: 200px;">
+                    <!-- Dynamically populated -->
+                  </select>
+                  
+                  <select id="select-workspace-class" style="padding: 6px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: var(--radius-sm); color: var(--text-main); font-size: 12.5px; font-weight: 600; cursor: pointer; flex: 1; max-width: 200px;">
+                    <!-- Dynamically populated -->
+                  </select>
+                </div>
+                
+                <!-- Hidden fallback labels for background scripts if needed -->
+                <span id="active-course-label" style="display: none;">วิชา: -</span>
+                <span id="active-class-label" style="display: none;">ชั้นเรียน: -</span>
               </div>
 
               <div class="lesson-meta-grid">
@@ -345,7 +357,23 @@
       </div>
       
       <!-- Top Action Bar for quick print/sync in preview modal -->
-      <div class="modal-tabs" style="display: flex; gap: 12px; padding: 12px 24px; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--card-border); flex-wrap: wrap;">
+      <div class="modal-tabs" style="display: flex; gap: 12px; padding: 12px 24px; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--card-border); flex-wrap: wrap; align-items: center;">
+
+        <!-- Course & Classroom Selectors -->
+        <div style="display: flex; align-items: center; gap: 8px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); border-radius: 10px; padding: 6px 12px;">
+          <i data-lucide="graduation-cap" style="width:15px; height:15px; color: var(--primary); flex-shrink:0;"></i>
+          <select id="select-preview-course" style="padding: 5px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--card-border); border-radius: 8px; color: var(--text-main); font-size: 12.5px; font-weight: 600; cursor: pointer; min-width: 140px; outline: none;">
+            <!-- Dynamically populated -->
+          </select>
+          <i data-lucide="chevron-right" style="width:13px; height:13px; color: var(--text-muted); flex-shrink:0;"></i>
+          <select id="select-preview-class" style="padding: 5px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--card-border); border-radius: 8px; color: var(--text-main); font-size: 12.5px; font-weight: 600; cursor: pointer; min-width: 110px; outline: none;">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <!-- Vertical separator -->
+        <div style="width: 1px; height: 32px; background: var(--card-border); flex-shrink: 0;"></div>
+
         <button id="btn-preview-save-offline" class="btn btn-success" style="padding: 10px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 8px;">
           <i data-lucide="save" style="width:14px; height:14px;"></i> <span>บันทึกหลังสอนในเครื่อง</span>
         </button>
@@ -470,6 +498,29 @@
                 <label for="input-active-class-leader">ชื่อหัวหน้าห้องเรียน (สำหรับห้องเรียนที่เลือก)</label>
                 <input type="text" id="input-active-class-leader" placeholder="เช่น นายสมชาย ดีเด่น">
               </div>
+
+              <!-- Inline Editor: Edit selected course/class name -->
+              <div style="margin-top: 20px; padding: 14px; background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.25); border-radius: 10px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                  <i data-lucide="edit-2" style="width:15px; height:15px; color: var(--primary);"></i>
+                  <span style="font-size:13px; font-weight:700; color:var(--primary);">แก้ไขชื่อที่เลือกอยู่</span>
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                  <label style="font-size:11.5px;">แก้ไขชื่อคอร์สวิชาที่เลือก</label>
+                  <div style="display:flex; gap:8px; margin-top:4px;">
+                    <input type="text" id="input-edit-course-name" placeholder="ชื่อวิชาใหม่" style="flex:1;">
+                    <input type="text" id="input-edit-course-code" placeholder="รหัสวิชา" style="width:110px;">
+                    <button type="button" id="btn-save-course-name" class="btn btn-primary" style="padding:8px 14px; white-space:nowrap; flex-shrink:0;">บันทึก</button>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label style="font-size:11.5px;">แก้ไขชื่อห้องเรียนที่เลือก</label>
+                  <div style="display:flex; gap:8px; margin-top:4px;">
+                    <input type="text" id="input-edit-class-name" placeholder="ชื่อห้องเรียนใหม่" style="flex:1;">
+                    <button type="button" id="btn-save-class-name" class="btn btn-primary" style="padding:8px 14px; white-space:nowrap; flex-shrink:0;">บันทึก</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="settings-col">
@@ -503,10 +554,16 @@
         <!-- Tab 3: Automatic Date runner script calculation -->
         <div class="tab-content" id="tab-auto-date">
           <p class="tab-intro" style="margin-bottom: 8px;">ระบบจะช่วยคำนวณวันที่สอนของแต่ละคาบ โดยระบุวันเริ่มสอนครั้งแรก และวันปกติที่มีการเรียนการสอนในแต่ละสัปดาห์</p>
-          <p class="tab-intro" style="margin-bottom: 24px; font-weight: 500;">
-            <i data-lucide="info" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px; color:var(--primary);"></i>
-            ห้องเรียนที่กำลังตั้งค่าวันที่: <span id="label-auto-date-classname" style="font-weight: 700; color: var(--primary);">[ชื่อห้องเรียน]</span>
-          </p>
+
+          <!-- Classroom selector inside auto-date tab -->
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background: rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-left:3px solid var(--primary); border-radius:10px; padding:10px 16px; margin-bottom:20px;">
+            <i data-lucide="door-open" style="width:16px; height:16px; color:var(--primary); flex-shrink:0;"></i>
+            <span style="font-size:13px; font-weight:700; color:var(--primary); white-space:nowrap;">เลือกห้องเรียนที่ตั้งค่าวันที่:</span>
+            <select id="select-autodate-class" style="flex:1; min-width:180px; padding:7px 12px; background:rgba(0,0,0,0.35); border:1px solid var(--card-border); border-radius:8px; color:var(--text-main); font-size:13px; font-weight:600; cursor:pointer; outline:none;">
+              <!-- Dynamically populated -->
+            </select>
+            <span style="font-size:12px; color:var(--text-muted); white-space:nowrap;">กำลังตั้งค่า: <span id="label-auto-date-classname" style="font-weight:700; color:var(--primary);">[ชื่อห้องเรียน]</span></span>
+          </div>
           
           <div class="settings-grid">
             <div class="settings-col">
@@ -572,7 +629,18 @@
 
         <!-- Tab 4: Inline Edit Lesson details database -->
         <div class="tab-content" id="tab-edit-lessons">
-          <p class="tab-intro" style="margin-bottom: 20px; font-weight: 500;">
+
+          <!-- Course selector inside edit-lessons tab -->
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background: rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.25); border-left:3px solid var(--danger); border-radius:10px; padding:10px 16px; margin-bottom:20px;">
+            <i data-lucide="graduation-cap" style="width:16px; height:16px; color:var(--danger); flex-shrink:0;"></i>
+            <span style="font-size:13px; font-weight:700; color:var(--danger); white-space:nowrap;">เลือกคอร์สวิชาที่แก้ไข:</span>
+            <select id="select-editlessson-course" style="flex:1; min-width:200px; padding:7px 12px; background:rgba(0,0,0,0.35); border:1px solid var(--card-border); border-radius:8px; color:var(--text-main); font-size:13px; font-weight:600; cursor:pointer; outline:none;">
+              <!-- Dynamically populated -->
+            </select>
+            <span style="font-size:12px; color:var(--text-muted); white-space:nowrap;">*(มีผลต่อทุกห้องเรียนในรายวิชานี้)*</span>
+          </div>
+
+          <p class="tab-intro" style="margin-bottom: 20px; font-weight: 500; display:none;">
             <i data-lucide="info" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px; color:var(--danger);"></i>
             รายวิชาที่กำลังแก้ไขเนื้อหาแผนการสอน: <span id="label-edit-lesson-coursename" style="font-weight: 700; color: var(--danger);">[ชื่อรายวิชา]</span> *(มีผลต่อทุกห้องเรียนในรายวิชานี้)*
           </p>
@@ -623,7 +691,18 @@
         <!-- Tab 5: CSV Semester bulk import & Template download -->
         <div class="tab-content" id="tab-csv-import">
           <p class="tab-intro" style="margin-bottom: 8px;">ดาวน์โหลดเทมเพลตไฟล์ CSV เพื่อกรอกข้อมูลแผนการสอนทั้งหมด จากนั้นอัปโหลดกลับเข้ามาในระบบเพื่อเขียนเปลี่ยนทับแผนการจัดการเรียนรู้หลักทั้งหมดของวิชานี้พร้อมกัน</p>
-          <p class="tab-intro" style="margin-bottom: 20px; font-weight: 500;">
+
+          <!-- Course selector inside CSV import tab -->
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background: rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.25); border-left:3px solid var(--danger); border-radius:10px; padding:10px 16px; margin-bottom:20px;">
+            <i data-lucide="graduation-cap" style="width:16px; height:16px; color:var(--danger); flex-shrink:0;"></i>
+            <span style="font-size:13px; font-weight:700; color:var(--danger); white-space:nowrap;">เลือกคอร์สวิชาที่นำเข้าข้อมูล:</span>
+            <select id="select-csv-course" style="flex:1; min-width:200px; padding:7px 12px; background:rgba(0,0,0,0.35); border:1px solid var(--card-border); border-radius:8px; color:var(--text-main); font-size:13px; font-weight:600; cursor:pointer; outline:none;">
+              <!-- Dynamically populated -->
+            </select>
+            <span style="font-size:12px; color:var(--text-muted); white-space:nowrap;">*(มีผลต่อทุกห้องเรียนในรายวิชานี้)*</span>
+          </div>
+
+          <p class="tab-intro" style="margin-bottom: 20px; font-weight: 500; display:none;">
             <i data-lucide="info" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px; color:var(--danger);"></i>
             รายวิชาที่เข้าข่ายนำเข้าแผนหลัก: <span id="label-csv-course-name" style="font-weight: 700; color: var(--danger);">[ชื่อรายวิชา]</span> *(มีผลต่อทุกห้องเรียนในรายวิชานี้)*
           </p>
