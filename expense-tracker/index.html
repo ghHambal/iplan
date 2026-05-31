@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ครอบครัวเซฟ">
+  <meta name="theme-color" content="#22c55e">
+  <title>ครอบครัวเซฟ – บันทึกรายรับรายจ่าย</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-logo">💰</div>
+    <div class="spinner"></div>
+    <p>กำลังโหลด...</p>
+  </div>
+
+  <!-- ─── AUTH VIEW ─────────────────────────────────────── -->
+  <div id="view-auth" class="full-page-view hidden">
+    <div class="auth-container">
+      <div class="auth-logo">💰</div>
+      <h1>ครอบครัวเซฟ</h1>
+      <p>บันทึกรายรับรายจ่ายสำหรับครอบครัว</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">เข้าสู่ระบบ</button>
+        <button class="auth-tab" data-tab="register">สมัครสมาชิก</button>
+      </div>
+
+      <form id="form-auth">
+        <div class="form-group">
+          <label>อีเมล</label>
+          <input type="email" id="auth-email" placeholder="your@email.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>รหัสผ่าน</label>
+          <input type="password" id="auth-password" placeholder="อย่างน้อย 6 ตัวอักษร" required autocomplete="current-password">
+        </div>
+        <div class="form-group" id="auth-name-group" style="display:none">
+          <label>ชื่อที่แสดง (เช่น คุณพ่อ, คุณแม่)</label>
+          <input type="text" id="auth-name" placeholder="ชื่อของคุณ" autocomplete="nickname">
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="btn-auth-submit">เข้าสู่ระบบ</button>
+      </form>
+
+      <div class="divider"><span>หรือ</span></div>
+      <button id="btn-google" class="btn-google">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/></svg>
+        เข้าสู่ระบบด้วย Google
+      </button>
+
+      <div id="auth-error" class="error-message hidden"></div>
+    </div>
+  </div>
+
+  <!-- ─── FAMILY SETUP VIEW ──────────────────────────────── -->
+  <div id="view-family-setup" class="full-page-view hidden">
+    <div class="auth-container">
+      <div class="auth-logo">👨‍👩‍👧‍👦</div>
+      <h2>ตั้งค่าครอบครัว</h2>
+      <p>สร้างกลุ่มครอบครัวใหม่ หรือเข้าร่วมด้วยรหัสเชิญ</p>
+
+      <div class="form-group">
+        <label>ชื่อที่แสดง (ถ้ายังไม่ได้ใส่)</label>
+        <input type="text" id="setup-display-name" placeholder="เช่น คุณพ่อ, คุณแม่">
+      </div>
+
+      <button id="btn-create-family" class="btn-primary btn-full">➕ สร้างครอบครัวใหม่</button>
+
+      <div class="divider"><span>หรือ</span></div>
+
+      <div class="form-group">
+        <label>รหัสเชิญ 6 หลัก (รับจากคู่ชีวิต)</label>
+        <input type="text" id="invite-code-input" placeholder="เช่น ABC123" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:20px;font-weight:700;text-align:center">
+      </div>
+      <button id="btn-join-family" class="btn-secondary btn-full">🔗 เข้าร่วมครอบครัว</button>
+
+      <div id="family-setup-error" class="error-message hidden"></div>
+    </div>
+  </div>
+
+  <!-- ─── MAIN APP ───────────────────────────────────────── -->
+  <div id="app" class="hidden">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <span id="header-family-icon">👨‍👩‍👧‍👦</span>
+        <span id="header-family-name">ครอบครัวของเรา</span>
+      </div>
+      <div class="header-right">
+        <span id="header-user-avatar" style="font-size:24px">👤</span>
+        <span id="header-user-name"></span>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view-section active">
+        <div class="balance-card">
+          <div class="month-nav">
+            <button id="prev-month">‹</button>
+            <span id="current-month-label">เดือนนี้</span>
+            <button id="next-month">›</button>
+          </div>
+          <div class="balance-label">ยอดคงเหลือ</div>
+          <div class="balance-amount" id="balance-amount">฿0</div>
+          <div class="balance-sub">
+            <div class="balance-item income-side">
+              <span class="bal-label">💚 รายรับ</span>
+              <span id="income-total" class="bal-amount income-color">฿0</span>
+            </div>
+            <div class="balance-divider"></div>
+            <div class="balance-item expense-side">
+              <span class="bal-label">❤️ รายจ่าย</span>
+              <span id="expense-total" class="bal-amount expense-color">฿0</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="budget-alerts"></div>
+
+        <div class="section-header">
+          <h3>รายการล่าสุด</h3>
+          <button class="link-btn" id="btn-view-all">ดูทั้งหมด →</button>
+        </div>
+        <div id="recent-transactions" class="transaction-list"></div>
+      </section>
+
+      <!-- TRANSACTIONS -->
+      <section id="view-transactions" class="view-section hidden">
+        <div class="view-header">
+          <h2>รายการทั้งหมด</h2>
+        </div>
+        <div class="filter-bar">
+          <select id="filter-type">
+            <option value="">ทั้งหมด</option>
+            <option value="income">รายรับ</option>
+            <option value="expense">รายจ่าย</option>
+          </select>
+          <select id="filter-category"><option value="">ทุกหมวด</option></select>
+        </div>
+        <div id="all-transactions" class="transaction-list"></div>
+      </section>
+
+      <!-- SUMMARY -->
+      <section id="view-summary" class="view-section hidden">
+        <div class="view-header"><h2>สรุปประจำเดือน</h2></div>
+        <div class="chart-card">
+          <h3>รายจ่ายตามหมวดหมู่</h3>
+          <div class="chart-wrap"><canvas id="chart-expense-pie"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>รายรับ vs รายจ่าย (6 เดือน)</h3>
+          <div class="chart-wrap"><canvas id="chart-monthly-bar"></canvas></div>
+        </div>
+        <div class="chart-card" id="category-breakdown-card">
+          <h3>รายละเอียดหมวดหมู่</h3>
+          <div id="category-breakdown"></div>
+        </div>
+      </section>
+
+      <!-- BUDGETS -->
+      <section id="view-budgets" class="view-section hidden">
+        <div class="view-header">
+          <h2>งบประมาณ</h2>
+          <button class="btn-icon" id="btn-add-budget">+ ตั้งงบ</button>
+        </div>
+        <div id="budget-list" class="budget-list"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="view-section hidden">
+        <div class="view-header"><h2>ตั้งค่าระบบ</h2></div>
+
+        <!-- Profile -->
+        <div class="settings-card">
+          <h3>👤 โปรไฟล์ของฉัน</h3>
+          <div class="form-group">
+            <label>ชื่อที่แสดง</label>
+            <input type="text" id="setting-display-name" placeholder="เช่น คุณพ่อ">
+          </div>
+          <div class="form-group">
+            <label>อีโมจิประจำตัว</label>
+            <div class="emoji-picker" id="emoji-picker">
+              <span class="emoji-opt" data-emoji="👨">👨</span>
+              <span class="emoji-opt" data-emoji="👩">👩</span>
+              <span class="emoji-opt" data-emoji="🧑">🧑</span>
+              <span class="emoji-opt" data-emoji="👴">👴</span>
+              <span class="emoji-opt" data-emoji="👵">👵</span>
+              <span class="emoji-opt" data-emoji="🧒">🧒</span>
+              <span class="emoji-opt" data-emoji="👶">👶</span>
+            </div>
+          </div>
+          <button class="btn-primary" id="btn-save-profile">💾 บันทึกโปรไฟล์</button>
+        </div>
+
+        <!-- Family -->
+        <div class="settings-card">
+          <h3>👨‍👩‍👧‍👦 จัดการครอบครัว</h3>
+          <div class="form-group">
+            <label>ชื่อครอบครัว</label>
+            <input type="text" id="setting-family-name" placeholder="เช่น ครอบครัวสุขใจ">
+          </div>
+          <button class="btn-primary" id="btn-save-family-name">💾 บันทึกชื่อครอบครัว</button>
+
+          <div class="divider-sm"></div>
+          <label class="form-label-sm">รหัสเชิญ (แชร์ให้คู่ชีวิตเพื่อเข้าร่วม)</label>
+          <div class="invite-code-display">
+            <span id="invite-code-display" class="invite-code-text">------</span>
+            <button class="btn-copy" id="btn-copy-invite">📋 คัดลอก</button>
+          </div>
+
+          <div class="divider-sm"></div>
+          <h4>สมาชิกในครอบครัว</h4>
+          <div id="family-members-list"></div>
+        </div>
+
+        <!-- Categories -->
+        <div class="settings-card">
+          <h3>🏷️ จัดการหมวดหมู่</h3>
+          <div class="category-tabs">
+            <button class="cat-tab active" data-type="expense">รายจ่าย</button>
+            <button class="cat-tab" data-type="income">รายรับ</button>
+          </div>
+          <div id="categories-list" class="categories-list"></div>
+          <div class="add-category-row">
+            <input type="text" id="new-category-input" placeholder="หมวดหมู่ใหม่ เช่น 🍜 ก๋วยเตี๋ยว">
+            <button id="btn-add-category" class="btn-secondary">+ เพิ่ม</button>
+          </div>
+        </div>
+
+        <!-- Transactions Manager -->
+        <div class="settings-card">
+          <h3>📋 จัดการรายการทั้งหมด</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">แก้ไขหรือลบรายการได้โดยตรงที่นี่</p>
+          <div class="filter-bar" style="margin-bottom:12px">
+            <select id="settings-filter-type">
+              <option value="">ทั้งหมด</option>
+              <option value="income">รายรับ</option>
+              <option value="expense">รายจ่าย</option>
+            </select>
+            <select id="settings-filter-month" style="flex:1.5"></select>
+          </div>
+          <div id="settings-transaction-list" class="transaction-list"></div>
+        </div>
+
+        <!-- Budgets Manager -->
+        <div class="settings-card">
+          <h3>💳 จัดการงบประมาณ</h3>
+          <button class="btn-icon" id="btn-add-budget-settings" style="margin-bottom:12px">+ ตั้งงบใหม่</button>
+          <div id="settings-budget-list"></div>
+        </div>
+
+        <!-- Data -->
+        <div class="settings-card">
+          <h3>📁 ข้อมูล</h3>
+          <button class="btn-secondary btn-full" id="btn-export-csv" style="margin-bottom:8px">📥 ส่งออก CSV</button>
+          <div class="divider-sm"></div>
+          <button class="btn-danger btn-full" id="btn-logout">🚪 ออกจากระบบ</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FAB -->
+    <button id="fab-add" class="fab" aria-label="เพิ่มรายการใหม่">
+      <span style="font-size:28px;line-height:1;font-weight:300">+</span>
+    </button>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">หน้าหลัก</span>
+      </button>
+      <button class="nav-item" data-view="transactions">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">รายการ</span>
+      </button>
+      <button class="nav-item" data-view="summary">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">สรุป</span>
+      </button>
+      <button class="nav-item" data-view="budgets">
+        <span class="nav-icon">💳</span>
+        <span class="nav-label">งบ</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">ตั้งค่า</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ─── TRANSACTION MODAL ──────────────────────────────── -->
+  <div id="modal-transaction" class="modal hidden">
+    <div class="modal-overlay" id="tx-overlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 id="modal-tx-title">เพิ่มรายการ</h3>
+        <button class="modal-close" id="btn-close-tx-modal">✕</button>
+      </div>
+
+      <div class="type-toggle">
+        <button class="type-btn active expense" data-type="expense">รายจ่าย</button>
+        <button class="type-btn income" data-type="income">รายรับ</button>
+      </div>
+
+      <form id="form-transaction">
+        <div class="form-group">
+          <label>จำนวนเงิน (บาท) <span class="required">*</span></label>
+          <input type="number" id="tx-amount" placeholder="0.00" min="0.01" step="0.01" required inputmode="decimal">
+        </div>
+        <div class="form-group">
+          <label>หมวดหมู่ <span class="required">*</span></label>
+          <div id="tx-categories" class="category-chips"></div>
+        </div>
+        <div class="form-group">
+          <label>วันที่</label>
+          <input type="date" id="tx-date" required>
+        </div>
+        <div class="form-group">
+          <label>หมายเหตุ</label>
+          <input type="text" id="tx-note" placeholder="เพิ่มรายละเอียด...">
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="btn-save-tx">💾 บันทึก</button>
+        <button type="button" class="btn-danger btn-full" id="btn-delete-tx" style="display:none;margin-top:8px">🗑️ ลบรายการนี้</button>
+      </form>
+      <div id="tx-error" class="error-message hidden" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ─── BUDGET MODAL ───────────────────────────────────── -->
+  <div id="modal-budget" class="modal hidden">
+    <div class="modal-overlay" id="budget-overlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 id="modal-budget-title">ตั้งงบประมาณ</h3>
+        <button class="modal-close" id="btn-close-budget-modal">✕</button>
+      </div>
+      <form id="form-budget">
+        <div class="form-group">
+          <label>หมวดหมู่รายจ่าย</label>
+          <select id="budget-category"></select>
+        </div>
+        <div class="form-group">
+          <label>งบประมาณต่อเดือน (บาท)</label>
+          <input type="number" id="budget-limit" placeholder="0" min="1" required inputmode="numeric">
+        </div>
+        <button type="submit" class="btn-primary btn-full">💾 บันทึกงบประมาณ</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>
