@@ -218,6 +218,32 @@ function translateErr(msg) {
   return msg;
 }
 
+async function handleForgotPassword() {
+  const email = el('auth-email').value.trim();
+  const errEl = el('auth-error');
+  const sucEl = el('forgot-success');
+  errEl.classList.add('hidden');
+  sucEl.classList.add('hidden');
+
+  if (!email) {
+    errEl.textContent = 'กรุณาใส่อีเมลก่อนกด "ลืมรหัสผ่าน"';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href,
+  });
+
+  if (error) {
+    errEl.textContent = 'เกิดข้อผิดพลาด: ' + error.message;
+    errEl.classList.remove('hidden');
+  } else {
+    sucEl.textContent = `ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email} แล้ว กรุณาตรวจสอบอีเมล`;
+    sucEl.classList.remove('hidden');
+  }
+}
+
 async function handleGoogleLogin() {
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google', options: { redirectTo: window.location.href }
@@ -707,6 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el('auth-error').classList.add('hidden');
   }));
   el('form-auth').addEventListener('submit', handleAuthSubmit);
+  el('btn-forgot-password').addEventListener('click', handleForgotPassword);
   el('btn-google').addEventListener('click', handleGoogleLogin);
 
   // Family setup
