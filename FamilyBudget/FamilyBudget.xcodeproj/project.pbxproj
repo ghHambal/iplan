@@ -1,0 +1,419 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2F0000000000000000000001 /* FamilyBudgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000001 /* FamilyBudgetApp.swift */; };
+		2F0000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000002 /* ContentView.swift */; };
+		2F0000000000000000000003 /* TransactionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000003 /* TransactionType.swift */; };
+		2F0000000000000000000004 /* ExpenseCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000004 /* ExpenseCategory.swift */; };
+		2F0000000000000000000005 /* TransactionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000005 /* TransactionViewModel.swift */; };
+		2F0000000000000000000006 /* BudgetViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000006 /* BudgetViewModel.swift */; };
+		2F0000000000000000000007 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000007 /* HomeView.swift */; };
+		2F0000000000000000000008 /* AddTransactionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000008 /* AddTransactionView.swift */; };
+		2F0000000000000000000009 /* TransactionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000009 /* TransactionListView.swift */; };
+		2F0000000000000000000010 /* TransactionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000010 /* TransactionRowView.swift */; };
+		2F0000000000000000000011 /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000011 /* SummaryView.swift */; };
+		2F0000000000000000000012 /* BudgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000012 /* BudgetView.swift */; };
+		2F0000000000000000000013 /* FamilySharingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000013 /* FamilySharingView.swift */; };
+		2F0000000000000000000014 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000014 /* PersistenceController.swift */; };
+		2F0000000000000000000015 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000015 /* NotificationManager.swift */; };
+		2F0000000000000000000016 /* FamilyBudget.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000016 /* FamilyBudget.xcdatamodeld */; };
+		2F0000000000000000000017 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1F0000000000000000000017 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1F0000000000000000000001 /* FamilyBudgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyBudgetApp.swift; sourceTree = "<group>"; };
+		1F0000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000003 /* TransactionType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionType.swift; sourceTree = "<group>"; };
+		1F0000000000000000000004 /* ExpenseCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseCategory.swift; sourceTree = "<group>"; };
+		1F0000000000000000000005 /* TransactionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionViewModel.swift; sourceTree = "<group>"; };
+		1F0000000000000000000006 /* BudgetViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetViewModel.swift; sourceTree = "<group>"; };
+		1F0000000000000000000007 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000008 /* AddTransactionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTransactionView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000009 /* TransactionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionListView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000010 /* TransactionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionRowView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000011 /* SummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000012 /* BudgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000013 /* FamilySharingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilySharingView.swift; sourceTree = "<group>"; };
+		1F0000000000000000000014 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		1F0000000000000000000015 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		1F0000000000000000000016 /* FamilyBudget.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = FamilyBudget.xcdatamodeld; sourceTree = "<group>"; };
+		1F0000000000000000000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1F0000000000000000000018 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1F0000000000000000000019 /* FamilyBudget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FamilyBudget.entitlements; sourceTree = "<group>"; };
+		1F0000000000000000000020 /* FamilyBudget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FamilyBudget.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4F0000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3F0000000000000000000001 /* MainGroup */ = {
+			isa = PBXGroup;
+			children = (
+				3F0000000000000000000002 /* FamilyBudget */,
+				3F0000000000000000000010 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000002 /* FamilyBudget */ = {
+			isa = PBXGroup;
+			children = (
+				3F0000000000000000000003 /* App */,
+				3F0000000000000000000004 /* Models */,
+				3F0000000000000000000005 /* ViewModels */,
+				3F0000000000000000000006 /* Views */,
+				3F0000000000000000000007 /* Persistence */,
+				3F0000000000000000000008 /* Notifications */,
+				3F0000000000000000000009 /* Resources */,
+				1F0000000000000000000018 /* Info.plist */,
+				1F0000000000000000000019 /* FamilyBudget.entitlements */,
+			);
+			path = FamilyBudget;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000001 /* FamilyBudgetApp.swift */,
+				1F0000000000000000000002 /* ContentView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000003 /* TransactionType.swift */,
+				1F0000000000000000000004 /* ExpenseCategory.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000005 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000005 /* TransactionViewModel.swift */,
+				1F0000000000000000000006 /* BudgetViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000007 /* HomeView.swift */,
+				1F0000000000000000000008 /* AddTransactionView.swift */,
+				1F0000000000000000000009 /* TransactionListView.swift */,
+				1F0000000000000000000010 /* TransactionRowView.swift */,
+				1F0000000000000000000011 /* SummaryView.swift */,
+				1F0000000000000000000012 /* BudgetView.swift */,
+				1F0000000000000000000013 /* FamilySharingView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000007 /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000014 /* PersistenceController.swift */,
+			);
+			path = Persistence;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000008 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000015 /* NotificationManager.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000009 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000016 /* FamilyBudget.xcdatamodeld */,
+				1F0000000000000000000017 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		3F0000000000000000000010 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1F0000000000000000000020 /* FamilyBudget.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7F0000000000000000000001 /* FamilyBudget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6F0000000000000000000002 /* Build configuration list for PBXNativeTarget "FamilyBudget" */;
+			buildPhases = (
+				4F0000000000000000000001 /* Sources */,
+				4F0000000000000000000002 /* Resources */,
+				4F0000000000000000000003 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FamilyBudget;
+			productName = FamilyBudget;
+			productReference = 1F0000000000000000000020 /* FamilyBudget.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8F0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1430;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					7F0000000000000000000001 = {
+						CreatedOnToolsVersion = 14.3;
+					};
+				};
+			};
+			buildConfigurationList = 6F0000000000000000000001 /* Build configuration list for PBXProject "FamilyBudget" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = th;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				th,
+				en,
+				Base,
+			);
+			mainGroup = 3F0000000000000000000001;
+			productRefGroup = 3F0000000000000000000010 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7F0000000000000000000001 /* FamilyBudget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4F0000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F0000000000000000000017 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4F0000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F0000000000000000000001 /* FamilyBudgetApp.swift in Sources */,
+				2F0000000000000000000002 /* ContentView.swift in Sources */,
+				2F0000000000000000000003 /* TransactionType.swift in Sources */,
+				2F0000000000000000000004 /* ExpenseCategory.swift in Sources */,
+				2F0000000000000000000005 /* TransactionViewModel.swift in Sources */,
+				2F0000000000000000000006 /* BudgetViewModel.swift in Sources */,
+				2F0000000000000000000007 /* HomeView.swift in Sources */,
+				2F0000000000000000000008 /* AddTransactionView.swift in Sources */,
+				2F0000000000000000000009 /* TransactionListView.swift in Sources */,
+				2F0000000000000000000010 /* TransactionRowView.swift in Sources */,
+				2F0000000000000000000011 /* SummaryView.swift in Sources */,
+				2F0000000000000000000012 /* BudgetView.swift in Sources */,
+				2F0000000000000000000013 /* FamilySharingView.swift in Sources */,
+				2F0000000000000000000014 /* PersistenceController.swift in Sources */,
+				2F0000000000000000000015 /* NotificationManager.swift in Sources */,
+				2F0000000000000000000016 /* FamilyBudget.xcdatamodeld in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5F0000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		5F0000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5F0000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FamilyBudget/FamilyBudget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FamilyBudget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iplan.familybudget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5F0000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FamilyBudget/FamilyBudget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FamilyBudget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iplan.familybudget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6F0000000000000000000001 /* Build configuration list for PBXProject "FamilyBudget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5F0000000000000000000001 /* Debug */,
+				5F0000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6F0000000000000000000002 /* Build configuration list for PBXNativeTarget "FamilyBudget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5F0000000000000000000003 /* Debug */,
+				5F0000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 8F0000000000000000000001 /* Project object */;
+}
