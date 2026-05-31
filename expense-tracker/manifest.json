@@ -1,0 +1,20 @@
+{
+  "name": "ครอบครัวเซฟ",
+  "short_name": "ครอบครัวเซฟ",
+  "description": "บันทึกรายรับรายจ่ายสำหรับครอบครัว",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#22c55e",
+  "orientation": "portrait-primary",
+  "lang": "th",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
