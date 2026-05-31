@@ -121,6 +121,17 @@ html, body {
   background: none; border: none; color: var(--primary);
   font-size: 14px; font-weight: 600; cursor: pointer;
 }
+.btn-forgot {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 13px; cursor: pointer; text-align: center;
+  padding: 4px; text-decoration: underline; align-self: center;
+}
+.btn-forgot:hover { color: var(--primary); }
+.success-message {
+  color: var(--primary-dark); font-size: 13px;
+  background: var(--primary-light); padding: 10px 14px;
+  border-radius: var(--radius-sm);
+}
 .btn-google {
   width: 100%; padding: 13px; border: 1.5px solid var(--border);
   border-radius: var(--radius-sm); background: white; color: var(--text);
