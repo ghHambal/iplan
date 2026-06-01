@@ -739,6 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Family setup
   el('btn-create-family').addEventListener('click', handleCreateFamily);
   el('btn-join-family').addEventListener('click', handleJoinFamily);
+  el('btn-setup-logout').addEventListener('click', async () => { await sb.auth.signOut(); });
 
   // Navigation
   document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => navigateTo(btn.dataset.view)));
