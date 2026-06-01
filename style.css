@@ -1120,6 +1120,11 @@ textarea:focus, input:focus, select:focus {
   line-height: 1.4;
 }
 
+.pdf-sig-date-line {
+  text-align: left;
+  padding-left: 15%;
+}
+
 .pdf-signature-block-single {
   display: flex;
   justify-content: center;

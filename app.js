@@ -2421,7 +2421,7 @@ function populatePrintTemplate() {
   // Dates underneath signature lines
   document.getElementById('pdf-print-date-sig-teacher').innerText = plan.date;
   document.getElementById('pdf-print-date-sig-room').innerText = plan.date;
-  document.getElementById('pdf-print-date-sig-hod').innerText = plan.date;
+  document.getElementById('pdf-print-date-sig-hod').innerText = '...................................';
 }
 
 // ==========================================
