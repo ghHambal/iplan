@@ -2477,140 +2477,210 @@ function exportPDFDocument() {
   }
 }
 
-// Copy active values onto official single-page A4 PDF elements
+let a4TemplateHtml = '';
+
+// Copy active values onto official single-page A4 PDF elements (Unified Course-wide classrooms compiler)
 function populatePrintTemplate() {
-  const plan = lessonPlans[selectedIndex];
+  const container = document.getElementById('print-template-container');
+  if (!container) return;
+
+  if (!a4TemplateHtml) {
+    a4TemplateHtml = container.innerHTML;
+  }
+  container.innerHTML = ''; // Clear container to dynamically build A4 sheets
+
   const currentCourse = courses.find(c => c.id === activeCourseId);
-  const currentClass = classes.find(c => c.id === activeClassId);
+  if (!currentCourse) return;
 
-  // General course metadata
-  document.getElementById('pdf-print-dept').innerText = `กลุ่มสาระการเรียนรู้${profile.schoolName}`;
-  document.getElementById('pdf-print-course-name').innerText = currentCourse ? currentCourse.name : '-';
-  document.getElementById('pdf-print-course-code').innerText = currentCourse ? currentCourse.code : '-';
-  document.getElementById('pdf-print-class-name').innerText = currentClass ? currentClass.name : '-';
+  // Filter classrooms belonging to this course
+  const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+  if (courseClasses.length === 0) return;
 
-  // Specific lesson info
-  document.getElementById('pdf-print-unit').innerText = plan.unit;
-  document.getElementById('pdf-print-topic').innerText = plan.topic;
-  document.getElementById('pdf-print-once').innerText = `ครั้งที่ ${plan.once}`;
-  document.getElementById('pdf-print-period-count').innerText = `เวลา ${plan.periodCount} ชั่วโมง`;
-  document.getElementById('pdf-print-date').innerText = plan.date;
+  courseClasses.forEach((cls, idx) => {
+    // Load this classroom's specific lessons
+    const classPlans = loadCombinedLessons(activeCourseId, cls.id);
+    const plan = classPlans[selectedIndex];
+    if (!plan) return;
 
-  // Left column sections
-  document.getElementById('pdf-print-standard').innerText = plan.standard;
-  document.getElementById('pdf-print-objectives').innerText = plan.objectives;
-  document.getElementById('pdf-print-activities').innerText = plan.activities;
-  document.getElementById('pdf-print-assessment').innerText = plan.assessment;
+    // Create unique DOM node from the saved HTML template
+    const pageWrapper = document.createElement('div');
+    pageWrapper.innerHTML = a4TemplateHtml;
+    const pageEl = pageWrapper.firstElementChild;
 
-  // Right column sections
-  document.getElementById('pdf-print-materials').innerText = plan.materials;
-
-  // Render Outcomes and Solutions dynamically inside Section 6 "บันทึกหลังการสอน"
-  const outcomesContainer = document.getElementById('pdf-print-outcomes');
-  if (outcomesContainer) {
-    outcomesContainer.innerHTML = ''; // Clear existing content
-    
-    // Render Outcomes title
-    const outcomesTitle = document.createElement('div');
-    outcomesTitle.className = 'font-bold';
-    outcomesTitle.style.fontSize = '12px';
-    outcomesTitle.style.color = '#14532d';
-    outcomesTitle.style.marginBottom = '2px';
-    outcomesTitle.innerText = 'ผลการจัดการเรียนรู้:';
-    outcomesContainer.appendChild(outcomesTitle);
-
-    if (plan.outcomesMode === 'draw' && plan.outcomes && plan.outcomes.startsWith('data:image/')) {
-      const outcomesImg = document.createElement('img');
-      outcomesImg.src = plan.outcomes;
-      outcomesImg.style.maxHeight = '30mm';
-      outcomesImg.style.maxWidth = '100%';
-      outcomesImg.style.display = 'block';
-      outcomesImg.style.objectFit = 'contain';
-      outcomesImg.style.margin = '2px 0 10px 0';
-      outcomesContainer.appendChild(outcomesImg);
+    // Set page break formatting for PDF multi-page rendering
+    if (idx < courseClasses.length - 1) {
+      pageEl.style.pageBreakAfter = 'always';
+      pageEl.style.breakAfter = 'page';
     } else {
-      const outcomesText = document.createElement('div');
-      outcomesText.style.whiteSpace = 'pre-line';
-      outcomesText.style.fontSize = '11px';
-      outcomesText.style.marginBottom = '10px';
-      outcomesText.innerText = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
-      outcomesContainer.appendChild(outcomesText);
+      pageEl.style.pageBreakAfter = 'avoid';
+      pageEl.style.breakAfter = 'avoid';
     }
 
-    // Render Solutions title
-    const solutionsTitle = document.createElement('div');
-    solutionsTitle.className = 'font-bold';
-    solutionsTitle.style.fontSize = '12px';
-    solutionsTitle.style.color = '#14532d';
-    solutionsTitle.style.marginBottom = '2px';
-    solutionsTitle.innerText = 'แนวทางการแก้ปัญหา:';
-    outcomesContainer.appendChild(solutionsTitle);
+    // Populate course details (shared across classrooms) and class details (unique)
+    const printDept = pageEl.querySelector('#pdf-print-dept');
+    if (printDept) printDept.innerText = `กลุ่มสาระการเรียนรู้${profile.schoolName || 'คณิตศาสตร์'}`;
 
-    if (plan.solutionsMode === 'draw' && plan.solutions && plan.solutions.startsWith('data:image/')) {
-      const solutionsImg = document.createElement('img');
-      solutionsImg.src = plan.solutions;
-      solutionsImg.style.maxHeight = '30mm';
-      solutionsImg.style.maxWidth = '100%';
-      solutionsImg.style.display = 'block';
-      solutionsImg.style.objectFit = 'contain';
-      solutionsImg.style.margin = '2px 0 2px 0';
-      outcomesContainer.appendChild(solutionsImg);
+    const printCourseName = pageEl.querySelector('#pdf-print-course-name');
+    if (printCourseName) printCourseName.innerText = currentCourse.name || '-';
+
+    const printCourseCode = pageEl.querySelector('#pdf-print-course-code');
+    if (printCourseCode) printCourseCode.innerText = currentCourse.code || '-';
+
+    const printClassName = pageEl.querySelector('#pdf-print-class-name');
+    if (printClassName) printClassName.innerText = cls.name || '-';
+
+    // Specific lesson info
+    const printUnit = pageEl.querySelector('#pdf-print-unit');
+    if (printUnit) printUnit.innerText = plan.unit || '1';
+
+    const printTopic = pageEl.querySelector('#pdf-print-topic');
+    if (printTopic) printTopic.innerText = plan.topic || '-';
+
+    const printOnce = pageEl.querySelector('#pdf-print-once');
+    if (printOnce) printOnce.innerText = `ครั้งที่ ${plan.once}`;
+
+    const printPeriodCount = pageEl.querySelector('#pdf-print-period-count');
+    if (printPeriodCount) printPeriodCount.innerText = `เวลา ${plan.periodCount} ชั่วโมง`;
+
+    const printDate = pageEl.querySelector('#pdf-print-date');
+    if (printDate) printDate.innerText = plan.date || '-';
+
+    // Left column standard, objectives, activities, assessment
+    const printStandard = pageEl.querySelector('#pdf-print-standard');
+    if (printStandard) printStandard.innerText = plan.standard || '-';
+
+    const printObjectives = pageEl.querySelector('#pdf-print-objectives');
+    if (printObjectives) printObjectives.innerText = plan.objectives || '-';
+
+    const printActivities = pageEl.querySelector('#pdf-print-activities');
+    if (printActivities) printActivities.innerText = plan.activities || '-';
+
+    const printAssessment = pageEl.querySelector('#pdf-print-assessment');
+    if (printAssessment) printAssessment.innerText = plan.assessment || '-';
+
+    // Right column materials
+    const printMaterials = pageEl.querySelector('#pdf-print-materials');
+    if (printMaterials) printMaterials.innerText = plan.materials || '-';
+
+    // Render outcomes & solutions inside Section 6
+    const outcomesContainer = pageEl.querySelector('#pdf-print-outcomes');
+    if (outcomesContainer) {
+      outcomesContainer.innerHTML = ''; // Clear fallback
+
+      // Render Outcomes title
+      const outcomesTitle = document.createElement('div');
+      outcomesTitle.className = 'font-bold';
+      outcomesTitle.style.fontSize = '11px';
+      outcomesTitle.style.color = '#14532d';
+      outcomesTitle.style.marginBottom = '2px';
+      outcomesTitle.innerText = 'ผลการจัดการเรียนรู้:';
+      outcomesContainer.appendChild(outcomesTitle);
+
+      if (plan.outcomesMode === 'draw' && plan.outcomes && plan.outcomes.startsWith('data:image/')) {
+        const outcomesImg = document.createElement('img');
+        outcomesImg.src = plan.outcomes;
+        outcomesImg.style.maxHeight = '24mm';
+        outcomesImg.style.maxWidth = '100%';
+        outcomesImg.style.display = 'block';
+        outcomesImg.style.objectFit = 'contain';
+        outcomesImg.style.margin = '2px 0 8px 0';
+        outcomesContainer.appendChild(outcomesImg);
+      } else {
+        const outcomesText = document.createElement('div');
+        outcomesText.style.whiteSpace = 'pre-line';
+        outcomesText.style.fontSize = '10.5px';
+        outcomesText.style.marginBottom = '8px';
+        outcomesText.innerText = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
+        outcomesContainer.appendChild(outcomesText);
+      }
+
+      // Render Solutions title
+      const solutionsTitle = document.createElement('div');
+      solutionsTitle.className = 'font-bold';
+      solutionsTitle.style.fontSize = '11px';
+      solutionsTitle.style.color = '#14532d';
+      solutionsTitle.style.marginBottom = '2px';
+      solutionsTitle.innerText = 'แนวทางการแก้ปัญหา:';
+      outcomesContainer.appendChild(solutionsTitle);
+
+      if (plan.solutionsMode === 'draw' && plan.solutions && plan.solutions.startsWith('data:image/')) {
+        const solutionsImg = document.createElement('img');
+        solutionsImg.src = plan.solutions;
+        solutionsImg.style.maxHeight = '24mm';
+        solutionsImg.style.maxWidth = '100%';
+        solutionsImg.style.display = 'block';
+        solutionsImg.style.objectFit = 'contain';
+        solutionsImg.style.margin = '2px 0 2px 0';
+        outcomesContainer.appendChild(solutionsImg);
+      } else {
+        const solutionsText = document.createElement('div');
+        solutionsText.style.whiteSpace = 'pre-line';
+        solutionsText.style.fontSize = '10.5px';
+        solutionsText.innerText = (plan.solutions === '-') ? '' : (plan.solutions || '');
+        outcomesContainer.appendChild(solutionsText);
+      }
+    }
+
+    // Section 7 suggestion blank lines
+    const printSolutions = pageEl.querySelector('#pdf-print-solutions');
+    if (printSolutions) printSolutions.innerText = '\n\n\n';
+
+    // Apply custom school logo or default SVG crest
+    const customLogo = localStorage.getItem('iplane_school_logo');
+    const defaultLogoSvg = pageEl.querySelector('#pdf-default-logo-svg');
+    const customLogoImg = pageEl.querySelector('#pdf-custom-logo-img');
+    if (customLogo) {
+      if (defaultLogoSvg) defaultLogoSvg.style.display = 'none';
+      if (customLogoImg) {
+        customLogoImg.src = customLogo;
+        customLogoImg.style.display = 'block';
+      }
     } else {
-      const solutionsText = document.createElement('div');
-      solutionsText.style.whiteSpace = 'pre-line';
-      solutionsText.style.fontSize = '11px';
-      solutionsText.innerText = (plan.solutions === '-') ? '' : (plan.solutions || '');
-      outcomesContainer.appendChild(solutionsText);
+      if (defaultLogoSvg) defaultLogoSvg.style.display = 'block';
+      if (customLogoImg) customLogoImg.style.display = 'none';
     }
-  }
-  
-  // Section 7 "ข้อเสนอแนะ" is for HOD to write on later, leave it empty (with blank lines to render dashed underlines beautifully)
-  document.getElementById('pdf-print-solutions').innerText = '\n\n\n\n';
 
-  // Apply custom school logo or SVG default
-  const customLogo = localStorage.getItem('iplane_school_logo');
-  const defaultLogoSvg = document.getElementById('pdf-default-logo-svg');
-  const customLogoImg = document.getElementById('pdf-custom-logo-img');
+    // Teachers digital signature
+    const sigImg = pageEl.querySelector('#pdf-print-sig-teacher');
+    if (sigImg) sigImg.src = currentSignatureDataUrl;
 
-  if (customLogo) {
-    if (defaultLogoSvg) defaultLogoSvg.style.display = 'none';
-    if (customLogoImg) {
-      customLogoImg.src = customLogo;
-      customLogoImg.style.display = 'block';
+    // Class room leader digital signature
+    const sigRoomImg = pageEl.querySelector('#pdf-print-sig-room');
+    if (sigRoomImg) {
+      const studentSig = localStorage.getItem('iplane_student_signature_' + cls.id) || '';
+      if (studentSig) {
+        sigRoomImg.src = studentSig;
+        sigRoomImg.style.display = 'block';
+      } else {
+        sigRoomImg.src = '';
+        sigRoomImg.style.display = 'none';
+      }
     }
-  } else {
-    if (defaultLogoSvg) defaultLogoSvg.style.display = 'block';
-    if (customLogoImg) customLogoImg.style.display = 'none';
-  }
 
-  // Apply signatures and dynamic thai formatted dates
-  const sigImg = document.getElementById('pdf-print-sig-teacher');
-  if (sigImg) sigImg.src = currentSignatureDataUrl;
+    const printTeacherName = pageEl.querySelector('#pdf-print-teacher-name');
+    if (printTeacherName) printTeacherName.innerText = profile.teacherName || '';
 
-  const sigRoomImg = document.getElementById('pdf-print-sig-room');
-  if (sigRoomImg) {
-    if (currentSignatureStudentDataUrl) {
-      sigRoomImg.src = currentSignatureStudentDataUrl;
-      sigRoomImg.style.display = 'block';
-    } else {
-      sigRoomImg.src = '';
-      sigRoomImg.style.display = 'none';
+    const printHodName = pageEl.querySelector('#pdf-print-hod-name');
+    if (printHodName) printHodName.innerText = profile.hodName || '';
+
+    // Class Leader signature name
+    const classLeaderNameSpan = pageEl.querySelector('#pdf-print-leader-name');
+    if (classLeaderNameSpan) {
+      classLeaderNameSpan.innerText = cls.classLeader || '.................................................';
     }
-  }
 
-  document.getElementById('pdf-print-teacher-name').innerText = profile.teacherName;
-  document.getElementById('pdf-print-hod-name').innerText = profile.hodName;
+    // Dates underneath signature lines
+    const printDateSigTeacher = pageEl.querySelector('#pdf-print-date-sig-teacher');
+    if (printDateSigTeacher) printDateSigTeacher.innerText = plan.date || '-';
 
-  // Set Class Leader signature name
-  const classLeaderNameSpan = document.getElementById('pdf-print-leader-name');
-  if (classLeaderNameSpan) {
-    classLeaderNameSpan.innerText = (currentClass && currentClass.classLeader) ? currentClass.classLeader : '.................................................';
-  }
+    const printDateSigRoom = pageEl.querySelector('#pdf-print-date-sig-room');
+    if (printDateSigRoom) printDateSigRoom.innerText = plan.date || '-';
 
-  // Dates underneath signature lines
-  document.getElementById('pdf-print-date-sig-teacher').innerText = plan.date;
-  document.getElementById('pdf-print-date-sig-room').innerText = plan.date;
-  document.getElementById('pdf-print-date-sig-hod').innerText = '...................................';
+    const printDateSigHod = pageEl.querySelector('#pdf-print-date-sig-hod');
+    if (printDateSigHod) printDateSigHod.innerText = '...................................';
+
+    container.appendChild(pageEl);
+  });
 }
 
 // ==========================================
@@ -3448,8 +3518,9 @@ function adjustPreviewScale() {
 
   host.style.transform = `scale(${scale})`;
   
-  // Offsets negative height gap to pull content scroll area height inline
-  const heightDifference = 1123 * (1 - scale);
+  // Offsets negative height gap dynamically based on page count to prevent scroll bounds clipping
+  const pageCount = host.querySelectorAll('.single-page-pdf').length || 1;
+  const heightDifference = (1123 * pageCount) * (1 - scale);
   host.style.marginBottom = `-${heightDifference}px`;
 }
 

@@ -424,10 +424,42 @@ function doPost(e) {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       pdfUrl = file.getUrl();
       
-      const pdfColIndex = headers.indexOf('ลิงก์ไฟล์ PDF');
-      let actualPdfCol = pdfColIndex === -1 ? headers.length : pdfColIndex;
-      if (pdfColIndex === -1) sheet.getRange(1, actualPdfCol + 1).setValue('ลิงก์ไฟล์ PDF');
-      sheet.getRange(targetRowIndex, actualPdfCol + 1).setValue(pdfUrl);
+      // [v3] อัปเดตลิงก์ PDF ให้ทุกห้องเรียนในวิชาเดียวกันโดยอัตโนมัติ เพื่อป้องกันการบันทึกทับและลิงก์เสีย
+      const coursePrefix = sheetName.indexOf('_') > -1 ? sheetName.split('_')[0] : '';
+      const allSheets = ss.getSheets();
+      
+      allSheets.forEach(function(s) {
+        const sName = s.getName();
+        let shouldUpdate = false;
+        if (sName === sheetName) {
+          shouldUpdate = true;
+        } else if (coursePrefix && sName.indexOf(coursePrefix + '_') === 0) {
+          shouldUpdate = true;
+        }
+        
+        if (shouldUpdate) {
+          const sValues = s.getDataRange().getDisplayValues();
+          if (sValues.length > 0) {
+            const sHeaders = sValues[0].map(function(h) { return String(h).trim(); });
+            const sOnceCol = sHeaders.indexOf('ครั้งที่');
+            let sPdfCol = sHeaders.indexOf('ลิงก์ไฟล์ PDF');
+            
+            if (sPdfCol === -1) {
+              sPdfCol = sHeaders.length;
+              s.getRange(1, sPdfCol + 1).setValue('ลิงก์ไฟล์ PDF');
+            }
+            
+            if (sOnceCol > -1) {
+              for (let i = 1; i < sValues.length; i++) {
+                if (String(sValues[i][sOnceCol]).trim() === onceValue) {
+                  s.getRange(i + 1, sPdfCol + 1).setValue(pdfUrl);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      });
     }
     
     return corsResponse({

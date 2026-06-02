@@ -1,7 +1,7 @@
 /* iPlane - Design System & Core Typography */
 :root {
-  --font-sans: 'Inter', 'Sarabun', -apple-system, sans-serif;
-  --font-thai: 'Sarabun', sans-serif;
+  --font-sans: 'Inter', 'Sarabun', 'Thonburi', 'Leelawadee', -apple-system, sans-serif;
+  --font-thai: 'Sarabun', 'Thonburi', 'Leelawadee', sans-serif;
 
   /* Color Palette (Deep Space Slate & Indigo Glow) */
   --bg-app: #090d16;
@@ -979,7 +979,14 @@ textarea:focus, input:focus, select:focus {
 
 /* A4 Print redone for exact 2-column single-page matching user image */
 .print-container {
-  display: none;
+  position: absolute;
+  left: -9999mm;
+  top: -9999mm;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
 }
 
 .single-page-pdf {
@@ -987,7 +994,7 @@ textarea:focus, input:focus, select:focus {
   color: #000;
   width: 210mm;
   height: 297mm;
-  padding: 12mm 15mm; /* Balanced padding to ensure exact single-page fit */
+  padding: 10mm 12mm; /* Tighter padding to fit exactly in one A4 page without overflows */
   margin: 0 auto;
   font-family: var(--font-thai);
   line-height: 1.35;
@@ -999,7 +1006,7 @@ textarea:focus, input:focus, select:focus {
 .pdf-logo-wrapper {
   display: flex;
   justify-content: center;
-  margin-bottom: 2mm;
+  margin-bottom: 1.5mm; /* Tightened margin */
 }
 
 .pdf-logo-svg {
@@ -1012,7 +1019,7 @@ textarea:focus, input:focus, select:focus {
   align-items: center;
   text-align: center;
   width: 100%;
-  margin-bottom: 3.5mm;
+  margin-bottom: 2mm; /* Tightened margin */
 }
 
 .pdf-title {
@@ -1035,8 +1042,8 @@ textarea:focus, input:focus, select:focus {
   width: 100%;
   border-top: 1.5px solid #166534; /* Green border exactly as user image */
   border-bottom: 1.5px solid #166534;
-  padding: 1.5mm 0;
-  margin-bottom: 4mm;
+  padding: 1mm 0; /* Slightly tighter padding */
+  margin-bottom: 3mm; /* Tightened margin */
   font-size: 12.5px;
 }
 
@@ -1049,17 +1056,26 @@ textarea:focus, input:focus, select:focus {
 .pdf-banner-col.col-right { text-align: right; padding-right: 2mm; }
 
 .pdf-columns-wrapper {
-  display: flex;
+  display: block; /* Switch to block to support floats and prevent html2canvas Flexbox overlap bugs */
   width: 100%;
-  gap: 6mm;
-  height: calc(100% - 46mm); /* Dynamically stretch columns to fit print bounds */
+  height: calc(100% - 41mm); /* Re-calculated print bounds height */
+  box-sizing: border-box;
 }
 
 .pdf-col {
-  width: 50%;
+  width: 48.5%; /* Explicit side-by-side width */
   display: flex;
   flex-direction: column;
-  gap: 3.5mm;
+  gap: 2.5mm; /* Tightened gap between blocks */
+  box-sizing: border-box;
+}
+
+.pdf-col-left {
+  float: left; /* Float left column */
+}
+
+.pdf-col-right {
+  float: right; /* Float right column */
 }
 
 .pdf-block {
@@ -1075,18 +1091,21 @@ textarea:focus, input:focus, select:focus {
 .pdf-block-title {
   background-color: #dcfce7; /* Light green header row matching user image */
   color: #14532d;
-  padding: 1.5mm 3mm;
-  font-size: 12px;
+  padding: 1mm 2.5mm; /* Slightly tighter padding */
+  font-size: 11.5px;
   border-bottom: 1px solid #166534;
 }
 
 .pdf-block-content {
-  padding: 2mm 3mm;
-  font-size: 11.5px;
+  padding: 1.5mm 2.5mm; /* Tighter padding for compact layout */
+  font-size: 10.5px; /* Slightly smaller text to prevent box overflow */
   white-space: pre-line;
   color: #000;
-  text-align: left;
-  line-height: 1.45;
+  text-align: left !important;
+  line-height: 1.45 !important;
+  word-break: break-word; /* Ensure robust wrapping of Thai characters in html2canvas */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Custom dashed reflection styles */
@@ -1097,20 +1116,23 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pdf-dashed-box-title {
-  font-size: 12.5px;
+  font-size: 12px;
   margin-bottom: 1mm;
   border-bottom: 1px solid #000;
   padding-bottom: 0.5mm;
 }
 
 .pdf-dashed-lines {
-  font-size: 11px;
+  font-size: 10.5px; /* Slightly smaller text */
   line-height: 6.8mm; /* Exactly aligns text lines with simulated writing sheets */
   background-image: linear-gradient(to bottom, transparent 96%, #94a3b8 96%);
   background-size: 100% 6.8mm;
   padding: 0.5mm 2mm;
   white-space: pre-line;
-  min-height: 27mm; /* strictly limit reflection boxes to prevent page-overflows */
+  min-height: 20.4mm; /* Adjusted to exact 3 lines to fit nicely in A4 height */
+  word-break: break-word;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Dual signature panel (Teacher & Room Leader) */
@@ -1118,7 +1140,7 @@ textarea:focus, input:focus, select:focus {
   display: flex;
   justify-content: space-between;
   gap: 4mm;
-  margin: 1mm 0;
+  margin: 0.5mm 0; /* Tightened margin */
 }
 
 .pdf-sig-box {
