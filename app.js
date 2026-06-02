@@ -2307,9 +2307,19 @@ async function syncToGoogleSheets() {
     const printEl = document.getElementById('print-template-container');
     printEl.style.display = 'block'; 
 
+    const currentCourse = courses.find(c => c.id === activeCourseId);
+    const currentClass = classes.find(c => c.id === activeClassId);
+    const courseCode = currentCourse ? currentCourse.code : '';
+    const courseName = currentCourse ? currentCourse.name : '';
+    const className = currentClass ? currentClass.name : '';
+    const onceCount = lessonPlans[selectedIndex].once;
+    const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
+    const cleanClassName = className.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
+    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_${cleanClassName}_ครั้งที่_${onceCount}.pdf`;
+
     const opt = {
       margin:       0,
-      filename:     `แผนการสอน_ครั้งที่_${lessonPlans[selectedIndex].once}.pdf`,
+      filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.95 },
       html2canvas:  { scale: 2, useCORS: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -2322,8 +2332,6 @@ async function syncToGoogleSheets() {
     }
 
     // Route active classroom specific sheet name
-    const currentCourse = courses.find(c => c.id === activeCourseId);
-    const currentClass = classes.find(c => c.id === activeClassId);
     const sheetTabName = (currentCourse && currentClass) ? getSafeSheetName(currentCourse.code, currentClass.name) : 'Sheet1';
 
     const payload = {
@@ -2344,7 +2352,7 @@ async function syncToGoogleSheets() {
       outcomes: lessonPlans[selectedIndex].outcomes,
       solutions: lessonPlans[selectedIndex].solutions,
       pdfBase64: pdfDataUri,
-      pdfFileName: `LessonPlan_Once_${lessonPlans[selectedIndex].once}.pdf`,
+      pdfFileName: descriptiveFileName,
       folderId: config.folderId,
       teacherName: profile.teacherName || 'ครูฮัมบาลีย์ วาจิ'
     };
@@ -2398,9 +2406,19 @@ function exportPDFDocument() {
     const printEl = document.getElementById('print-template-container');
     printEl.style.display = 'block';
 
+    const currentCourse = courses.find(c => c.id === activeCourseId);
+    const currentClass = classes.find(c => c.id === activeClassId);
+    const courseCode = currentCourse ? currentCourse.code : '';
+    const courseName = currentCourse ? currentCourse.name : '';
+    const className = currentClass ? currentClass.name : '';
+    const onceCount = lessonPlans[selectedIndex].once;
+    const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
+    const cleanClassName = className.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
+    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_${cleanClassName}_ครั้งที่_${onceCount}.pdf`;
+
     const opt = {
       margin:       0,
-      filename:     `แผนการจัดการเรียนรู้_ครั้งที่_${lessonPlans[selectedIndex].once}_${lessonPlans[selectedIndex].topic}.pdf`,
+      filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
