@@ -989,6 +989,14 @@ textarea:focus, input:focus, select:focus {
   background: transparent !important;
 }
 
+/* Ensure the print container is statically positioned and fully visible inside the A4 Preview modal */
+#preview-page-host .print-container {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  background: #fff !important;
+}
+
 .single-page-pdf {
   background-color: #fff;
   color: #000;
