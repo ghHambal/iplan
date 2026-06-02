@@ -989,6 +989,11 @@ textarea:focus, input:focus, select:focus {
   background: transparent !important;
 }
 
+/* Force clean bug-free Thai fonts on all print elements and descendants to prevent Serif fallback and character garbling */
+.print-container, .print-container * {
+  font-family: 'Sarabun', sans-serif !important;
+}
+
 /* Ensure the print container is statically positioned and fully visible inside the A4 Preview modal */
 #preview-page-host .print-container {
   position: relative !important;
