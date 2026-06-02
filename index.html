@@ -323,26 +323,90 @@
           <div class="card glass-card form-card">
             <div class="card-header">
               <i data-lucide="edit-3" class="card-icon edit-icon"></i>
-              <h2>ส่วนที่พิมพ์บันทึกหลังจัดการเรียนรู้</h2>
+              <h2>ส่วนที่บันทึกหลังจัดการเรียนรู้</h2>
             </div>
             <div class="card-body">
 
               <div class="form-group">
-                <label for="txt-outcomes">
-                  <span>บันทึกหลังการสอน (ผลการจัดการเรียนรู้)</span>
-                  <span class="required">*</span>
-                </label>
+                <div class="label-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                  <label for="txt-outcomes" style="margin-bottom: 0;">
+                    <span>บันทึกหลังการสอน (ผลการจัดการเรียนรู้)</span>
+                    <span class="required">*</span>
+                  </label>
+                  <div class="mode-toggle-group" style="display: inline-flex; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 20px; padding: 2px; gap: 2px;">
+                    <button type="button" class="mode-toggle-btn active" id="btn-toggle-text-outcomes" style="background:none; border:none; border-radius:18px; padding:4px 12px; color:var(--text-muted); font-size:11.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="setReflectionMode('outcomes', 'text')">
+                      <i data-lucide="keyboard" style="width:13px;height:13px;"></i> พิมพ์
+                    </button>
+                    <button type="button" class="mode-toggle-btn" id="btn-toggle-draw-outcomes" style="background:none; border:none; border-radius:18px; padding:4px 12px; color:var(--text-muted); font-size:11.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="setReflectionMode('outcomes', 'draw')">
+                      <i data-lucide="pen-tool" style="width:13px;height:13px;"></i> เขียน
+                    </button>
+                  </div>
+                </div>
+                
                 <textarea id="txt-outcomes" rows="5"
                   placeholder="ระบุผลการสอน เช่น นักเรียนเข้าใจและคำนวณรากที่ n ได้ถูกต้อง..."></textarea>
+                
+                <!-- Drawing Canvas Container -->
+                <div id="draw-outcomes-container" class="draw-input-container" style="display:none; margin-top: 8px;">
+                  <div class="canvas-header-tools" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:6px; border:1px solid var(--card-border);">
+                    <div class="pen-colors" style="display:flex; gap:8px;">
+                      <button type="button" class="color-dot active" data-color="#0000FF" style="background-color: #0000FF; width:16px; height:16px; border-radius:50%; border:2px solid #fff; cursor:pointer;" onclick="setCanvasColor('outcomes', '#0000FF', this)"></button>
+                      <button type="button" class="color-dot" data-color="#000000" style="background-color: #000000; width:16px; height:16px; border-radius:50%; border:2px solid transparent; cursor:pointer;" onclick="setCanvasColor('outcomes', '#000000', this)"></button>
+                    </div>
+                    <div class="canvas-actions" style="display:flex; gap:8px;">
+                      <button type="button" class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="undoCanvasStroke('outcomes')">
+                        <i data-lucide="undo-2" style="width:12px;height:12px; display:inline-block; vertical-align:middle;"></i> ย้อนกลับ
+                      </button>
+                      <button type="button" class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="clearCanvas('outcomes')">
+                        <i data-lucide="trash-2" style="width:12px;height:12px; display:inline-block; vertical-align:middle;"></i> ล้างช่องเขียน
+                      </button>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper" style="position:relative; width:100%;">
+                    <canvas id="canvas-outcomes" class="draw-canvas"></canvas>
+                  </div>
+                </div>
               </div>
 
-              <div class="form-group">
-                <label for="txt-solutions">
-                  <span>ข้อเสนอแนะ / ปัญหา อุปสรรค และแนวทางแก้ไข</span>
-                  <span class="required">*</span>
-                </label>
+              <div class="form-group" style="margin-top: 20px;">
+                <div class="label-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                  <label for="txt-solutions" style="margin-bottom: 0;">
+                    <span>ข้อเสนอแนะ / ปัญหา อุปสรรค และแนวทางแก้ไข</span>
+                    <span class="required">*</span>
+                  </label>
+                  <div class="mode-toggle-group" style="display: inline-flex; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 20px; padding: 2px; gap: 2px;">
+                    <button type="button" class="mode-toggle-btn active" id="btn-toggle-text-solutions" style="background:none; border:none; border-radius:18px; padding:4px 12px; color:var(--text-muted); font-size:11.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="setReflectionMode('solutions', 'text')">
+                      <i data-lucide="keyboard" style="width:13px;height:13px;"></i> พิมพ์
+                    </button>
+                    <button type="button" class="mode-toggle-btn" id="btn-toggle-draw-solutions" style="background:none; border:none; border-radius:18px; padding:4px 12px; color:var(--text-muted); font-size:11.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="setReflectionMode('solutions', 'draw')">
+                      <i data-lucide="pen-tool" style="width:13px;height:13px;"></i> เขียน
+                    </button>
+                  </div>
+                </div>
+                
                 <textarea id="txt-solutions" rows="5"
                   placeholder="ระบุปัญหาอุปสรรคที่พบ และข้อเสนอแนะในการแก้ไขครั้งถัดไป..."></textarea>
+                
+                <!-- Drawing Canvas Container -->
+                <div id="draw-solutions-container" class="draw-input-container" style="display:none; margin-top: 8px;">
+                  <div class="canvas-header-tools" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:6px; border:1px solid var(--card-border);">
+                    <div class="pen-colors" style="display:flex; gap:8px;">
+                      <button type="button" class="color-dot active" data-color="#0000FF" style="background-color: #0000FF; width:16px; height:16px; border-radius:50%; border:2px solid #fff; cursor:pointer;" onclick="setCanvasColor('solutions', '#0000FF', this)"></button>
+                      <button type="button" class="color-dot" data-color="#000000" style="background-color: #000000; width:16px; height:16px; border-radius:50%; border:2px solid transparent; cursor:pointer;" onclick="setCanvasColor('solutions', '#000000', this)"></button>
+                    </div>
+                    <div class="canvas-actions" style="display:flex; gap:8px;">
+                      <button type="button" class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="undoCanvasStroke('solutions')">
+                        <i data-lucide="undo-2" style="width:12px;height:12px; display:inline-block; vertical-align:middle;"></i> ย้อนกลับ
+                      </button>
+                      <button type="button" class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="clearCanvas('solutions')">
+                        <i data-lucide="trash-2" style="width:12px;height:12px; display:inline-block; vertical-align:middle;"></i> ล้างช่องเขียน
+                      </button>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper" style="position:relative; width:100%;">
+                    <canvas id="canvas-solutions" class="draw-canvas"></canvas>
+                  </div>
+                </div>
               </div>
 
             </div>

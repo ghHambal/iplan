@@ -346,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Bind Canvas and UI controls
   setupSignaturePad();
+  setupReflectionCanvases();
   initializeUI();
   
   if (config.gasUrl) {
@@ -1344,9 +1345,65 @@ function selectLesson(index) {
   document.getElementById('lbl-assessment').innerText = plan.assessment || '-';
   document.getElementById('lbl-materials').innerText = plan.materials || '-';
 
-  // Fill reflection inputs
-  document.getElementById('txt-outcomes').value = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
-  document.getElementById('txt-solutions').value = (plan.solutions === '-') ? '' : (plan.solutions || '');
+  // Load Reflection outcomes
+  const outcomesMode = plan.outcomesMode || 'text';
+  plan.outcomesMode = outcomesMode; // ensure it's saved
+  
+  const outcomesText = document.getElementById('txt-outcomes');
+  const outcomesDrawContainer = document.getElementById('draw-outcomes-container');
+  const btnToggleTextOutcomes = document.getElementById('btn-toggle-text-outcomes');
+  const btnToggleDrawOutcomes = document.getElementById('btn-toggle-draw-outcomes');
+
+  if (outcomesMode === 'text') {
+    btnToggleTextOutcomes.classList.add('active');
+    btnToggleDrawOutcomes.classList.remove('active');
+    outcomesText.style.display = 'block';
+    outcomesDrawContainer.style.display = 'none';
+    outcomesText.value = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
+  } else {
+    btnToggleTextOutcomes.classList.remove('active');
+    btnToggleDrawOutcomes.classList.add('active');
+    outcomesText.style.display = 'none';
+    outcomesDrawContainer.style.display = 'block';
+    outcomesText.value = '';
+    
+    // Load and draw strokes
+    setTimeout(() => {
+      resizeReflectionCanvas('outcomes');
+      canvases.outcomes.strokes = plan.outcomesDrawStrokes ? JSON.parse(JSON.stringify(plan.outcomesDrawStrokes)) : [];
+      redrawCanvas('outcomes');
+    }, 50);
+  }
+
+  // Load Reflection solutions
+  const solutionsMode = plan.solutionsMode || 'text';
+  plan.solutionsMode = solutionsMode; // ensure it's saved
+
+  const solutionsText = document.getElementById('txt-solutions');
+  const solutionsDrawContainer = document.getElementById('draw-solutions-container');
+  const btnToggleTextSolutions = document.getElementById('btn-toggle-text-solutions');
+  const btnToggleDrawSolutions = document.getElementById('btn-toggle-draw-solutions');
+
+  if (solutionsMode === 'text') {
+    btnToggleTextSolutions.classList.add('active');
+    btnToggleDrawSolutions.classList.remove('active');
+    solutionsText.style.display = 'block';
+    solutionsDrawContainer.style.display = 'none';
+    solutionsText.value = (plan.solutions === '-') ? '' : (plan.solutions || '');
+  } else {
+    btnToggleTextSolutions.classList.remove('active');
+    btnToggleDrawSolutions.classList.add('active');
+    solutionsText.style.display = 'none';
+    solutionsDrawContainer.style.display = 'block';
+    solutionsText.value = '';
+    
+    // Load and draw strokes
+    setTimeout(() => {
+      resizeReflectionCanvas('solutions');
+      canvases.solutions.strokes = plan.solutionsDrawStrokes ? JSON.parse(JSON.stringify(plan.solutionsDrawStrokes)) : [];
+      redrawCanvas('solutions');
+    }, 50);
+  }
 
   // Load and draw global signature if exists, instead of erasing it!
   strokes = [];
@@ -1359,18 +1416,39 @@ function selectLesson(index) {
 
 // Save reflections locally to LocalStorage
 function saveLessonProgress(showNotification = false) {
-  const outcomeText = document.getElementById('txt-outcomes').value.trim();
-  const solutionText = document.getElementById('txt-solutions').value.trim();
+  const plan = lessonPlans[selectedIndex];
+  if (!plan) return false;
 
-  if (!outcomeText || !solutionText) {
-    if (showNotification) {
-      alert('กรุณากรอกข้อมูล ผลการจัดการเรียนรู้ และ แนวทางแก้ปัญหา ให้ครบถ้วน');
+  let outcomeText = '';
+  let solutionText = '';
+
+  if (plan.outcomesMode === 'draw') {
+    if (!plan.outcomes || plan.outcomes === '-') {
+      if (showNotification) alert('กรุณาเขียนบันทึกผลการจัดการเรียนรู้');
+      return false;
     }
-    return false;
+  } else {
+    outcomeText = document.getElementById('txt-outcomes').value.trim();
+    if (!outcomeText) {
+      if (showNotification) alert('กรุณากรอกข้อมูลบันทึกผลการจัดการเรียนรู้');
+      return false;
+    }
+    plan.outcomes = outcomeText;
   }
 
-  lessonPlans[selectedIndex].outcomes = outcomeText;
-  lessonPlans[selectedIndex].solutions = solutionText;
+  if (plan.solutionsMode === 'draw') {
+    if (!plan.solutions || plan.solutions === '-') {
+      if (showNotification) alert('กรุณาเขียนบันทึกแนวทางการแก้ปัญหา');
+      return false;
+    }
+  } else {
+    solutionText = document.getElementById('txt-solutions').value.trim();
+    if (!solutionText) {
+      if (showNotification) alert('กรุณากรอกข้อมูลบันทึกแนวทางการแก้ปัญหา');
+      return false;
+    }
+    plan.solutions = solutionText;
+  }
 
   // Save to classroom local state using decouple saver
   saveClassLessons(activeClassId, lessonPlans);
@@ -2371,9 +2449,64 @@ function populatePrintTemplate() {
   // Right column sections
   document.getElementById('pdf-print-materials').innerText = plan.materials;
 
-  // Combine Outcomes (ผลการจัดการเรียนรู้) and Solutions (แนวทางการแก้ปัญหา) under Section 6 "บันทึกหลังการสอน"
-  const combinedOutcomes = `ผลการจัดการเรียนรู้:\n${plan.outcomes || '-'}\n\nแนวทางการแก้ปัญหา:\n${plan.solutions || '-'}`;
-  document.getElementById('pdf-print-outcomes').innerText = combinedOutcomes;
+  // Render Outcomes and Solutions dynamically inside Section 6 "บันทึกหลังการสอน"
+  const outcomesContainer = document.getElementById('pdf-print-outcomes');
+  if (outcomesContainer) {
+    outcomesContainer.innerHTML = ''; // Clear existing content
+    
+    // Render Outcomes title
+    const outcomesTitle = document.createElement('div');
+    outcomesTitle.className = 'font-bold';
+    outcomesTitle.style.fontSize = '12px';
+    outcomesTitle.style.color = '#14532d';
+    outcomesTitle.style.marginBottom = '2px';
+    outcomesTitle.innerText = 'ผลการจัดการเรียนรู้:';
+    outcomesContainer.appendChild(outcomesTitle);
+
+    if (plan.outcomesMode === 'draw' && plan.outcomes && plan.outcomes.startsWith('data:image/')) {
+      const outcomesImg = document.createElement('img');
+      outcomesImg.src = plan.outcomes;
+      outcomesImg.style.maxHeight = '30mm';
+      outcomesImg.style.maxWidth = '100%';
+      outcomesImg.style.display = 'block';
+      outcomesImg.style.objectFit = 'contain';
+      outcomesImg.style.margin = '2px 0 10px 0';
+      outcomesContainer.appendChild(outcomesImg);
+    } else {
+      const outcomesText = document.createElement('div');
+      outcomesText.style.whiteSpace = 'pre-line';
+      outcomesText.style.fontSize = '11px';
+      outcomesText.style.marginBottom = '10px';
+      outcomesText.innerText = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
+      outcomesContainer.appendChild(outcomesText);
+    }
+
+    // Render Solutions title
+    const solutionsTitle = document.createElement('div');
+    solutionsTitle.className = 'font-bold';
+    solutionsTitle.style.fontSize = '12px';
+    solutionsTitle.style.color = '#14532d';
+    solutionsTitle.style.marginBottom = '2px';
+    solutionsTitle.innerText = 'แนวทางการแก้ปัญหา:';
+    outcomesContainer.appendChild(solutionsTitle);
+
+    if (plan.solutionsMode === 'draw' && plan.solutions && plan.solutions.startsWith('data:image/')) {
+      const solutionsImg = document.createElement('img');
+      solutionsImg.src = plan.solutions;
+      solutionsImg.style.maxHeight = '30mm';
+      solutionsImg.style.maxWidth = '100%';
+      solutionsImg.style.display = 'block';
+      solutionsImg.style.objectFit = 'contain';
+      solutionsImg.style.margin = '2px 0 2px 0';
+      outcomesContainer.appendChild(solutionsImg);
+    } else {
+      const solutionsText = document.createElement('div');
+      solutionsText.style.whiteSpace = 'pre-line';
+      solutionsText.style.fontSize = '11px';
+      solutionsText.innerText = (plan.solutions === '-') ? '' : (plan.solutions || '');
+      outcomesContainer.appendChild(solutionsText);
+    }
+  }
   
   // Section 7 "ข้อเสนอแนะ" is for HOD to write on later, leave it empty (with blank lines to render dashed underlines beautifully)
   document.getElementById('pdf-print-solutions').innerText = '\n\n\n\n';
@@ -3417,3 +3550,215 @@ async function saveScheduleTable() {
   closeScheduleTableModal();
 }
 
+// =========================================================================
+// ipad / Stylus reflection drawing hand-written modes
+// =========================================================================
+let canvases = {
+  outcomes: {
+    canvas: null,
+    ctx: null,
+    drawing: false,
+    strokes: [],
+    currentStroke: [],
+    color: '#0000FF',
+    width: 2.5
+  },
+  solutions: {
+    canvas: null,
+    ctx: null,
+    drawing: false,
+    strokes: [],
+    currentStroke: [],
+    color: '#0000FF',
+    width: 2.5
+  }
+};
+
+function setupReflectionCanvases() {
+  ['outcomes', 'solutions'].forEach(type => {
+    const canvas = document.getElementById(`canvas-${type}`);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvases[type].canvas = canvas;
+    canvases[type].ctx = ctx;
+
+    // Resize canvas on layout changes
+    resizeReflectionCanvas(type);
+    
+    // Add draw events
+    canvas.addEventListener('mousedown', (e) => startReflectionDraw(type, getReflectionPos(canvas, e)));
+    canvas.addEventListener('mousemove', (e) => drawReflection(type, getReflectionPos(canvas, e)));
+    canvas.addEventListener('mouseup', () => endReflectionDraw(type));
+    canvas.addEventListener('mouseleave', () => endReflectionDraw(type));
+
+    // Touch support for iPad
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startReflectionDraw(type, getReflectionPos(canvas, e.touches[0]));
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      drawReflection(type, getReflectionPos(canvas, e.touches[0]));
+    });
+    canvas.addEventListener('touchend', () => endReflectionDraw(type));
+  });
+}
+
+function getReflectionPos(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+}
+
+function resizeReflectionCanvas(type) {
+  const cData = canvases[type];
+  if (!cData.canvas) return;
+  const rect = cData.canvas.getBoundingClientRect();
+  cData.canvas.width = rect.width || 400;
+  cData.canvas.height = rect.height || 200;
+  cData.ctx.lineWidth = cData.width;
+  cData.ctx.lineCap = 'round';
+  cData.ctx.lineJoin = 'round';
+  cData.ctx.strokeStyle = cData.color;
+}
+
+function startReflectionDraw(type, pos) {
+  const cData = canvases[type];
+  cData.drawing = true;
+  cData.currentStroke = [{ x: pos.x, y: pos.y }];
+  cData.strokes.push(cData.currentStroke);
+
+  cData.ctx.beginPath();
+  cData.ctx.moveTo(pos.x, pos.y);
+  cData.ctx.lineWidth = cData.width;
+  cData.ctx.lineCap = 'round';
+  cData.ctx.lineJoin = 'round';
+  cData.ctx.strokeStyle = cData.color;
+}
+
+function drawReflection(type, pos) {
+  const cData = canvases[type];
+  if (!cData.drawing) return;
+  cData.currentStroke.push({ x: pos.x, y: pos.y });
+  cData.ctx.lineTo(pos.x, pos.y);
+  cData.ctx.stroke();
+}
+
+function endReflectionDraw(type) {
+  const cData = canvases[type];
+  if (!cData.drawing) return;
+  cData.drawing = false;
+  
+  // Save vectors and image to current plan
+  saveCanvasToPlan(type);
+}
+
+function saveCanvasToPlan(type) {
+  const cData = canvases[type];
+  const plan = lessonPlans[selectedIndex];
+  if (!plan) return;
+
+  if (cData.strokes.length === 0) {
+    plan[type] = '-';
+    plan[type + 'DrawStrokes'] = [];
+  } else {
+    plan[type] = cData.canvas.toDataURL('image/png');
+    plan[type + 'DrawStrokes'] = cData.strokes;
+  }
+  saveClassLessons(activeClassId, lessonPlans);
+  renderSidebar();
+}
+
+function redrawCanvas(type) {
+  const cData = canvases[type];
+  if (!cData.ctx || !cData.canvas) return;
+  
+  cData.ctx.clearRect(0, 0, cData.canvas.width, cData.canvas.height);
+  
+  if (cData.strokes.length === 0) return;
+  
+  cData.strokes.forEach(stroke => {
+    if (stroke.length === 0) return;
+    cData.ctx.beginPath();
+    cData.ctx.moveTo(stroke[0].x, stroke[0].y);
+    cData.ctx.lineWidth = cData.width;
+    cData.ctx.lineCap = 'round';
+    cData.ctx.lineJoin = 'round';
+    cData.ctx.strokeStyle = cData.color;
+    
+    for (let i = 1; i < stroke.length; i++) {
+      cData.ctx.lineTo(stroke[i].x, stroke[i].y);
+    }
+    cData.ctx.stroke();
+  });
+}
+
+function setReflectionMode(type, mode) {
+  const plan = lessonPlans[selectedIndex];
+  if (!plan) return;
+
+  plan[type + 'Mode'] = mode;
+
+  // Toggle button styles
+  const btnText = document.getElementById(`btn-toggle-text-${type}`);
+  const btnDraw = document.getElementById(`btn-toggle-draw-${type}`);
+  const textInput = document.getElementById(`txt-${type}`);
+  const drawContainer = document.getElementById(`draw-${type}-container`);
+
+  if (mode === 'text') {
+    btnText.classList.add('active');
+    btnDraw.classList.remove('active');
+    textInput.style.display = 'block';
+    drawContainer.style.display = 'none';
+    
+    plan[type] = '-';
+    textInput.value = '';
+  } else {
+    btnText.classList.remove('active');
+    btnDraw.classList.add('active');
+    textInput.style.display = 'none';
+    drawContainer.style.display = 'block';
+    
+    plan[type] = '-';
+    
+    // Setup and resize canvas
+    setTimeout(() => {
+      resizeReflectionCanvas(type);
+      
+      // Load previous strokes if exist
+      const savedStrokes = plan[type + 'DrawStrokes'];
+      if (savedStrokes) {
+        canvases[type].strokes = JSON.parse(JSON.stringify(savedStrokes));
+      } else {
+        canvases[type].strokes = [];
+      }
+      redrawCanvas(type);
+    }, 50);
+  }
+  
+  saveClassLessons(activeClassId, lessonPlans);
+  renderSidebar();
+}
+
+function setCanvasColor(type, color, btn) {
+  canvases[type].color = color;
+  const dots = btn.parentNode.querySelectorAll('.color-dot');
+  dots.forEach(d => d.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function undoCanvasStroke(type) {
+  const cData = canvases[type];
+  cData.strokes.pop();
+  redrawCanvas(type);
+  saveCanvasToPlan(type);
+}
+
+function clearCanvas(type) {
+  const cData = canvases[type];
+  cData.strokes = [];
+  redrawCanvas(type);
+  saveCanvasToPlan(type);
+}

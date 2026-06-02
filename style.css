@@ -481,6 +481,36 @@ textarea:focus, input:focus, select:focus {
   padding-bottom: 24px;
 }
 
+/* Drawing Canvas for ipad hand writing modes */
+.draw-canvas {
+  background-color: #fff;
+  background-image: linear-gradient(#f1f5f9 1.5px, transparent 1.5px);
+  background-size: 100% 28px; /* Beautiful Lined Paper Effect */
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  cursor: crosshair;
+  width: 100%;
+  height: 200px;
+  display: block;
+  touch-action: none;
+}
+
+.mode-toggle-group button.active {
+  background: var(--primary) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.mode-toggle-btn {
+  transition: var(--transition-smooth);
+}
+
+.color-dot.active {
+  border-color: #fff !important;
+  transform: scale(1.15);
+}
+
+
 .signature-container {
   position: relative;
   width: 100%;
