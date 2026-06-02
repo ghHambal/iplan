@@ -3513,7 +3513,7 @@ function adjustPreviewScale() {
 
   let scale = 1;
   if (parentWidth < a4Width) {
-    scale = parentWidth / a4Width;
+    scale = Math.max(0.1, parentWidth / a4Width); // Guarantee positive scale factor
   }
 
   host.style.transform = `scale(${scale})`;
@@ -3534,8 +3534,15 @@ function openA4PreviewModal() {
 
   // Clean host container and append print elements
   hostEl.innerHTML = '';
-  hostEl.appendChild(printEl);
+
+  // Apply inline styles to force visibility and bypass aggressive CSS caching
+  printEl.style.position = 'relative';
+  printEl.style.left = 'auto';
+  printEl.style.top = 'auto';
   printEl.style.display = 'block';
+  printEl.style.background = '#fff';
+
+  hostEl.appendChild(printEl);
 
   // Toggle open
   document.getElementById('preview-modal').classList.add('open');
@@ -3549,7 +3556,12 @@ function closeA4PreviewModal() {
   document.getElementById('preview-modal').classList.remove('open');
   const printEl = document.getElementById('print-template-container');
   if (printEl) {
+    // Restore off-screen layout settings for PDF generator
+    printEl.style.position = 'absolute';
+    printEl.style.left = '-9999mm';
+    printEl.style.top = '-9999mm';
     printEl.style.display = 'none';
+    printEl.style.background = 'transparent';
     document.body.appendChild(printEl);
   }
 }
