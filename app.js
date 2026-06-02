@@ -2314,8 +2314,7 @@ async function syncToGoogleSheets() {
     const className = currentClass ? currentClass.name : '';
     const onceCount = lessonPlans[selectedIndex].once;
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
-    const cleanClassName = className.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
-    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_${cleanClassName}_ครั้งที่_${onceCount}.pdf`;
+    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
     const opt = {
       margin:       0,
@@ -2413,8 +2412,7 @@ function exportPDFDocument() {
     const className = currentClass ? currentClass.name : '';
     const onceCount = lessonPlans[selectedIndex].once;
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
-    const cleanClassName = className.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
-    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_${cleanClassName}_ครั้งที่_${onceCount}.pdf`;
+    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
     const opt = {
       margin:       0,
