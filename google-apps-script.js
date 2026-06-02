@@ -412,6 +412,14 @@ function doPost(e) {
         folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('iPlane_PDFs');
       }
       
+      // ค้นหาและย้ายไฟล์เก่าที่มีชื่อเดียวกันลงถังขยะ เพื่อป้องกันการเกิดไฟล์ซ้ำซ้อนในโฟลเดอร์ Google Drive
+      const fileName = pdfBlob.getName();
+      const existingFiles = folder.getFilesByName(fileName);
+      while (existingFiles.hasNext()) {
+        const oldFile = existingFiles.next();
+        oldFile.setTrashed(true);
+      }
+      
       const file = folder.createFile(pdfBlob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       pdfUrl = file.getUrl();
