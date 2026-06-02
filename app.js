@@ -2576,7 +2576,7 @@ function populatePrintTemplate() {
       outcomesTitle.innerText = 'ผลการจัดการเรียนรู้:';
       outcomesContainer.appendChild(outcomesTitle);
 
-      if (plan.outcomesMode === 'draw' && plan.outcomes && plan.outcomes.startsWith('data:image/')) {
+      if (plan.outcomes && plan.outcomes.startsWith('data:image/')) {
         const outcomesImg = document.createElement('img');
         outcomesImg.src = plan.outcomes;
         outcomesImg.style.maxHeight = '24mm';
@@ -2603,7 +2603,7 @@ function populatePrintTemplate() {
       solutionsTitle.innerText = 'แนวทางการแก้ปัญหา:';
       outcomesContainer.appendChild(solutionsTitle);
 
-      if (plan.solutionsMode === 'draw' && plan.solutions && plan.solutions.startsWith('data:image/')) {
+      if (plan.solutions && plan.solutions.startsWith('data:image/')) {
         const solutionsImg = document.createElement('img');
         solutionsImg.src = plan.solutions;
         solutionsImg.style.maxHeight = '24mm';
