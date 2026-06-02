@@ -1346,8 +1346,11 @@ function selectLesson(index) {
   document.getElementById('lbl-materials').innerText = plan.materials || '-';
 
   // Load Reflection outcomes
-  const outcomesMode = plan.outcomesMode || 'text';
-  plan.outcomesMode = outcomesMode; // ensure it's saved
+  let outcomesMode = plan.outcomesMode;
+  if (!outcomesMode) {
+    outcomesMode = (plan.outcomes && plan.outcomes.startsWith('data:image/')) ? 'draw' : 'text';
+    plan.outcomesMode = outcomesMode;
+  }
   
   const outcomesText = document.getElementById('txt-outcomes');
   const outcomesDrawContainer = document.getElementById('draw-outcomes-container');
@@ -1367,17 +1370,37 @@ function selectLesson(index) {
     outcomesDrawContainer.style.display = 'block';
     outcomesText.value = '';
     
-    // Load and draw strokes
+    // Load and draw strokes or image
     setTimeout(() => {
       resizeReflectionCanvas('outcomes');
-      canvases.outcomes.strokes = plan.outcomesDrawStrokes ? JSON.parse(JSON.stringify(plan.outcomesDrawStrokes)) : [];
-      redrawCanvas('outcomes');
+      const hasStrokes = plan.outcomesDrawStrokes && plan.outcomesDrawStrokes.length > 0;
+      if (hasStrokes) {
+        canvases.outcomes.strokes = JSON.parse(JSON.stringify(plan.outcomesDrawStrokes));
+        redrawCanvas('outcomes');
+      } else if (plan.outcomes && plan.outcomes.startsWith('data:image/')) {
+        canvases.outcomes.strokes = [];
+        const img = new Image();
+        img.onload = () => {
+          const cData = canvases.outcomes;
+          if (cData.ctx && cData.canvas) {
+            cData.ctx.clearRect(0, 0, cData.canvas.width, cData.canvas.height);
+            cData.ctx.drawImage(img, 0, 0, cData.canvas.width, cData.canvas.height);
+          }
+        };
+        img.src = plan.outcomes;
+      } else {
+        canvases.outcomes.strokes = [];
+        redrawCanvas('outcomes');
+      }
     }, 50);
   }
 
   // Load Reflection solutions
-  const solutionsMode = plan.solutionsMode || 'text';
-  plan.solutionsMode = solutionsMode; // ensure it's saved
+  let solutionsMode = plan.solutionsMode;
+  if (!solutionsMode) {
+    solutionsMode = (plan.solutions && plan.solutions.startsWith('data:image/')) ? 'draw' : 'text';
+    plan.solutionsMode = solutionsMode;
+  }
 
   const solutionsText = document.getElementById('txt-solutions');
   const solutionsDrawContainer = document.getElementById('draw-solutions-container');
@@ -1397,11 +1420,28 @@ function selectLesson(index) {
     solutionsDrawContainer.style.display = 'block';
     solutionsText.value = '';
     
-    // Load and draw strokes
+    // Load and draw strokes or image
     setTimeout(() => {
       resizeReflectionCanvas('solutions');
-      canvases.solutions.strokes = plan.solutionsDrawStrokes ? JSON.parse(JSON.stringify(plan.solutionsDrawStrokes)) : [];
-      redrawCanvas('solutions');
+      const hasStrokes = plan.solutionsDrawStrokes && plan.solutionsDrawStrokes.length > 0;
+      if (hasStrokes) {
+        canvases.solutions.strokes = JSON.parse(JSON.stringify(plan.solutionsDrawStrokes));
+        redrawCanvas('solutions');
+      } else if (plan.solutions && plan.solutions.startsWith('data:image/')) {
+        canvases.solutions.strokes = [];
+        const img = new Image();
+        img.onload = () => {
+          const cData = canvases.solutions;
+          if (cData.ctx && cData.canvas) {
+            cData.ctx.clearRect(0, 0, cData.canvas.width, cData.canvas.height);
+            cData.ctx.drawImage(img, 0, 0, cData.canvas.width, cData.canvas.height);
+          }
+        };
+        img.src = plan.solutions;
+      } else {
+        canvases.solutions.strokes = [];
+        redrawCanvas('solutions');
+      }
     }, 50);
   }
 
