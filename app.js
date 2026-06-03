@@ -2316,6 +2316,42 @@ async function fetchLiveGoogleData() {
 // 7. Sync and PDF Export Engine
 // ==========================================
 
+// Inject Sarabun @font-face with absolute URLs into html2canvas cloned document
+// เพื่อแก้ปัญหา relative path ไม่ resolve และ font weight 400 ไม่โหลดใน cloned DOM
+const IPLAN_FONT_BASE = 'https://ghhambal.github.io/iplan/fonts/';
+async function injectSarabunInClone(clonedDoc) {
+  const style = clonedDoc.createElement('style');
+  style.textContent = `
+    @font-face { font-family:'Sarabun'; font-weight:400; font-style:normal;
+      src: url('${IPLAN_FONT_BASE}sarabun-400-thai.woff2') format('woff2');
+      unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC; }
+    @font-face { font-family:'Sarabun'; font-weight:400; font-style:normal;
+      src: url('${IPLAN_FONT_BASE}sarabun-400-latin.woff2') format('woff2');
+      unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+FEFF,U+FFFD; }
+    @font-face { font-family:'Sarabun'; font-weight:600; font-style:normal;
+      src: url('${IPLAN_FONT_BASE}sarabun-600-thai.woff2') format('woff2');
+      unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC; }
+    @font-face { font-family:'Sarabun'; font-weight:600; font-style:normal;
+      src: url('${IPLAN_FONT_BASE}sarabun-600-latin.woff2') format('woff2');
+      unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+FEFF,U+FFFD; }
+    @font-face { font-family:'Sarabun'; font-weight:700; font-style:normal;
+      src: url('${IPLAN_FONT_BASE}sarabun-700-thai.woff2') format('woff2');
+      unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC; }
+    @font-face { font-family:'Sarabun'; font-weight:700; font-style:normal;
+      src: url('${IPLAN_FONT_BASE}sarabun-700-latin.woff2') format('woff2');
+      unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+FEFF,U+FFFD; }
+    .print-container, .print-container * { font-family: 'Sarabun', sans-serif !important; }
+  `;
+  clonedDoc.head.appendChild(style);
+  // รอ font ใน cloned document พร้อมทั้ง force-load ทุก weight ด้วยตัวอักษรไทย
+  await clonedDoc.fonts.ready;
+  await Promise.all([
+    clonedDoc.fonts.load('400 16px Sarabun', 'กขคงจฉชซ'),
+    clonedDoc.fonts.load('600 16px Sarabun', 'กขคงจฉชซ'),
+    clonedDoc.fonts.load('700 16px Sarabun', 'กขคงจฉชซ'),
+  ]).catch(() => {});
+}
+
 // Send reflection record + generated A4 PDF to Google Sheets & Drive
 async function syncToGoogleSheets() {
   const saved = saveLessonProgress(false);
@@ -2363,7 +2399,7 @@ async function syncToGoogleSheets() {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.95 },
-      html2canvas:  { scale: 2, useCORS: true, onclone: (doc) => doc.fonts.ready },
+      html2canvas:  { scale: 2, useCORS: true, onclone: injectSarabunInClone },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -2465,7 +2501,7 @@ async function exportPDFDocument() {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, onclone: (doc) => doc.fonts.ready },
+      html2canvas:  { scale: 2, useCORS: true, onclone: injectSarabunInClone },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -3918,7 +3954,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '1.4';
+  const CURRENT_VERSION = '1.5';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
