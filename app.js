@@ -2316,40 +2316,40 @@ async function fetchLiveGoogleData() {
 // 7. Sync and PDF Export Engine
 // ==========================================
 
-// Inject Sarabun @font-face with absolute URLs into html2canvas cloned document
-// เพื่อแก้ปัญหา relative path ไม่ resolve และ font weight 400 ไม่โหลดใน cloned DOM
-const IPLAN_FONT_BASE = 'https://ghhambal.github.io/iplan/fonts/';
-async function injectSarabunInClone(clonedDoc) {
-  const style = clonedDoc.createElement('style');
-  style.textContent = `
-    @font-face { font-family:'Sarabun'; font-weight:400; font-style:normal;
-      src: url('${IPLAN_FONT_BASE}sarabun-400-thai.woff2') format('woff2');
-      unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC; }
-    @font-face { font-family:'Sarabun'; font-weight:400; font-style:normal;
-      src: url('${IPLAN_FONT_BASE}sarabun-400-latin.woff2') format('woff2');
-      unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+FEFF,U+FFFD; }
-    @font-face { font-family:'Sarabun'; font-weight:600; font-style:normal;
-      src: url('${IPLAN_FONT_BASE}sarabun-600-thai.woff2') format('woff2');
-      unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC; }
-    @font-face { font-family:'Sarabun'; font-weight:600; font-style:normal;
-      src: url('${IPLAN_FONT_BASE}sarabun-600-latin.woff2') format('woff2');
-      unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+FEFF,U+FFFD; }
-    @font-face { font-family:'Sarabun'; font-weight:700; font-style:normal;
-      src: url('${IPLAN_FONT_BASE}sarabun-700-thai.woff2') format('woff2');
-      unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC; }
-    @font-face { font-family:'Sarabun'; font-weight:700; font-style:normal;
-      src: url('${IPLAN_FONT_BASE}sarabun-700-latin.woff2') format('woff2');
-      unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+FEFF,U+FFFD; }
-    .print-container, .print-container * { font-family: 'Sarabun', sans-serif !important; }
-  `;
-  clonedDoc.head.appendChild(style);
-  // รอ font ใน cloned document พร้อมทั้ง force-load ทุก weight ด้วยตัวอักษรไทย
-  await clonedDoc.fonts.ready;
-  await Promise.all([
-    clonedDoc.fonts.load('400 16px Sarabun', 'กขคงจฉชซ'),
-    clonedDoc.fonts.load('600 16px Sarabun', 'กขคงจฉชซ'),
-    clonedDoc.fonts.load('700 16px Sarabun', 'กขคงจฉชซ'),
-  ]).catch(() => {});
+// ย้าย print element เข้า viewport จริงๆ ก่อน html2canvas จะ capture
+// เพราะ browser จะไม่ทำ full Thai text shaping กับ element ที่อยู่ off-screen (left:-9999mm)
+// ทำให้ตัวอักษรไทยที่มี combining vowels/tone marks เพี้ยนในไฟล์ PDF
+async function captureWithViewport(printEl, opt) {
+  // บันทึก style เดิม
+  const orig = {
+    position: printEl.style.position,
+    left:     printEl.style.left,
+    top:      printEl.style.top,
+    zIndex:   printEl.style.zIndex,
+    opacity:  printEl.style.opacity,
+  };
+
+  // ย้ายเข้า viewport (ซ่อนด้วย opacity:0 เพื่อไม่ให้ผู้ใช้เห็น)
+  printEl.style.position = 'fixed';
+  printEl.style.left     = '0';
+  printEl.style.top      = '0';
+  printEl.style.zIndex   = '-9999';
+  printEl.style.opacity  = '0';
+
+  // รอให้ browser commit full layout + Thai text shaping
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  await document.fonts.ready;
+
+  try {
+    return await html2pdf().set(opt).from(printEl).output('datauristring');
+  } finally {
+    // คืน style เดิมเสมอ
+    printEl.style.position = orig.position;
+    printEl.style.left     = orig.left;
+    printEl.style.top      = orig.top;
+    printEl.style.zIndex   = orig.zIndex;
+    printEl.style.opacity  = orig.opacity;
+  }
 }
 
 // Send reflection record + generated A4 PDF to Google Sheets & Drive
@@ -2392,19 +2392,16 @@ async function syncToGoogleSheets() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
-    // รอให้ฟอนต์ภาษาไทย (Sarabun) โหลดเสร็จก่อน render PDF
-    await document.fonts.ready;
-
     const opt = {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.95 },
-      html2canvas:  { scale: 2, useCORS: true, onclone: injectSarabunInClone },
+      html2canvas:  { scale: 2, useCORS: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Generate PDF inside html2pdf and output base64 data uri
-    const pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
+    // ย้าย element เข้า viewport ก่อน capture เพื่อให้ browser ทำ Thai text shaping ครบถ้วน
+    const pdfDataUri = await captureWithViewport(printEl, opt);
     if (!isPreviewOpen) {
       printEl.style.display = 'none';
     }
@@ -2494,18 +2491,21 @@ async function exportPDFDocument() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
-    // รอให้ฟอนต์ภาษาไทย (Sarabun) โหลดเสร็จก่อน render PDF
-    await document.fonts.ready;
-
     const opt = {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, onclone: injectSarabunInClone },
+      html2canvas:  { scale: 2, useCORS: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    await html2pdf().set(opt).from(printEl).save();
+    // ย้าย element เข้า viewport ก่อน capture เพื่อให้ browser ทำ Thai text shaping ครบถ้วน
+    const pdfBlob = await captureWithViewport(printEl, opt);
+    // สร้าง download link จาก data URI แทนการเรียก .save() โดยตรง
+    const link = document.createElement('a');
+    link.href = pdfBlob;
+    link.download = descriptiveFileName;
+    link.click();
     if (!isPreviewOpen) {
       printEl.style.display = 'none';
     }
@@ -3954,7 +3954,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '1.5';
+  const CURRENT_VERSION = '1.6';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
