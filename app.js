@@ -3913,3 +3913,54 @@ function clearCanvas(type) {
   redrawCanvas(type);
   saveCanvasToPlan(type);
 }
+
+// ==========================================
+// 9. Auto-reload when new version is deployed
+// ==========================================
+(function startVersionWatcher() {
+  const CURRENT_VERSION = '1.3';
+  const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
+  let updateBannerShown = false;
+
+  async function checkVersion() {
+    try {
+      const res = await fetch('version.json?t=' + Date.now());
+      if (!res.ok) return;
+      const data = await res.json();
+      const latestVersion = String(data.version || '');
+      if (latestVersion && latestVersion !== CURRENT_VERSION && !updateBannerShown) {
+        updateBannerShown = true;
+        showUpdateBanner(latestVersion);
+      }
+    } catch (_) {}
+  }
+
+  function showUpdateBanner(newVer) {
+    const banner = document.createElement('div');
+    banner.style.cssText = [
+      'position:fixed', 'bottom:20px', 'left:50%', 'transform:translateX(-50%)',
+      'background:#6366f1', 'color:#fff', 'padding:12px 20px',
+      'border-radius:12px', 'font-size:13px', 'font-weight:600',
+      'box-shadow:0 4px 20px rgba(99,102,241,0.5)',
+      'display:flex', 'align-items:center', 'gap:12px',
+      'z-index:99999', 'white-space:nowrap'
+    ].join(';');
+    banner.innerHTML = `
+      <span>มีเวอร์ชันใหม่ v${newVer} พร้อมใช้งาน</span>
+      <button onclick="location.reload()" style="
+        background:#fff; color:#6366f1; border:none; border-radius:8px;
+        padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;">
+        โหลดใหม่
+      </button>
+      <button onclick="this.parentNode.remove()" style="
+        background:transparent; color:rgba(255,255,255,0.7); border:none;
+        font-size:18px; cursor:pointer; line-height:1; padding:0 4px;">
+        ×
+      </button>
+    `;
+    document.body.appendChild(banner);
+  }
+
+  setInterval(checkVersion, CHECK_INTERVAL_MS);
+  setTimeout(checkVersion, 5000); // ตรวจครั้งแรกหลังจาก 5 วินาที
+})();
