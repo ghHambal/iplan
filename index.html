@@ -7,12 +7,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>iPlane - ระบบแผนการสอนหน้าเดียวและบันทึกหลังสอน</title>
 
-  <!-- Google Fonts: Sarabun (สำหรับพิมพ์ใบแผนการสอนราชการ) และ Inter (สำหรับ Interface) -->
+  <!-- Inter from Google CDN (UI only, ไม่ใช้ใน PDF) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Sarabun จาก local (แก้ปัญหา html2canvas ไม่โหลด Google Fonts ใน cloned DOM) -->
+  <link rel="stylesheet" href="fonts/sarabun.css">
 
   <!-- Lucide Icons for premium modern UI -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -35,7 +35,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v1.3</span>
+        <span class="version-tag" id="app-version-tag">v1.4</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
