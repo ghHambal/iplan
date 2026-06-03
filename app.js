@@ -2343,9 +2343,9 @@ async function syncToGoogleSheets() {
   syncBtn.disabled = true;
 
   try {
-    populatePrintTemplate();
+    const classCount = populatePrintTemplate();
     const printEl = document.getElementById('print-template-container');
-    printEl.style.display = 'block'; 
+    printEl.style.display = 'block';
 
     const currentCourse = courses.find(c => c.id === activeCourseId);
     const currentClass = classes.find(c => c.id === activeClassId);
@@ -2356,11 +2356,14 @@ async function syncToGoogleSheets() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
+    // รอให้ฟอนต์ภาษาไทย (Sarabun) โหลดเสร็จก่อน render PDF
+    await document.fonts.ready;
+
     const opt = {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.95 },
-      html2canvas:  { scale: 2, useCORS: true },
+      html2canvas:  { scale: 2, useCORS: true, onclone: (doc) => doc.fonts.ready },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -2408,7 +2411,8 @@ async function syncToGoogleSheets() {
     const result = await response.json();
 
     if (result.status === 'success') {
-      alert(`อัปเดต Google Sheet และ อัปโหลด PDF ขึ้น Drive เรียบร้อยแล้ว!\n\nแผ่นงาน (Tab): ${sheetTabName}\nลิงก์ไฟล์: ${result.pdfUrl || 'ไม่พบลิงก์'}`);
+      const classInfo = classCount > 1 ? `\nPDF รวม ${classCount} ห้องเรียนในวิชาเดียวกัน` : '';
+      alert(`อัปเดต Google Sheet และ อัปโหลด PDF ขึ้น Drive เรียบร้อยแล้ว!${classInfo}\n\nแผ่นงาน (Tab): ${sheetTabName}\nลิงก์ไฟล์: ${result.pdfUrl || 'ไม่พบลิงก์'}`);
     } else {
       alert(`การบันทึกล้มเหลว: ${result.message}`);
     }
@@ -2422,7 +2426,7 @@ async function syncToGoogleSheets() {
 }
 
 // Export A4 PDF Document
-function exportPDFDocument() {
+async function exportPDFDocument() {
   const saved = saveLessonProgress(false);
   if (!saved) {
     alert('กรุณากรอกบันทึกหลังสอนก่อนดึงเอกสาร PDF');
@@ -2454,21 +2458,23 @@ function exportPDFDocument() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
+    // รอให้ฟอนต์ภาษาไทย (Sarabun) โหลดเสร็จก่อน render PDF
+    await document.fonts.ready;
+
     const opt = {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
+      html2canvas:  { scale: 2, useCORS: true, onclone: (doc) => doc.fonts.ready },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(printEl).save().then(() => {
-      if (!isPreviewOpen) {
-        printEl.style.display = 'none';
-      }
-      exportText.innerText = 'ดาวน์โหลด PDF (หน้าเดียว)';
-      exportBtn.disabled = false;
-    });
+    await html2pdf().set(opt).from(printEl).save();
+    if (!isPreviewOpen) {
+      printEl.style.display = 'none';
+    }
+    exportText.innerText = 'ดาวน์โหลด PDF (หน้าเดียว)';
+    exportBtn.disabled = false;
   } catch (err) {
     console.error(err);
     alert('การสร้าง PDF ขัดข้อง');
@@ -2480,9 +2486,10 @@ function exportPDFDocument() {
 let a4TemplateHtml = '';
 
 // Copy active values onto official single-page A4 PDF elements (Unified Course-wide classrooms compiler)
+// Returns the number of classroom pages generated (used in sync success message)
 function populatePrintTemplate() {
   const container = document.getElementById('print-template-container');
-  if (!container) return;
+  if (!container) return 0;
 
   if (!a4TemplateHtml) {
     a4TemplateHtml = container.innerHTML;
@@ -2490,11 +2497,13 @@ function populatePrintTemplate() {
   container.innerHTML = ''; // Clear container to dynamically build A4 sheets
 
   const currentCourse = courses.find(c => c.id === activeCourseId);
-  if (!currentCourse) return;
+  if (!currentCourse) return 0;
 
   // Filter classrooms belonging to this course
   const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
-  if (courseClasses.length === 0) return;
+  if (courseClasses.length === 0) return 0;
+
+  let pageCount = 0;
 
   courseClasses.forEach((cls, idx) => {
     // Load this classroom's specific lessons
@@ -2680,7 +2689,10 @@ function populatePrintTemplate() {
     if (printDateSigHod) printDateSigHod.innerText = '...................................';
 
     container.appendChild(pageEl);
+    pageCount++;
   });
+
+  return pageCount;
 }
 
 // ==========================================
