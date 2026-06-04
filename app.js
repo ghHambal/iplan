@@ -2320,35 +2320,31 @@ async function fetchLiveGoogleData() {
 // เพราะ browser จะไม่ทำ full Thai text shaping กับ element ที่อยู่ off-screen (left:-9999mm)
 // ทำให้ตัวอักษรไทยที่มี combining vowels/tone marks เพี้ยนในไฟล์ PDF
 async function captureWithViewport(printEl, opt) {
-  // บันทึก style เดิม
   const orig = {
     position: printEl.style.position,
     left:     printEl.style.left,
     top:      printEl.style.top,
     zIndex:   printEl.style.zIndex,
-    opacity:  printEl.style.opacity,
   };
 
-  // ย้ายเข้า viewport (ซ่อนด้วย opacity:0 เพื่อไม่ให้ผู้ใช้เห็น)
+  // ย้ายเข้า viewport จริง — ไม่ใช้ opacity:0 เพราะ html2canvas อ่าน CSS แล้ว render ขาว
+  // ซ่อนด้วย z-index ติดลบ (อยู่หลังทุก element) แทน
   printEl.style.position = 'fixed';
   printEl.style.left     = '0';
   printEl.style.top      = '0';
   printEl.style.zIndex   = '-9999';
-  printEl.style.opacity  = '0';
 
-  // รอให้ browser commit full layout + Thai text shaping
+  // รอ 2 animation frames ให้ browser commit full layout + Thai text shaping
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   await document.fonts.ready;
 
   try {
     return await html2pdf().set(opt).from(printEl).output('datauristring');
   } finally {
-    // คืน style เดิมเสมอ
     printEl.style.position = orig.position;
     printEl.style.left     = orig.left;
     printEl.style.top      = orig.top;
     printEl.style.zIndex   = orig.zIndex;
-    printEl.style.opacity  = orig.opacity;
   }
 }
 
@@ -3954,7 +3950,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '1.6';
+  const CURRENT_VERSION = '1.7';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
