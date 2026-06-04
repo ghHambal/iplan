@@ -2396,9 +2396,15 @@ async function syncToGoogleSheets() {
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Capture ตรงๆ โดยไม่ย้าย element — position:fixed ทำให้ html2canvas render ขาว
+    // Capture: รอ font-display:block หมดรอบก่อน (ป้องกัน html2canvas จับ fallback font)
     printEl.style.background = '#ffffff';
     await document.fonts.ready;
+    await Promise.all([
+      document.fonts.load('400 16px Sarabun', 'กขคเข้าใจ'),
+      document.fonts.load('700 16px Sarabun', 'กขคเข้าใจ'),
+    ]).catch(() => {});
+    // รอ 1 รอบ repaint เพื่อให้ font-display:block สลับ rendering แล้ว
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
     printEl.style.background = '';
     if (!isPreviewOpen) {
@@ -3971,7 +3977,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '1.9';
+  const CURRENT_VERSION = '2.0';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
