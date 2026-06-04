@@ -2476,35 +2476,53 @@ async function exportPDFDocument() {
   try {
     populatePrintTemplate();
     const printEl = document.getElementById('print-template-container');
-    printEl.style.display = 'block';
 
     const currentCourse = courses.find(c => c.id === activeCourseId);
-    const currentClass = classes.find(c => c.id === activeClassId);
+    const onceCount = lessonPlans[selectedIndex].once;
     const courseCode = currentCourse ? currentCourse.code : '';
     const courseName = currentCourse ? currentCourse.name : '';
-    const className = currentClass ? currentClass.name : '';
-    const onceCount = lessonPlans[selectedIndex].once;
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
-    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
+    const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}`;
 
-    const opt = {
-      margin:       0,
-      filename:     descriptiveFileName,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    // ใช้ browser native print ผ่าน iframe แทน html2canvas
+    // เพื่อให้ browser rendering engine จัดการ Thai text shaping เอง ไม่ผ่าน Canvas API
+    const baseUrl = new URL('./', window.location.href).href;
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;border:none;visibility:hidden;';
+    document.body.appendChild(iframe);
 
-    // ย้าย element เข้า viewport ก่อน capture เพื่อให้ browser ทำ Thai text shaping ครบถ้วน
-    const pdfBlob = await captureWithViewport(printEl, opt);
-    // สร้าง download link จาก data URI แทนการเรียก .save() โดยตรง
-    const link = document.createElement('a');
-    link.href = pdfBlob;
-    link.download = descriptiveFileName;
-    link.click();
-    if (!isPreviewOpen) {
-      printEl.style.display = 'none';
-    }
+    const iDoc = iframe.contentDocument;
+    iDoc.open();
+    iDoc.write(`<!DOCTYPE html><html><head>
+      <meta charset="utf-8">
+      <title>${descriptiveFileName}</title>
+      <link rel="stylesheet" href="${baseUrl}fonts/sarabun.css">
+      <link rel="stylesheet" href="${baseUrl}style.css">
+      <style>
+        @page { size: A4 portrait; margin: 0; }
+        html, body { margin: 0; padding: 0; background: #fff; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .print-container {
+          position: static !important; left: auto !important; top: auto !important;
+          display: block !important; background: #fff !important;
+        }
+      </style>
+    </head><body>${printEl.outerHTML}</body></html>`);
+    iDoc.close();
+
+    // รอให้ font โหลดใน iframe ก่อนเปิด print dialog
+    await new Promise(resolve => {
+      iframe.onload = async () => {
+        try { await iframe.contentDocument.fonts.ready; } catch(_) {}
+        resolve();
+      };
+      setTimeout(resolve, 1500); // fallback
+    });
+
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => document.body.removeChild(iframe), 3000);
+
     exportText.innerText = 'ดาวน์โหลด PDF (หน้าเดียว)';
     exportBtn.disabled = false;
   } catch (err) {
@@ -3950,7 +3968,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '1.7';
+  const CURRENT_VERSION = '1.8';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
