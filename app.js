@@ -2392,12 +2392,15 @@ async function syncToGoogleSheets() {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.95 },
-      html2canvas:  { scale: 2, useCORS: true },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // ย้าย element เข้า viewport ก่อน capture เพื่อให้ browser ทำ Thai text shaping ครบถ้วน
-    const pdfDataUri = await captureWithViewport(printEl, opt);
+    // Capture ตรงๆ โดยไม่ย้าย element — position:fixed ทำให้ html2canvas render ขาว
+    printEl.style.background = '#ffffff';
+    await document.fonts.ready;
+    const pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
+    printEl.style.background = '';
     if (!isPreviewOpen) {
       printEl.style.display = 'none';
     }
@@ -3968,7 +3971,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '1.8';
+  const CURRENT_VERSION = '1.9';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
