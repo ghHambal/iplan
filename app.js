@@ -2388,23 +2388,18 @@ async function syncToGoogleSheets() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
+    // foreignObjectRendering:true = ให้ browser render HTML ผ่าน SVG foreignObject
+    // (ใช้ native text engine รองรับ Thai combining chars) แทน Canvas re-render
     const opt = {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.95 },
-      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', foreignObjectRendering: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Capture: รอ font-display:block หมดรอบก่อน (ป้องกัน html2canvas จับ fallback font)
     printEl.style.background = '#ffffff';
     await document.fonts.ready;
-    await Promise.all([
-      document.fonts.load('400 16px Sarabun', 'กขคเข้าใจ'),
-      document.fonts.load('700 16px Sarabun', 'กขคเข้าใจ'),
-    ]).catch(() => {});
-    // รอ 1 รอบ repaint เพื่อให้ font-display:block สลับ rendering แล้ว
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
     printEl.style.background = '';
     if (!isPreviewOpen) {
@@ -3977,7 +3972,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '2.0';
+  const CURRENT_VERSION = '2.1';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 

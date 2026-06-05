@@ -393,8 +393,9 @@ function doPost(e) {
             }
           }
           
-          // 2. ค้นหาโฟลเดอร์ชื่อครูผู้สอนด้านในสัปดาห์นั้น เช่น "ครูฮัมบาลีย์ วาจิ" หรือชื่อจากโปรไฟล์ครู
-          const teacherName = (payload.teacherName || 'ครูฮัมบาลีย์ วาจิ').trim();
+          // 2. ค้นหาโฟลเดอร์ชื่อครูผู้สอน — แปลงคำนำหน้า นาย/นาง/นางสาว → ครู
+          const teacherRaw = (payload.teacherName || 'ครูฮัมบาลีย์ วาจิ').trim();
+          const teacherName = teacherRaw.replace(/^(นาย|นางสาว|นาง)\s*/, 'ครู');
           const teacherFolders = weekFolder.getFoldersByName(teacherName);
           if (teacherFolders.hasNext()) {
             folder = teacherFolders.next();
