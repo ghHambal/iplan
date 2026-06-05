@@ -2316,66 +2316,48 @@ async function fetchLiveGoogleData() {
 // 7. Sync and PDF Export Engine
 // ==========================================
 
-// สร้าง PDF สำหรับ Drive sync โดย embed Sarabun เป็น base64 ใน CSS
-// เพื่อให้ Canvas API อ่าน font ได้โดยตรง (ไม่ติดปัญหา CORS/SVG context)
+// สร้าง PDF สำหรับ Drive sync
+// root cause ที่แท้จริง: element อยู่ off-screen (left:-9999mm) ทำให้ browser ไม่โหลด Thai font subset
+// เมื่อ html2canvas จับ element โดยไม่มี Thai font → fallback font → glyphs เพี้ยน
+// fix v2.5: (1) บังคับโหลด Thai font ก่อน capture ด้วย fonts.load()
+//           (2) ใช้ position:relative ใน wrapper (เหมือน preview modal) ไม่มี z-index:-1
 async function buildPdfForDrive(printEl, opt) {
-  const base = new URL('./', location.href).href;
+  const origParent  = printEl.parentElement;
+  const origStyleText = printEl.getAttribute('style') || '';
 
-  // 1. โหลด font files แล้วแปลงเป็น base64
-  async function toB64(url) {
-    const buf = await fetch(url).then(r => r.arrayBuffer());
-    const bytes = new Uint8Array(buf);
-    let bin = '';
-    for (let i = 0; i < bytes.length; i += 8192)
-      bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
-    return btoa(bin);
-  }
-  const [t4, l4, t7, l7] = await Promise.all([
-    toB64(base + 'fonts/sarabun-400-thai.woff2'),
-    toB64(base + 'fonts/sarabun-400-latin.woff2'),
-    toB64(base + 'fonts/sarabun-700-thai.woff2'),
-    toB64(base + 'fonts/sarabun-700-latin.woff2'),
-  ]);
+  // สร้าง wrapper ที่ positive coordinate ใต้ viewport — ผู้ใช้ไม่เห็น
+  const safeTop = window.scrollY + window.innerHeight + 20;
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `position:absolute;top:${safeTop}px;left:0;width:794px;background:#fff;`;
+  document.body.appendChild(wrapper);
 
-  // 2. ฉีด @font-face ด้วย data URI ลง document → Canvas API อ่านได้แน่นอน
-  const injectStyle = document.createElement('style');
-  injectStyle.textContent = `
-    @font-face { font-family:'SarabunPDF'; font-weight:400; font-display:block;
-      src:url('data:font/woff2;base64,${t4}') format('woff2');
-      unicode-range:U+0E01-0E5B,U+0303,U+0331,U+200C-200D,U+25CC; }
-    @font-face { font-family:'SarabunPDF'; font-weight:400; font-display:block;
-      src:url('data:font/woff2;base64,${l4}') format('woff2');
-      unicode-range:U+0000-00FF,U+2000-206F; }
-    @font-face { font-family:'SarabunPDF'; font-weight:700; font-display:block;
-      src:url('data:font/woff2;base64,${t7}') format('woff2');
-      unicode-range:U+0E01-0E5B,U+0303,U+0331,U+200C-200D,U+25CC; }
-    @font-face { font-family:'SarabunPDF'; font-weight:700; font-display:block;
-      src:url('data:font/woff2;base64,${l7}') format('woff2');
-      unicode-range:U+0000-00FF,U+2000-206F; }
-    #print-template-container, #print-template-container * {
-      font-family: 'SarabunPDF', sans-serif !important; }
-  `;
-  document.head.appendChild(injectStyle);
+  // ย้าย element เข้า wrapper ด้วย position:relative (เหมือน openA4PreviewModal)
+  printEl.style.cssText = 'position:relative;left:auto;top:auto;display:block;background:#ffffff;';
+  wrapper.appendChild(printEl);
 
-  // 3. รอ font โหลดจริงๆ
-  await document.fonts.ready;
+  // บังคับ browser โหลด Thai font subset ก่อน capture
+  // fonts.ready อย่างเดียวไม่พอ — element off-screen ทำให้ font ไม่ถูก trigger ให้โหลด
   await Promise.all([
-    document.fonts.load('400 16px SarabunPDF', 'กขคเข้าใจ'),
-    document.fonts.load('700 16px SarabunPDF', 'กขคเข้าใจ'),
-  ]).catch(() => {});
+    document.fonts.load('400 14px Sarabun', 'กขคงจฉชซญดตถทธนบปผฝพฟภมยรลวสหอฮเแโใไ'),
+    document.fonts.load('600 14px Sarabun', 'กขคงจฉชซญดตถทธนบปผฝพฟภมยรลวสหอฮเแโใไ'),
+    document.fonts.load('700 14px Sarabun', 'กขคงจฉชซญดตถทธนบปผฝพฟภมยรลวสหอฮเแโใไ'),
+  ]);
+  // รอ 2 frame ให้ layout + font rendering เสร็จสมบูรณ์
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-  // 4. Capture — element อยู่ off-screen ได้ html2canvas จับ element โดยตรง
-  printEl.style.background = '#ffffff';
-  const simpleOpt = {
+  const driveOpt = {
     ...opt,
     html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
   };
+
   try {
-    return await html2pdf().set(simpleOpt).from(printEl).output('datauristring');
+    return await html2pdf().set(driveOpt).from(printEl).output('datauristring');
   } finally {
-    document.head.removeChild(injectStyle);
-    printEl.style.background = '';
+    // คืน element กลับที่เดิมและลบ wrapper
+    if (origParent) origParent.appendChild(printEl);
+    else document.body.appendChild(printEl);
+    printEl.setAttribute('style', origStyleText);
+    if (wrapper.parentElement) wrapper.parentElement.removeChild(wrapper);
   }
 }
 
@@ -3999,7 +3981,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '2.3';
+  const CURRENT_VERSION = '2.5';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
