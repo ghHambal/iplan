@@ -2388,20 +2388,43 @@ async function syncToGoogleSheets() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
-    // foreignObjectRendering:true = ให้ browser render HTML ผ่าน SVG foreignObject
-    // (ใช้ native text engine รองรับ Thai combining chars) แทน Canvas re-render
     const opt = {
       margin:       0,
       filename:     descriptiveFileName,
       image:        { type: 'jpeg', quality: 0.95 },
+      // foreignObjectRendering: browser render นาน HTML ผ่าน SVG → Thai text ถูกต้อง
+      // ต้องอยู่ใน viewport ด้วย ไม่งั้น SVG จับแค่ -9999mm area ซึ่งว่างเปล่า
       html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', foreignObjectRendering: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
+    // ย้ายเข้า viewport ชั่วคราว (z-index สูงสุด) เพื่อให้ SVG foreignObject จับได้ครบ
+    const _origPos   = printEl.style.position;
+    const _origLeft  = printEl.style.left;
+    const _origTop   = printEl.style.top;
+    const _origZ     = printEl.style.zIndex;
+    const _origBg    = printEl.style.background;
+
+    printEl.style.position   = 'fixed';
+    printEl.style.left       = '0';
+    printEl.style.top        = '0';
+    printEl.style.zIndex     = '99999';
     printEl.style.background = '#ffffff';
+
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     await document.fonts.ready;
-    const pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
-    printEl.style.background = '';
+
+    let pdfDataUri;
+    try {
+      pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
+    } finally {
+      printEl.style.position   = _origPos;
+      printEl.style.left       = _origLeft;
+      printEl.style.top        = _origTop;
+      printEl.style.zIndex     = _origZ;
+      printEl.style.background = _origBg;
+    }
+
     if (!isPreviewOpen) {
       printEl.style.display = 'none';
     }
@@ -3972,7 +3995,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '2.1';
+  const CURRENT_VERSION = '2.2';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
