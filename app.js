@@ -2316,35 +2316,66 @@ async function fetchLiveGoogleData() {
 // 7. Sync and PDF Export Engine
 // ==========================================
 
-// ย้าย print element เข้า viewport จริงๆ ก่อน html2canvas จะ capture
-// เพราะ browser จะไม่ทำ full Thai text shaping กับ element ที่อยู่ off-screen (left:-9999mm)
-// ทำให้ตัวอักษรไทยที่มี combining vowels/tone marks เพี้ยนในไฟล์ PDF
-async function captureWithViewport(printEl, opt) {
-  const orig = {
-    position: printEl.style.position,
-    left:     printEl.style.left,
-    top:      printEl.style.top,
-    zIndex:   printEl.style.zIndex,
-  };
+// สร้าง PDF สำหรับ Drive sync โดย embed Sarabun เป็น base64 ใน CSS
+// เพื่อให้ Canvas API อ่าน font ได้โดยตรง (ไม่ติดปัญหา CORS/SVG context)
+async function buildPdfForDrive(printEl, opt) {
+  const base = new URL('./', location.href).href;
 
-  // ย้ายเข้า viewport จริง — ไม่ใช้ opacity:0 เพราะ html2canvas อ่าน CSS แล้ว render ขาว
-  // ซ่อนด้วย z-index ติดลบ (อยู่หลังทุก element) แทน
-  printEl.style.position = 'fixed';
-  printEl.style.left     = '0';
-  printEl.style.top      = '0';
-  printEl.style.zIndex   = '-9999';
+  // 1. โหลด font files แล้วแปลงเป็น base64
+  async function toB64(url) {
+    const buf = await fetch(url).then(r => r.arrayBuffer());
+    const bytes = new Uint8Array(buf);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 8192)
+      bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    return btoa(bin);
+  }
+  const [t4, l4, t7, l7] = await Promise.all([
+    toB64(base + 'fonts/sarabun-400-thai.woff2'),
+    toB64(base + 'fonts/sarabun-400-latin.woff2'),
+    toB64(base + 'fonts/sarabun-700-thai.woff2'),
+    toB64(base + 'fonts/sarabun-700-latin.woff2'),
+  ]);
 
-  // รอ 2 animation frames ให้ browser commit full layout + Thai text shaping
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  // 2. ฉีด @font-face ด้วย data URI ลง document → Canvas API อ่านได้แน่นอน
+  const injectStyle = document.createElement('style');
+  injectStyle.textContent = `
+    @font-face { font-family:'SarabunPDF'; font-weight:400; font-display:block;
+      src:url('data:font/woff2;base64,${t4}') format('woff2');
+      unicode-range:U+0E01-0E5B,U+0303,U+0331,U+200C-200D,U+25CC; }
+    @font-face { font-family:'SarabunPDF'; font-weight:400; font-display:block;
+      src:url('data:font/woff2;base64,${l4}') format('woff2');
+      unicode-range:U+0000-00FF,U+2000-206F; }
+    @font-face { font-family:'SarabunPDF'; font-weight:700; font-display:block;
+      src:url('data:font/woff2;base64,${t7}') format('woff2');
+      unicode-range:U+0E01-0E5B,U+0303,U+0331,U+200C-200D,U+25CC; }
+    @font-face { font-family:'SarabunPDF'; font-weight:700; font-display:block;
+      src:url('data:font/woff2;base64,${l7}') format('woff2');
+      unicode-range:U+0000-00FF,U+2000-206F; }
+    #print-template-container, #print-template-container * {
+      font-family: 'SarabunPDF', sans-serif !important; }
+  `;
+  document.head.appendChild(injectStyle);
+
+  // 3. รอ font โหลดจริงๆ
   await document.fonts.ready;
+  await Promise.all([
+    document.fonts.load('400 16px SarabunPDF', 'กขคเข้าใจ'),
+    document.fonts.load('700 16px SarabunPDF', 'กขคเข้าใจ'),
+  ]).catch(() => {});
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+  // 4. Capture — element อยู่ off-screen ได้ html2canvas จับ element โดยตรง
+  printEl.style.background = '#ffffff';
+  const simpleOpt = {
+    ...opt,
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+  };
   try {
-    return await html2pdf().set(opt).from(printEl).output('datauristring');
+    return await html2pdf().set(simpleOpt).from(printEl).output('datauristring');
   } finally {
-    printEl.style.position = orig.position;
-    printEl.style.left     = orig.left;
-    printEl.style.top      = orig.top;
-    printEl.style.zIndex   = orig.zIndex;
+    document.head.removeChild(injectStyle);
+    printEl.style.background = '';
   }
 }
 
@@ -2389,41 +2420,14 @@ async function syncToGoogleSheets() {
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
     const opt = {
-      margin:       0,
-      filename:     descriptiveFileName,
-      image:        { type: 'jpeg', quality: 0.95 },
-      // foreignObjectRendering: browser render นาน HTML ผ่าน SVG → Thai text ถูกต้อง
-      // ต้องอยู่ใน viewport ด้วย ไม่งั้น SVG จับแค่ -9999mm area ซึ่งว่างเปล่า
-      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', foreignObjectRendering: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      margin:   0,
+      filename: descriptiveFileName,
+      image:    { type: 'jpeg', quality: 0.95 },
+      jsPDF:    { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // ย้ายเข้า viewport ชั่วคราว (z-index สูงสุด) เพื่อให้ SVG foreignObject จับได้ครบ
-    const _origPos   = printEl.style.position;
-    const _origLeft  = printEl.style.left;
-    const _origTop   = printEl.style.top;
-    const _origZ     = printEl.style.zIndex;
-    const _origBg    = printEl.style.background;
-
-    printEl.style.position   = 'fixed';
-    printEl.style.left       = '0';
-    printEl.style.top        = '0';
-    printEl.style.zIndex     = '99999';
-    printEl.style.background = '#ffffff';
-
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    await document.fonts.ready;
-
-    let pdfDataUri;
-    try {
-      pdfDataUri = await html2pdf().set(opt).from(printEl).output('datauristring');
-    } finally {
-      printEl.style.position   = _origPos;
-      printEl.style.left       = _origLeft;
-      printEl.style.top        = _origTop;
-      printEl.style.zIndex     = _origZ;
-      printEl.style.background = _origBg;
-    }
+    // embed font เป็น base64 แล้วค่อย capture — ไม่ต้องย้าย element
+    const pdfDataUri = await buildPdfForDrive(printEl, opt);
 
     if (!isPreviewOpen) {
       printEl.style.display = 'none';
@@ -3995,7 +3999,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '2.2';
+  const CURRENT_VERSION = '2.3';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
