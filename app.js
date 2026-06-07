@@ -2336,24 +2336,36 @@ function escapeHtmlForReport(str) {
     .replace(/\n/g, '<br>');
 }
 
+// การ์ดบล็อกสีเขียว (มาตรฐาน/จุดประสงค์/กิจกรรม ฯลฯ) — เลียนแบบ .pdf-block เดิม
 function reportBlockHtml(title, contentHtml) {
-  return `<table style="width:100%;border-collapse:collapse;border:1px solid #166534;margin-bottom:6px;" cellpadding="0" cellspacing="0">
-    <tr><td style="background-color:#dcfce7;color:#14532d;font-weight:bold;font-size:11px;padding:3px 6px;border-bottom:1px solid #166534;">${title}</td></tr>
-    <tr><td style="font-size:10.5px;padding:4px 6px;text-align:left;line-height:1.5;word-break:break-word;overflow-wrap:break-word;">${contentHtml}</td></tr>
-  </table>`;
+  return `<div style="border:1px solid #166534;border-radius:4px;background-color:#fff;margin-bottom:2.5mm;">
+    <div style="background-color:#dcfce7;color:#14532d;font-weight:bold;font-size:11.5px;padding:1mm 2.5mm;border-bottom:1px solid #166534;border-radius:3px 3px 0 0;">${title}</div>
+    <div style="font-size:10.5px;padding:1.5mm 2.5mm;text-align:left;line-height:1.45;word-break:break-word;overflow-wrap:break-word;">${contentHtml}</div>
+  </div>`;
 }
 
+// กล่องกระดาษเส้น (บันทึกหลังการสอน/ข้อเสนอแนะ) — เลียนแบบ .pdf-dashed-box เดิม
+function reportDashedBoxHtml(title, contentHtml) {
+  return `<div style="margin-bottom:2.5mm;">
+    <div style="font-size:12px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:0.5mm;margin-bottom:1mm;">${title}</div>
+    <div style="font-size:10.5px;line-height:6.8mm;background-image:linear-gradient(to bottom, transparent 95%, #94a3b8 95%);background-size:100% 6.8mm;padding:0.5mm 2mm;min-height:20.4mm;word-break:break-word;overflow-wrap:break-word;">${contentHtml}</div>
+  </div>`;
+}
+
+// ช่องลายเซ็น (รูป + บรรทัดชื่อ + วันที่) — เลียนแบบ .pdf-sig-box เดิม
 function reportSignatureCellHtml(imgSrc, lineLabel, nameLabel, dateLabel) {
   const img = imgSrc
-    ? `<img src="${imgSrc}" style="max-height:60px;max-width:140px;display:block;margin:0 auto;">`
-    : '<div style="height:60px;">&nbsp;</div>';
-  return `<table style="width:100%;border-collapse:collapse;text-align:center;font-size:10.5px;" cellpadding="0" cellspacing="0">
-    <tr><td>${img}</td></tr>
-    <tr><td style="padding-top:2px;">${lineLabel}<br>( ${escapeHtmlForReport(nameLabel)} )<br>วันที่ ${escapeHtmlForReport(dateLabel)}</td></tr>
-  </table>`;
+    ? `<img src="${imgSrc}" style="max-height:9mm;max-width:32mm;display:block;margin:0 auto 1.5mm auto;">`
+    : '<div style="height:9mm;margin-bottom:1.5mm;">&nbsp;</div>';
+  return `<div style="text-align:center;font-size:11px;line-height:1.4;">
+    ${img}
+    <div>${lineLabel}<br>( ${escapeHtmlForReport(nameLabel)} )</div>
+    <div style="text-align:left;padding-left:15%;">วันที่ ${escapeHtmlForReport(dateLabel)}</div>
+  </div>`;
 }
 
-// สร้างหน้า A4 ของห้องเรียนหนึ่งห้อง (table-based, inline style ทั้งหมด)
+// สร้างหน้า A4 ของห้องเรียนหนึ่งห้อง — โครงเดียวกับเทมเพลตเดิม (.single-page-pdf) แต่ใช้ table/div ล้วน
+// เพื่อให้ Google HTML→Docs converter render ได้ถูกต้อง (หลีกเลี่ยง flexbox/float ที่ converter ไม่รองรับ)
 function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
   const dept = `กลุ่มสาระการเรียนรู้${profile.schoolName || 'คณิตศาสตร์'}`;
   const courseLine = `วิชา ${escapeHtmlForReport(currentCourse.name || '-')}　รหัสวิชา ${escapeHtmlForReport(currentCourse.code || '-')}　ชั้นมัธยมศึกษาปีที่ ${escapeHtmlForReport(cls.name || '-')}`;
@@ -2361,13 +2373,13 @@ function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
 
   const customLogo = localStorage.getItem('iplane_school_logo');
   const logoHtml = customLogo
-    ? `<img src="${customLogo}" style="max-height:60px;max-width:60px;display:block;margin:0 auto 4px auto;">`
+    ? `<img src="${customLogo}" style="max-height:16mm;max-width:16mm;display:block;margin:0 auto 1.5mm auto;border-radius:50%;">`
     : '';
 
   // ผลการจัดการเรียนรู้/แนวทางแก้ปัญหา อาจเป็นข้อความหรือรูปลายเซ็น (data:image/...)
   const renderOutcomeContent = (val) => {
     if (val && val.startsWith('data:image/')) {
-      return `<img src="${val}" style="max-height:90px;max-width:100%;display:block;">`;
+      return `<img src="${val}" style="max-height:18mm;max-width:100%;display:block;">`;
     }
     return escapeHtmlForReport((val === '-' ? '' : (val || '')) || '\n\n\n');
   };
@@ -2375,48 +2387,52 @@ function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
   const studentSig = localStorage.getItem('iplane_student_signature_' + cls.id) || '';
 
   const leftCol = [
-    reportBlockHtml('1. มาตรฐาน/ตัวชี้วัด (ผลการเรียนรู้)', escapeHtmlForReport(plan.standard || '-')),
-    reportBlockHtml('2. จุดประสงค์การเรียนรู้', escapeHtmlForReport(plan.objectives || '-')),
-    reportBlockHtml('3. กิจกรรมการเรียนรู้', escapeHtmlForReport(plan.activities || '-')),
-    reportBlockHtml('4. การวัดและประเมินผล', escapeHtmlForReport(plan.assessment || '-')),
+    reportBlockHtml('1.มาตรฐาน/ตัวชี้วัด (ผลการเรียนรู้)', escapeHtmlForReport(plan.standard || '-')),
+    reportBlockHtml('2.จุดประสงค์การเรียนรู้', escapeHtmlForReport(plan.objectives || '-')),
+    reportBlockHtml('3.กิจกรรมการเรียนรู้', escapeHtmlForReport(plan.activities || '-')),
+    reportBlockHtml('4.การวัดและประเมินผล', escapeHtmlForReport(plan.assessment || '-')),
   ].join('');
 
   const rightCol = [
-    reportBlockHtml('5. สื่อการเรียนรู้', escapeHtmlForReport(plan.materials || '-')),
-    `<table style="width:100%;border-collapse:collapse;margin-bottom:6px;" cellpadding="0" cellspacing="0"><tr>
-      <td style="width:50%;padding-right:3px;">${reportSignatureCellHtml(studentSig, 'ลงชื่อ ................................. หัวหน้าห้อง', cls.classLeader || '.................................................', plan.date || '-')}</td>
-      <td style="width:50%;padding-left:3px;">${reportSignatureCellHtml(currentSignatureDataUrl || '', 'ลงชื่อ ................................. ครูผู้สอน', profile.teacherName || '', plan.date || '-')}</td>
+    reportBlockHtml('5.สื่อการเรียนรู้', escapeHtmlForReport(plan.materials || '-')),
+    `<table style="width:100%;border-collapse:collapse;margin-bottom:2.5mm;" cellpadding="0" cellspacing="0"><tr>
+      <td style="width:50%;padding-right:2mm;">${reportSignatureCellHtml(studentSig, 'ลงชื่อ ................................. หัวหน้าห้อง', cls.classLeader || '.................................................', plan.date || '-')}</td>
+      <td style="width:50%;padding-left:2mm;">${reportSignatureCellHtml(currentSignatureDataUrl || '', 'ลงชื่อ ................................. ครูผู้สอน', profile.teacherName || '', plan.date || '-')}</td>
     </tr></table>`,
-    reportBlockHtml('บันทึกหลังการสอน', renderOutcomeContent(plan.outcomes)),
-    reportBlockHtml('ข้อเสนอแนะ', renderOutcomeContent(plan.solutions)),
-    `<table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr><td style="text-align:center;">${reportSignatureCellHtml('', 'ลงชื่อ ..................................... หัวหน้ากลุ่มสาระ', profile.hodName || '', '...................................')}</td></tr></table>`,
+    reportDashedBoxHtml('บันทึกหลังการสอน', renderOutcomeContent(plan.outcomes)),
+    reportDashedBoxHtml('ข้อเสนอแนะ', renderOutcomeContent(plan.solutions)),
+    `<table style="width:100%;margin-top:2mm;" cellpadding="0" cellspacing="0"><tr>
+      <td style="width:15%;">&nbsp;</td>
+      <td style="width:70%;">${reportSignatureCellHtml('', 'ลงชื่อ ..................................... หัวหน้ากลุ่มสาระ', profile.hodName || '', '...................................')}</td>
+      <td style="width:15%;">&nbsp;</td>
+    </tr></table>`,
   ].join('');
 
   const pageBreakStyle = isLastPage ? '' : 'page-break-after: always;';
 
-  return `<div style="width:100%;${pageBreakStyle}">
-  <table style="width:100%;border-collapse:collapse;font-family:'Sarabun',sans-serif;font-size:12px;color:#000;table-layout:fixed;" cellpadding="0" cellspacing="0">
-    <tr><td style="text-align:center;padding-bottom:4px;">
+  // กรอบขนาด A4 เท่าเทมเพลตเดิม (.single-page-pdf: 210mm x 297mm, padding 10mm 12mm)
+  return `<div style="width:210mm;min-height:297mm;box-sizing:border-box;padding:10mm 12mm;margin:0 auto;font-family:'Sarabun',sans-serif;font-size:12px;color:#000;line-height:1.35;${pageBreakStyle}">
+    <div style="text-align:center;margin-bottom:2mm;">
       ${logoHtml}
-      <div style="font-size:17px;font-weight:bold;">แผนการจัดการเรียนรู้</div>
-      <div style="font-size:13px;">${escapeHtmlForReport(dept)}</div>
-      <div style="font-size:12.5px;">${courseLine}</div>
-      <div style="font-size:12.5px;">${unitLine}</div>
-    </td></tr>
-    <tr><td style="border-top:1.5px solid #166534;border-bottom:1.5px solid #166534;padding:3px 0;">
-      <table style="width:100%;font-size:12.5px;font-weight:bold;" cellpadding="0" cellspacing="0"><tr>
-        <td style="text-align:left;padding-left:4px;">ครั้งที่ ${escapeHtmlForReport(plan.once)}</td>
-        <td style="text-align:center;">เวลา ${escapeHtmlForReport(plan.periodCount)} ชั่วโมง</td>
-        <td style="text-align:right;padding-right:4px;">วันที่ ${escapeHtmlForReport(plan.date || '-')}</td>
-      </tr></table>
-    </td></tr>
-    <tr><td style="padding-top:4px;">
-      <table style="width:100%;border-collapse:collapse;table-layout:fixed;" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:50%;vertical-align:top;padding-right:4px;overflow:hidden;">${leftCol}</td>
-        <td style="width:50%;vertical-align:top;padding-left:4px;overflow:hidden;">${rightCol}</td>
-      </tr></table>
-    </td></tr>
-  </table>
+      <div style="font-size:17px;font-weight:bold;">แผนการจัดการเรียนรู้(หน้าเดียว)</div>
+      <div style="font-size:13px;margin-top:1px;">${escapeHtmlForReport(dept)}</div>
+      <div style="font-size:12.5px;margin-top:1px;">${courseLine}</div>
+      <div style="font-size:12.5px;margin-top:1px;">${unitLine}</div>
+    </div>
+    <table style="width:100%;border-top:1.5px solid #166534;border-bottom:1.5px solid #166534;margin-bottom:3mm;" cellpadding="0" cellspacing="0">
+      <tr style="font-size:12.5px;font-weight:bold;">
+        <td style="text-align:left;padding:1mm 0 1mm 2mm;">ครั้งที่ ${escapeHtmlForReport(plan.once)}</td>
+        <td style="text-align:center;padding:1mm 0;">เวลา ${escapeHtmlForReport(plan.periodCount)} ชั่วโมง</td>
+        <td style="text-align:right;padding:1mm 2mm 1mm 0;">วันที่ ${escapeHtmlForReport(plan.date || '-')}</td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="width:48.5%;vertical-align:top;">${leftCol}</td>
+        <td style="width:3%;">&nbsp;</td>
+        <td style="width:48.5%;vertical-align:top;">${rightCol}</td>
+      </tr>
+    </table>
   </div>`;
 }
 
@@ -4048,7 +4064,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.1';
+  const CURRENT_VERSION = '3.2';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
