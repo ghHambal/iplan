@@ -2316,228 +2316,6 @@ async function fetchLiveGoogleData() {
 // 7. Sync and PDF Export Engine
 // ==========================================
 
-// ==========================================
-// สร้างรายงาน HTML (table-based) สำหรับให้ Google Drive แปลงเป็น PDF เอง
-// root cause ที่แท้จริง: html2canvas วาดข้อความผ่าน Canvas API ซึ่งตัดคำกลางสระ/วรรณยุกต์ไทย
-// (grapheme cluster) ทำให้เพี้ยน — ไม่ว่าจะลอง font/ตำแหน่ง/base64 แบบไหนก็ไม่หาย
-// ทางแก้: เลิกใช้ html2canvas ไปเลย ส่ง HTML ไปให้ Google Drive แปลง HTML→Google Docs→PDF
-// (เครื่องมือแปลงของ Google เอง รองรับภาษาไทยสมบูรณ์ 100% เพราะใช้ตัว render เดียวกับ Docs)
-// ใช้ <table> ล้วนสำหรับ layout เพราะตัวแปลง HTML→Docs ของ Google รองรับตารางได้ดีที่สุด
-// (ไม่รองรับ flexbox/float/position ซึ่งเป็นของเดิมที่ print-template-container ใช้)
-// ==========================================
-
-function escapeHtmlForReport(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/\n/g, '<br>');
-}
-
-// ย่อขนาดรูป (ลายเซ็น/ภาพวาดบันทึก) ก่อนฝังใน HTML สำหรับ Google Drive
-// เพราะ Google HTML→Docs converter เพิกเฉยต่อ CSS max-width/max-height บน <img>
-// แล้วตีความ "พิกเซลของรูปต้นฉบับ = พอยต์ในเอกสาร" ทำให้รูป canvas (หลายร้อยพิกเซล)
-// ขยายล้นช่องไปหลายเท่า — ต้องลดขนาดพิกเซลจริงของรูปลงให้พอดีกับช่องที่ต้องการ
-function resizeImageDataUrlForDrive(dataUrl, maxWidthPx, maxHeightPx) {
-  return new Promise((resolve) => {
-    if (!dataUrl || !dataUrl.startsWith('data:image/')) { resolve(dataUrl); return; }
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(maxWidthPx / img.width, maxHeightPx / img.height, 1);
-      const w = Math.max(1, Math.round(img.width * scale));
-      const h = Math.max(1, Math.round(img.height * scale));
-      const c = document.createElement('canvas');
-      c.width = w;
-      c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL('image/png'));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
-}
-
-// ตราโลโก้เริ่มต้น (เมื่อโรงเรียนยังไม่อัปโหลดโลโก้) — เลียนแบบ #pdf-default-logo-svg ใน print-template เป๊ะๆ
-const DEFAULT_LOGO_SVG_MARKUP = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="200" height="200">
-  <circle cx="50" cy="50" r="48" stroke="#000" stroke-width="1.5" fill="none" />
-  <circle cx="50" cy="50" r="43" stroke="#000" stroke-width="0.75" fill="none" />
-  <path d="M50 15 L50 85 M15 50 L85 50" stroke="#000" stroke-width="0.5" stroke-dasharray="1 1" />
-  <polygon points="50,22 75,40 65,75 35,75 25,40" stroke="#000" stroke-width="1" fill="none" />
-  <circle cx="50" cy="48" r="10" stroke="#000" stroke-width="1" fill="none" />
-  <path d="M50 25 L50 40 M38 48 L46 48 M62 48 L54 48" stroke="#000" stroke-width="1" />
-  <text x="50" y="80" font-family="Sarabun, sans-serif" font-size="6" font-weight="700" text-anchor="middle">OFFICIAL</text>
-</svg>`;
-
-let cachedDefaultLogoPngDataUrl = null;
-
-// แปลง SVG ตราโลโก้เริ่มต้นเป็น PNG data URL ก่อนฝังใน HTML รายงาน Drive
-// (ตัวแปลง HTML→Docs ของ Google ไม่รองรับ inline <svg> จึง rasterize ผ่าน canvas เหมือนรูปอื่นๆ)
-function getDefaultLogoPngDataUrl() {
-  if (cachedDefaultLogoPngDataUrl) return Promise.resolve(cachedDefaultLogoPngDataUrl);
-  return new Promise((resolve) => {
-    const svgBlob = new Blob([DEFAULT_LOGO_SVG_MARKUP], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement('canvas');
-      c.width = 200;
-      c.height = 200;
-      c.getContext('2d').drawImage(img, 0, 0, 200, 200);
-      URL.revokeObjectURL(url);
-      cachedDefaultLogoPngDataUrl = c.toDataURL('image/png');
-      resolve(cachedDefaultLogoPngDataUrl);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(''); };
-    img.src = url;
-  });
-}
-
-// การ์ดบล็อกสีเขียว (มาตรฐาน/จุดประสงค์/กิจกรรม ฯลฯ) — เลียนแบบ .pdf-block เดิม
-// ใช้ table+bgcolor แทน div+background-color เพราะ Google HTML→Docs converter
-// มักตัด background-color ของ <div> ทิ้ง แต่คงสีพื้นหลังของ <td bgcolor> ไว้เสมอ
-function reportBlockHtml(title, contentHtml) {
-  return `<table style="width:100%;border-collapse:collapse;border:1px solid #166534;margin-bottom:2.5mm;" cellpadding="0" cellspacing="0">
-    <tr><td bgcolor="#dcfce7" style="background-color:#dcfce7;color:#14532d;font-weight:bold;font-size:11.5px;padding:1mm 2.5mm;border-bottom:1px solid #166534;">${title}</td></tr>
-    <tr><td style="font-size:10.5px;padding:1.5mm 2.5mm;text-align:left;line-height:1.45;word-break:break-word;overflow-wrap:break-word;">${contentHtml}</td></tr>
-  </table>`;
-}
-
-// กล่องกระดาษเส้น (บันทึกหลังการสอน/ข้อเสนอแนะ) — เลียนแบบ .pdf-dashed-box เดิม
-function reportDashedBoxHtml(title, contentHtml) {
-  return `<table style="width:100%;border-collapse:collapse;margin-bottom:2.5mm;" cellpadding="0" cellspacing="0">
-    <tr><td style="font-size:12px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:0.5mm;">${title}</td></tr>
-    <tr><td style="font-size:10.5px;line-height:1.8;padding:1mm 2mm;min-height:20mm;word-break:break-word;overflow-wrap:break-word;">${contentHtml}</td></tr>
-  </table>`;
-}
-
-// ช่องลายเซ็น (รูป + บรรทัดชื่อ + วันที่) — เลียนแบบ .pdf-sig-box เดิม
-function reportSignatureCellHtml(imgSrc, lineLabel, nameLabel, dateLabel) {
-  const img = imgSrc
-    ? `<img src="${imgSrc}" style="max-height:9mm;max-width:32mm;display:block;margin:0 auto 1.5mm auto;">`
-    : '<div style="height:9mm;margin-bottom:1.5mm;">&nbsp;</div>';
-  return `<div style="text-align:center;font-size:11px;line-height:1.4;">
-    ${img}
-    <div>${lineLabel}<br>( ${escapeHtmlForReport(nameLabel)} )</div>
-    <div style="text-align:left;padding-left:15%;">วันที่ ${escapeHtmlForReport(dateLabel)}</div>
-  </div>`;
-}
-
-// สร้างหน้า A4 ของห้องเรียนหนึ่งห้อง — โครงเดียวกับเทมเพลตเดิม (.single-page-pdf) แต่ใช้ table/div ล้วน
-// เพื่อให้ Google HTML→Docs converter render ได้ถูกต้อง (หลีกเลี่ยง flexbox/float ที่ converter ไม่รองรับ)
-async function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
-  const dept = `กลุ่มสาระการเรียนรู้${profile.schoolName || 'คณิตศาสตร์'}`;
-  const courseLine = `วิชา ${escapeHtmlForReport(currentCourse.name || '-')} รหัสวิชา ${escapeHtmlForReport(currentCourse.code || '-')} ชั้นมัธยมศึกษาปีที่ ${escapeHtmlForReport(cls.name || '-')}`;
-  const unitLine = `หน่วยการเรียนรู้ที่ ${escapeHtmlForReport(plan.unit || '1')} เรื่อง ${escapeHtmlForReport(plan.topic || '-')}`;
-
-  // ขนาดเป้าหมายเป็นพิกเซล (≈ พอยต์ในเอกสารหลังแปลง): โลโก้ ~16mm, ลายเซ็น ~32×9mm, ภาพบันทึก ~กว้างคอลัมน์ขวา×สูง 18mm
-  const customLogoRaw = localStorage.getItem('iplane_school_logo');
-  const studentSigRaw = localStorage.getItem('iplane_student_signature_' + cls.id) || '';
-  const [customLogo, studentSig, teacherSig, outcomesImg, solutionsImg] = await Promise.all([
-    resizeImageDataUrlForDrive(customLogoRaw, 60, 60),
-    resizeImageDataUrlForDrive(studentSigRaw, 90, 26),
-    resizeImageDataUrlForDrive(currentSignatureDataUrl || '', 90, 26),
-    resizeImageDataUrlForDrive((plan.outcomes && plan.outcomes.startsWith('data:image/')) ? plan.outcomes : '', 240, 50),
-    resizeImageDataUrlForDrive((plan.solutions && plan.solutions.startsWith('data:image/')) ? plan.solutions : '', 240, 50),
-  ]);
-
-  // โลโก้: ใช้โลโก้ที่อัปโหลด (ครอปวงกลม) หรือตราเริ่มต้น (rasterize จาก SVG) — เลียนแบบ #pdf-print-logo-container เป๊ะๆ
-  const logoHtml = customLogo
-    ? `<img src="${customLogo}" style="max-height:16mm;max-width:16mm;display:block;margin:0 auto 1.5mm auto;border-radius:50%;">`
-    : `<img src="${await getDefaultLogoPngDataUrl()}" style="height:16mm;width:16mm;display:block;margin:0 auto 1.5mm auto;">`;
-
-  // กล่อง "บันทึกหลังการสอน" รวมทั้งผลการจัดการเรียนรู้และแนวทางแก้ปัญหาไว้ด้วยกัน
-  // (เลียนแบบ populatePrintTemplate#pdf-print-outcomes เป๊ะๆ — ส่วน "ข้อเสนอแนะ" ปล่อยว่างไว้สำหรับเขียนด้วยลายมือ เหมือนต้นฉบับ)
-  // ผลการจัดการเรียนรู้/แนวทางแก้ปัญหา อาจเป็นข้อความหรือรูปลายเซ็น (data:image/...) — รูปถูกย่อขนาดมาแล้วด้านบน
-  const renderReflectionEntry = (val, resizedImg, marginBottom) => {
-    if (val && val.startsWith('data:image/')) {
-      return `<img src="${resizedImg}" style="max-height:24mm;max-width:100%;display:block;object-fit:contain;margin:2px 0 ${marginBottom} 0;">`;
-    }
-    const text = (val === '-') ? '' : (val || '');
-    return `<div style="white-space:pre-line;font-size:10.5px;margin-bottom:${marginBottom};">${escapeHtmlForReport(text)}</div>`;
-  };
-  const reflectionTitleHtml = (label) =>
-    `<div style="font-weight:bold;font-size:11px;color:#14532d;margin-bottom:2px;">${escapeHtmlForReport(label)}</div>`;
-  const reflectionBoxHtml = [
-    reflectionTitleHtml('ผลการจัดการเรียนรู้:'),
-    renderReflectionEntry(plan.outcomes, outcomesImg, '8px'),
-    reflectionTitleHtml('แนวทางการแก้ปัญหา:'),
-    renderReflectionEntry(plan.solutions, solutionsImg, '2px'),
-  ].join('');
-
-  const leftCol = [
-    reportBlockHtml('1.มาตรฐาน/ตัวชี้วัด (ผลการเรียนรู้)', escapeHtmlForReport(plan.standard || '-')),
-    reportBlockHtml('2.จุดประสงค์การเรียนรู้', escapeHtmlForReport(plan.objectives || '-')),
-    reportBlockHtml('3.กิจกรรมการเรียนรู้', escapeHtmlForReport(plan.activities || '-')),
-    reportBlockHtml('4.การวัดและประเมินผล', escapeHtmlForReport(plan.assessment || '-')),
-  ].join('');
-
-  const rightCol = [
-    reportBlockHtml('5.สื่อการเรียนรู้', escapeHtmlForReport(plan.materials || '-')),
-    `<table style="width:100%;border-collapse:collapse;margin-bottom:2.5mm;" cellpadding="0" cellspacing="0"><tr>
-      <td style="width:50%;padding-right:2mm;">${reportSignatureCellHtml(studentSig, 'ลงชื่อ ................................................. หัวหน้าห้อง', cls.classLeader || '.................................................', plan.date || '-')}</td>
-      <td style="width:50%;padding-left:2mm;">${reportSignatureCellHtml(teacherSig, 'ลงชื่อ ................................................. ครูผู้สอน', profile.teacherName || '', plan.date || '-')}</td>
-    </tr></table>`,
-    reportDashedBoxHtml('บันทึกหลังการสอน', reflectionBoxHtml),
-    reportDashedBoxHtml('ข้อเสนอแนะ', escapeHtmlForReport('\n\n\n')),
-    `<table style="width:100%;margin-top:2mm;" cellpadding="0" cellspacing="0"><tr>
-      <td style="width:15%;">&nbsp;</td>
-      <td style="width:70%;">${reportSignatureCellHtml('', 'ลงชื่อ ..................................... หัวหน้ากลุ่มสาระ', profile.hodName || '', '...................................')}</td>
-      <td style="width:15%;">&nbsp;</td>
-    </tr></table>`,
-  ].join('');
-
-  const pageBreakStyle = isLastPage ? '' : 'page-break-after: always;';
-
-  // กรอบขนาด A4 เท่าเทมเพลตเดิม (.single-page-pdf: 210mm x 297mm, padding 10mm 12mm)
-  // ส่วนหัว/แถบครั้งที่-เวลา-วันที่ เลียนแบบ .pdf-header + .pdf-banner-row เดิม
-  // (ไม่มีกรอบการ์ดล้อมรอบ มีแค่เส้นเขียวบน-ล่างของแถบครั้งที่ ตามต้นฉบับ)
-  return `<div style="width:210mm;min-height:297mm;box-sizing:border-box;padding:10mm 12mm;margin:0 auto;font-family:'Sarabun',sans-serif;font-size:12px;color:#000;line-height:1.35;${pageBreakStyle}">
-    <div style="text-align:center;margin-bottom:2mm;">
-      ${logoHtml}
-      <div style="font-size:17px;font-weight:bold;margin-bottom:1px;">แผนการจัดการเรียนรู้(หน้าเดียว)</div>
-      <div style="font-size:13px;margin-bottom:2px;">${escapeHtmlForReport(dept)}</div>
-      <div style="font-size:12.5px;margin-bottom:1px;">${courseLine}</div>
-      <div style="font-size:12.5px;margin-bottom:1px;">${unitLine}</div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;border-top:1.5px solid #166534;border-bottom:1.5px solid #166534;margin-bottom:3mm;" cellpadding="0" cellspacing="0">
-      <tr style="font-size:12.5px;font-weight:bold;">
-        <td style="width:34%;text-align:left;padding:1mm 0 1mm 2mm;">ครั้งที่ ${escapeHtmlForReport(plan.once)}</td>
-        <td style="width:32%;text-align:center;padding:1mm 0;">เวลา ${escapeHtmlForReport(plan.periodCount)} ชั่วโมง</td>
-        <td style="width:34%;text-align:right;padding:1mm 2mm 1mm 0;">วันที่ ${escapeHtmlForReport(plan.date || '-')}</td>
-      </tr>
-    </table>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed;" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="width:48.5%;vertical-align:top;">${leftCol}</td>
-        <td style="width:3%;">&nbsp;</td>
-        <td style="width:48.5%;vertical-align:top;">${rightCol}</td>
-      </tr>
-    </table>
-  </div>`;
-}
-
-// รวมหน้ารายงานของทุกห้องเรียนในวิชาเดียวกันเป็นเอกสาร HTML เดียว (merge อัตโนมัติ)
-async function buildDriveReportHtml(courseClasses) {
-  const currentCourse = courses.find(c => c.id === activeCourseId);
-  if (!currentCourse) return '';
-
-  const pages = [];
-  for (let idx = 0; idx < courseClasses.length; idx++) {
-    const cls = courseClasses[idx];
-    const classPlans = loadCombinedLessons(activeCourseId, cls.id);
-    const plan = classPlans[selectedIndex];
-    if (!plan) continue;
-    pages.push(await buildClassroomReportHtml(plan, cls, currentCourse, idx === courseClasses.length - 1));
-  }
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
-<body style="font-family:'Sarabun',sans-serif;margin:0;padding:0;">
-${pages.join('\n')}
-</body></html>`;
-}
-
 // Send reflection record + generated A4 PDF to Google Sheets & Drive
 async function syncToGoogleSheets() {
   const saved = saveLessonProgress(false);
@@ -2577,9 +2355,10 @@ async function syncToGoogleSheets() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
-    // สร้างรายงาน HTML แล้วส่งให้ Google Drive แปลงเป็น PDF เอง (แทน html2canvas)
-    // เพื่อให้ Google render ภาษาไทยถูกต้อง 100% — ไม่ผ่าน Canvas API ที่ตัดคำเพี้ยน
-    const reportHtml = await buildDriveReportHtml(courseClasses);
+    // สร้างไฟล์ PDF จริงด้วยฟังก์ชันกลางเดียวกับปุ่มดาวน์โหลด แล้วแปลงเป็น base64 ส่งให้ Apps Script
+    // เก็บขึ้น Drive ตรงๆ (ไม่ผ่านการแปลง HTML→Google Docs→PDF ของ Google ที่ทำให้รูปแบบเพี้ยน)
+    const pdfBlob = await generateLessonPlanPdfBlob();
+    const pdfBase64 = await blobToBase64(pdfBlob);
 
     // Route active classroom specific sheet name
     const sheetTabName = (currentCourse && currentClass) ? getSafeSheetName(currentCourse.code, currentClass.name) : 'Sheet1';
@@ -2601,7 +2380,7 @@ async function syncToGoogleSheets() {
       
       outcomes: lessonPlans[selectedIndex].outcomes,
       solutions: lessonPlans[selectedIndex].solutions,
-      pdfHtml: reportHtml,
+      pdfBase64: pdfBase64,
       pdfFileName: descriptiveFileName.replace(/\.pdf$/i, ''),
       folderId: config.folderId,
       teacherName: profile.teacherName || 'ครูฮัมบาลีย์ วาจิ'
@@ -2633,6 +2412,55 @@ async function syncToGoogleSheets() {
   }
 }
 
+// สร้างไฟล์ PDF จริงฝั่งเบราว์เซอร์ — ใช้ฟังก์ชันเดียวกันทั้งดาวน์โหลดและอัปโหลดขึ้น Drive
+// เพื่อให้ผลลัพธ์ทั้งสองทางเหมือนกันเป๊ะ 100%
+//
+// วิธีการ: rasterize DOM ของแต่ละหน้า .single-page-pdf ด้วย html-to-image (เทคนิค SVG <foreignObject>)
+// ซึ่งให้ "เบราว์เซอร์เอง" เป็นผู้ render ตัวอักษร (เอนจินเดียวกับที่แสดงผลบนจอและพิมพ์ออกมาถูกต้อง)
+// จึงไม่เจอบั๊กสระ/วรรณยุกต์ไทยเรียงผิดตำแหน่งแบบ html2canvas (ซึ่ง re-implement text layout เอง)
+// และไม่เจอบั๊ก text-shaping ของ jsPDF เวลาวาดข้อความตรงๆ (GitHub issue #2650 ของ jsPDF ที่ยังไม่ถูกแก้)
+// จากนั้นนำภาพความละเอียดสูงที่ได้มาวางลงหน้ากระดาษ A4 ใน PDF ผ่าน jsPDF
+async function generateLessonPlanPdfBlob() {
+  populatePrintTemplate();
+  const container = document.getElementById('print-template-container');
+  const pages = container.querySelectorAll('.single-page-pdf');
+  if (!pages.length) throw new Error('ไม่พบหน้าเอกสารสำหรับสร้าง PDF');
+
+  try { await document.fonts.ready; } catch (_) {}
+
+  const { jsPDF } = window.jspdf;
+  let doc = null;
+
+  for (let i = 0; i < pages.length; i++) {
+    const pageEl = pages[i];
+    const dataUrl = await window.htmlToImage.toPng(pageEl, {
+      pixelRatio: 3,
+      backgroundColor: '#ffffff',
+      width: pageEl.offsetWidth,
+      height: pageEl.offsetHeight
+    });
+
+    if (!doc) {
+      doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    } else {
+      doc.addPage('a4', 'portrait');
+    }
+    doc.addImage(dataUrl, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+  }
+
+  return doc.output('blob');
+}
+
+// แปลง Blob เป็น base64 string ล้วน (ตัด prefix "data:...;base64," ออก) สำหรับส่งให้ Apps Script
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 // Export A4 PDF Document
 async function exportPDFDocument() {
   const saved = saveLessonProgress(false);
@@ -2653,9 +2481,6 @@ async function exportPDFDocument() {
   exportBtn.disabled = true;
 
   try {
-    populatePrintTemplate();
-    const printEl = document.getElementById('print-template-container');
-
     const currentCourse = courses.find(c => c.id === activeCourseId);
     const onceCount = lessonPlans[selectedIndex].once;
     const courseCode = currentCourse ? currentCourse.code : '';
@@ -2663,44 +2488,16 @@ async function exportPDFDocument() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}`;
 
-    // ใช้ browser native print ผ่าน iframe แทน html2canvas
-    // เพื่อให้ browser rendering engine จัดการ Thai text shaping เอง ไม่ผ่าน Canvas API
-    const baseUrl = new URL('./', window.location.href).href;
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;border:none;visibility:hidden;';
-    document.body.appendChild(iframe);
-
-    const iDoc = iframe.contentDocument;
-    iDoc.open();
-    iDoc.write(`<!DOCTYPE html><html><head>
-      <meta charset="utf-8">
-      <title>${descriptiveFileName}</title>
-      <link rel="stylesheet" href="${baseUrl}fonts/sarabun.css">
-      <link rel="stylesheet" href="${baseUrl}style.css">
-      <style>
-        @page { size: A4 portrait; margin: 0; }
-        html, body { margin: 0; padding: 0; background: #fff; }
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        .print-container {
-          position: static !important; left: auto !important; top: auto !important;
-          display: block !important; background: #fff !important;
-        }
-      </style>
-    </head><body>${printEl.outerHTML}</body></html>`);
-    iDoc.close();
-
-    // รอให้ font โหลดใน iframe ก่อนเปิด print dialog
-    await new Promise(resolve => {
-      iframe.onload = async () => {
-        try { await iframe.contentDocument.fonts.ready; } catch(_) {}
-        resolve();
-      };
-      setTimeout(resolve, 1500); // fallback
-    });
-
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-    setTimeout(() => document.body.removeChild(iframe), 3000);
+    // สร้างไฟล์ PDF จริงด้วยฟังก์ชันกลาง (เหมือนกับที่ใช้อัปโหลดขึ้น Drive เป๊ะ) แล้วดาวน์โหลดทันที
+    const blob = await generateLessonPlanPdfBlob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `${descriptiveFileName}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
 
     exportText.innerText = 'ดาวน์โหลด PDF (หน้าเดียว)';
     exportBtn.disabled = false;
@@ -4147,7 +3944,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.5';
+  const CURRENT_VERSION = '3.6';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
