@@ -138,9 +138,10 @@ function createAndSetupSheet(ss, sheetName) {
 function convertHtmlToPdfBlob(htmlString, baseFileName) {
   const htmlBlob = Utilities.newBlob(htmlString, 'text/html', baseFileName + '.html');
 
-  // อัปโหลดพร้อมแปลงเป็น Google Docs (convert: true) — Google render HTML/CSS ให้เอง
-  const resource = { title: baseFileName, mimeType: MimeType.GOOGLE_DOCS };
-  const convertedFile = Drive.Files.insert(resource, htmlBlob, { convert: true });
+  // อัปโหลดพร้อมแปลงเป็น Google Docs — Google render HTML/CSS ให้เอง
+  // หมายเหตุ: Drive API v3 ใช้ Files.create + key "name" (v2 เดิมใช้ Files.insert + "title")
+  const resource = { name: baseFileName, mimeType: MimeType.GOOGLE_DOCS };
+  const convertedFile = Drive.Files.create(resource, htmlBlob);
 
   try {
     // Export ออกมาเป็น PDF จาก Google Docs โดยตรง (ภาษาไทยถูกต้องเพราะใช้ renderer เดียวกับ Docs)
