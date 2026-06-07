@@ -2336,6 +2336,29 @@ function escapeHtmlForReport(str) {
     .replace(/\n/g, '<br>');
 }
 
+// ย่อขนาดรูป (ลายเซ็น/ภาพวาดบันทึก) ก่อนฝังใน HTML สำหรับ Google Drive
+// เพราะ Google HTML→Docs converter เพิกเฉยต่อ CSS max-width/max-height บน <img>
+// แล้วตีความ "พิกเซลของรูปต้นฉบับ = พอยต์ในเอกสาร" ทำให้รูป canvas (หลายร้อยพิกเซล)
+// ขยายล้นช่องไปหลายเท่า — ต้องลดขนาดพิกเซลจริงของรูปลงให้พอดีกับช่องที่ต้องการ
+function resizeImageDataUrlForDrive(dataUrl, maxWidthPx, maxHeightPx) {
+  return new Promise((resolve) => {
+    if (!dataUrl || !dataUrl.startsWith('data:image/')) { resolve(dataUrl); return; }
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(maxWidthPx / img.width, maxHeightPx / img.height, 1);
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // การ์ดบล็อกสีเขียว (มาตรฐาน/จุดประสงค์/กิจกรรม ฯลฯ) — เลียนแบบ .pdf-block เดิม
 // ใช้ table+bgcolor แทน div+background-color เพราะ Google HTML→Docs converter
 // มักตัด background-color ของ <div> ทิ้ง แต่คงสีพื้นหลังของ <td bgcolor> ไว้เสมอ
@@ -2368,25 +2391,33 @@ function reportSignatureCellHtml(imgSrc, lineLabel, nameLabel, dateLabel) {
 
 // สร้างหน้า A4 ของห้องเรียนหนึ่งห้อง — โครงเดียวกับเทมเพลตเดิม (.single-page-pdf) แต่ใช้ table/div ล้วน
 // เพื่อให้ Google HTML→Docs converter render ได้ถูกต้อง (หลีกเลี่ยง flexbox/float ที่ converter ไม่รองรับ)
-function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
+async function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
   const dept = `กลุ่มสาระการเรียนรู้${profile.schoolName || 'คณิตศาสตร์'}`;
   const courseLine = `วิชา ${escapeHtmlForReport(currentCourse.name || '-')}　รหัสวิชา ${escapeHtmlForReport(currentCourse.code || '-')}　ชั้นมัธยมศึกษาปีที่ ${escapeHtmlForReport(cls.name || '-')}`;
   const unitLine = `หน่วยการเรียนรู้ที่ ${escapeHtmlForReport(plan.unit || '1')}　เรื่อง ${escapeHtmlForReport(plan.topic || '-')}`;
 
-  const customLogo = localStorage.getItem('iplane_school_logo');
+  // ขนาดเป้าหมายเป็นพิกเซล (≈ พอยต์ในเอกสารหลังแปลง): โลโก้ ~16mm, ลายเซ็น ~32×9mm, ภาพบันทึก ~กว้างคอลัมน์ขวา×สูง 18mm
+  const customLogoRaw = localStorage.getItem('iplane_school_logo');
+  const studentSigRaw = localStorage.getItem('iplane_student_signature_' + cls.id) || '';
+  const [customLogo, studentSig, teacherSig, outcomesImg, solutionsImg] = await Promise.all([
+    resizeImageDataUrlForDrive(customLogoRaw, 60, 60),
+    resizeImageDataUrlForDrive(studentSigRaw, 90, 26),
+    resizeImageDataUrlForDrive(currentSignatureDataUrl || '', 90, 26),
+    resizeImageDataUrlForDrive((plan.outcomes && plan.outcomes.startsWith('data:image/')) ? plan.outcomes : '', 240, 50),
+    resizeImageDataUrlForDrive((plan.solutions && plan.solutions.startsWith('data:image/')) ? plan.solutions : '', 240, 50),
+  ]);
+
   const logoHtml = customLogo
     ? `<img src="${customLogo}" style="max-height:16mm;max-width:16mm;display:block;margin:0 auto 1.5mm auto;border-radius:50%;">`
     : '';
 
-  // ผลการจัดการเรียนรู้/แนวทางแก้ปัญหา อาจเป็นข้อความหรือรูปลายเซ็น (data:image/...)
-  const renderOutcomeContent = (val) => {
+  // ผลการจัดการเรียนรู้/แนวทางแก้ปัญหา อาจเป็นข้อความหรือรูปลายเซ็น (data:image/...) — รูปถูกย่อขนาดมาแล้วด้านบน
+  const renderOutcomeContent = (val, resizedImg) => {
     if (val && val.startsWith('data:image/')) {
-      return `<img src="${val}" style="max-height:18mm;max-width:100%;display:block;">`;
+      return `<img src="${resizedImg}" style="max-height:18mm;max-width:100%;display:block;">`;
     }
     return escapeHtmlForReport((val === '-' ? '' : (val || '')) || '\n\n\n');
   };
-
-  const studentSig = localStorage.getItem('iplane_student_signature_' + cls.id) || '';
 
   const leftCol = [
     reportBlockHtml('1. มาตรฐาน/ตัวชี้วัด (ผลการเรียนรู้)', escapeHtmlForReport(plan.standard || '-')),
@@ -2399,10 +2430,10 @@ function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
     reportBlockHtml('5. สื่อการเรียนรู้', escapeHtmlForReport(plan.materials || '-')),
     `<table style="width:100%;border-collapse:collapse;margin-bottom:2.5mm;" cellpadding="0" cellspacing="0"><tr>
       <td style="width:50%;padding-right:2mm;">${reportSignatureCellHtml(studentSig, 'ลงชื่อ ................................. หัวหน้าห้อง', cls.classLeader || '.................................................', plan.date || '-')}</td>
-      <td style="width:50%;padding-left:2mm;">${reportSignatureCellHtml(currentSignatureDataUrl || '', 'ลงชื่อ ................................. ครูผู้สอน', profile.teacherName || '', plan.date || '-')}</td>
+      <td style="width:50%;padding-left:2mm;">${reportSignatureCellHtml(teacherSig, 'ลงชื่อ ................................. ครูผู้สอน', profile.teacherName || '', plan.date || '-')}</td>
     </tr></table>`,
-    reportDashedBoxHtml('บันทึกหลังการสอน', renderOutcomeContent(plan.outcomes)),
-    reportDashedBoxHtml('ข้อเสนอแนะ', renderOutcomeContent(plan.solutions)),
+    reportDashedBoxHtml('บันทึกหลังการสอน', renderOutcomeContent(plan.outcomes, outcomesImg)),
+    reportDashedBoxHtml('ข้อเสนอแนะ', renderOutcomeContent(plan.solutions, solutionsImg)),
     `<table style="width:100%;margin-top:2mm;" cellpadding="0" cellspacing="0"><tr>
       <td style="width:15%;">&nbsp;</td>
       <td style="width:70%;">${reportSignatureCellHtml('', 'ลงชื่อ ..................................... หัวหน้ากลุ่มสาระ', profile.hodName || '', '...................................')}</td>
@@ -2443,17 +2474,18 @@ function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
 }
 
 // รวมหน้ารายงานของทุกห้องเรียนในวิชาเดียวกันเป็นเอกสาร HTML เดียว (merge อัตโนมัติ)
-function buildDriveReportHtml(courseClasses) {
+async function buildDriveReportHtml(courseClasses) {
   const currentCourse = courses.find(c => c.id === activeCourseId);
   if (!currentCourse) return '';
 
   const pages = [];
-  courseClasses.forEach((cls, idx) => {
+  for (let idx = 0; idx < courseClasses.length; idx++) {
+    const cls = courseClasses[idx];
     const classPlans = loadCombinedLessons(activeCourseId, cls.id);
     const plan = classPlans[selectedIndex];
-    if (!plan) return;
-    pages.push(buildClassroomReportHtml(plan, cls, currentCourse, idx === courseClasses.length - 1));
-  });
+    if (!plan) continue;
+    pages.push(await buildClassroomReportHtml(plan, cls, currentCourse, idx === courseClasses.length - 1));
+  }
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="font-family:'Sarabun',sans-serif;margin:0;padding:0;">
@@ -2502,7 +2534,7 @@ async function syncToGoogleSheets() {
 
     // สร้างรายงาน HTML แล้วส่งให้ Google Drive แปลงเป็น PDF เอง (แทน html2canvas)
     // เพื่อให้ Google render ภาษาไทยถูกต้อง 100% — ไม่ผ่าน Canvas API ที่ตัดคำเพี้ยน
-    const reportHtml = buildDriveReportHtml(courseClasses);
+    const reportHtml = await buildDriveReportHtml(courseClasses);
 
     // Route active classroom specific sheet name
     const sheetTabName = (currentCourse && currentClass) ? getSafeSheetName(currentCourse.code, currentClass.name) : 'Sheet1';
@@ -4070,7 +4102,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.3';
+  const CURRENT_VERSION = '3.4';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
