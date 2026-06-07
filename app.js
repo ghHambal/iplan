@@ -282,6 +282,9 @@ const DEFAULT_LESSON_PLANS = [
 let lessonPlans = [];
 let selectedIndex = 0;
 let currentSignatureDataUrl = '';
+// html-to-image จะ reject ทันทีถ้าเจอ <img> ที่ไม่มีรูปให้โหลดจริง (src ว่าง/ไม่มี attribute/ซ่อนด้วย display:none ก็ไม่รอด)
+// จึงต้องใส่พิกเซลโปร่งใส 1x1 แทนเสมอเมื่อไม่มีลายเซ็น/โลโก้จริง ก่อน rasterize เป็น PDF
+const TRANSPARENT_PIXEL_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 let isSignatureDrawn = false;
 
 // 3. Profiles & Courses/Classes defaults
@@ -2672,12 +2675,15 @@ function populatePrintTemplate() {
       }
     } else {
       if (defaultLogoSvg) defaultLogoSvg.style.display = 'block';
-      if (customLogoImg) customLogoImg.style.display = 'none';
+      if (customLogoImg) {
+        customLogoImg.src = TRANSPARENT_PIXEL_DATA_URL;
+        customLogoImg.style.display = 'none';
+      }
     }
 
     // Teachers digital signature
     const sigImg = pageEl.querySelector('#pdf-print-sig-teacher');
-    if (sigImg) sigImg.src = currentSignatureDataUrl;
+    if (sigImg) sigImg.src = currentSignatureDataUrl || TRANSPARENT_PIXEL_DATA_URL;
 
     // Class room leader digital signature
     const sigRoomImg = pageEl.querySelector('#pdf-print-sig-room');
@@ -2687,7 +2693,7 @@ function populatePrintTemplate() {
         sigRoomImg.src = studentSig;
         sigRoomImg.style.display = 'block';
       } else {
-        sigRoomImg.src = '';
+        sigRoomImg.src = TRANSPARENT_PIXEL_DATA_URL;
         sigRoomImg.style.display = 'none';
       }
     }
@@ -3944,7 +3950,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.6';
+  const CURRENT_VERSION = '3.7';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
