@@ -2339,7 +2339,7 @@ function escapeHtmlForReport(str) {
 function reportBlockHtml(title, contentHtml) {
   return `<table style="width:100%;border-collapse:collapse;border:1px solid #166534;margin-bottom:6px;" cellpadding="0" cellspacing="0">
     <tr><td style="background-color:#dcfce7;color:#14532d;font-weight:bold;font-size:11px;padding:3px 6px;border-bottom:1px solid #166534;">${title}</td></tr>
-    <tr><td style="font-size:10.5px;padding:4px 6px;text-align:left;line-height:1.5;">${contentHtml}</td></tr>
+    <tr><td style="font-size:10.5px;padding:4px 6px;text-align:left;line-height:1.5;word-break:break-word;overflow-wrap:break-word;">${contentHtml}</td></tr>
   </table>`;
 }
 
@@ -2394,7 +2394,8 @@ function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
 
   const pageBreakStyle = isLastPage ? '' : 'page-break-after: always;';
 
-  return `<table style="width:100%;border-collapse:collapse;font-family:'Sarabun',sans-serif;font-size:12px;color:#000;${pageBreakStyle}" cellpadding="0" cellspacing="0">
+  return `<div style="width:100%;${pageBreakStyle}">
+  <table style="width:100%;border-collapse:collapse;font-family:'Sarabun',sans-serif;font-size:12px;color:#000;table-layout:fixed;" cellpadding="0" cellspacing="0">
     <tr><td style="text-align:center;padding-bottom:4px;">
       ${logoHtml}
       <div style="font-size:17px;font-weight:bold;">แผนการจัดการเรียนรู้</div>
@@ -2410,12 +2411,13 @@ function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
       </tr></table>
     </td></tr>
     <tr><td style="padding-top:4px;">
-      <table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:49%;vertical-align:top;padding-right:4px;">${leftCol}</td>
-        <td style="width:49%;vertical-align:top;padding-left:4px;">${rightCol}</td>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;" cellpadding="0" cellspacing="0"><tr>
+        <td style="width:50%;vertical-align:top;padding-right:4px;overflow:hidden;">${leftCol}</td>
+        <td style="width:50%;vertical-align:top;padding-left:4px;overflow:hidden;">${rightCol}</td>
       </tr></table>
     </td></tr>
-  </table>`;
+  </table>
+  </div>`;
 }
 
 // รวมหน้ารายงานของทุกห้องเรียนในวิชาเดียวกันเป็นเอกสาร HTML เดียว (merge อัตโนมัติ)
@@ -4046,7 +4048,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.0';
+  const CURRENT_VERSION = '3.1';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
