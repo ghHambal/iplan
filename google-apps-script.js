@@ -128,6 +128,32 @@ function createAndSetupSheet(ss, sheetName) {
 }
 
 // ==========================================
+// แปลง HTML → PDF โดยใช้ความสามารถแปลงไฟล์ของ Google Drive (HTML → Google Docs → PDF)
+// ใช้ตัว render เอกสารของ Google เอง — รองรับภาษาไทยสมบูรณ์ 100%
+// (เดิมฝั่ง client ใช้ html2canvas ซึ่งวาดข้อความผ่าน Canvas API แล้วตัดคำกลางสระ/วรรณยุกต์ไทยเพี้ยน
+//  แก้ไม่หายไม่ว่าจะลองวิธีไหน จึงเปลี่ยนมาให้ Google เป็นคนแปลง HTML→PDF แทน)
+// ⚠️ ต้องเปิดใช้ Advanced Drive Service ก่อน: ในตัวแก้ไข Apps Script
+//    กดเครื่องหมาย + ข้าง "Services" > เลือก "Drive API" > Add
+// ==========================================
+function convertHtmlToPdfBlob(htmlString, baseFileName) {
+  const htmlBlob = Utilities.newBlob(htmlString, 'text/html', baseFileName + '.html');
+
+  // อัปโหลดพร้อมแปลงเป็น Google Docs (convert: true) — Google render HTML/CSS ให้เอง
+  const resource = { title: baseFileName, mimeType: MimeType.GOOGLE_DOCS };
+  const convertedFile = Drive.Files.insert(resource, htmlBlob, { convert: true });
+
+  try {
+    // Export ออกมาเป็น PDF จาก Google Docs โดยตรง (ภาษาไทยถูกต้องเพราะใช้ renderer เดียวกับ Docs)
+    const pdfBlob = DriveApp.getFileById(convertedFile.id).getAs(MimeType.PDF);
+    pdfBlob.setName(baseFileName + '.pdf');
+    return pdfBlob;
+  } finally {
+    // ลบไฟล์ Google Docs ชั่วคราวทิ้งเสมอ ไม่ให้ค้างใน Drive ของผู้ใช้
+    try { DriveApp.getFileById(convertedFile.id).setTrashed(true); } catch (e) {}
+  }
+}
+
+// ==========================================
 // GET Request Handler
 // ==========================================
 function doGet(e) {
@@ -360,14 +386,23 @@ function doPost(e) {
     }
     
     let pdfUrl = '';
-    if (payload.pdfBase64) {
+    let pdfBlob = null;
+    const baseFileName = (payload.pdfFileName || ('Lesson_Plan_' + onceValue)).replace(/\.pdf$/i, '');
+
+    if (payload.pdfHtml) {
+      // วิธีใหม่: ส่ง HTML ให้ Google แปลงเป็น PDF เอง — แก้ปัญหาภาษาไทยเพี้ยนถาวร (ดู convertHtmlToPdfBlob)
+      pdfBlob = convertHtmlToPdfBlob(payload.pdfHtml, baseFileName);
+    } else if (payload.pdfBase64) {
+      // วิธีเดิม (fallback เผื่อ client เก่ายังส่ง base64 มา): รับ PDF ที่สร้างจาก html2canvas ฝั่ง client
       let base64Data = payload.pdfBase64;
       if (base64Data.indexOf('base64,') > -1) {
         base64Data = base64Data.split('base64,')[1];
       }
       const decodedPdf = Utilities.base64Decode(base64Data);
-      const pdfBlob = Utilities.newBlob(decodedPdf, 'application/pdf', payload.pdfFileName || ('Lesson_Plan_' + onceValue + '.pdf'));
-      
+      pdfBlob = Utilities.newBlob(decodedPdf, 'application/pdf', baseFileName + '.pdf');
+    }
+
+    if (pdfBlob) {
       let folder;
       if (payload.folderId) {
         try {

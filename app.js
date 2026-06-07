@@ -2316,49 +2316,125 @@ async function fetchLiveGoogleData() {
 // 7. Sync and PDF Export Engine
 // ==========================================
 
-// สร้าง PDF สำหรับ Drive sync
-// root cause ที่แท้จริง: element อยู่ off-screen (left:-9999mm) ทำให้ browser ไม่โหลด Thai font subset
-// เมื่อ html2canvas จับ element โดยไม่มี Thai font → fallback font → glyphs เพี้ยน
-// fix v2.5: (1) บังคับโหลด Thai font ก่อน capture ด้วย fonts.load()
-//           (2) ใช้ position:relative ใน wrapper (เหมือน preview modal) ไม่มี z-index:-1
-async function buildPdfForDrive(printEl, opt) {
-  const origParent  = printEl.parentElement;
-  const origStyleText = printEl.getAttribute('style') || '';
+// ==========================================
+// สร้างรายงาน HTML (table-based) สำหรับให้ Google Drive แปลงเป็น PDF เอง
+// root cause ที่แท้จริง: html2canvas วาดข้อความผ่าน Canvas API ซึ่งตัดคำกลางสระ/วรรณยุกต์ไทย
+// (grapheme cluster) ทำให้เพี้ยน — ไม่ว่าจะลอง font/ตำแหน่ง/base64 แบบไหนก็ไม่หาย
+// ทางแก้: เลิกใช้ html2canvas ไปเลย ส่ง HTML ไปให้ Google Drive แปลง HTML→Google Docs→PDF
+// (เครื่องมือแปลงของ Google เอง รองรับภาษาไทยสมบูรณ์ 100% เพราะใช้ตัว render เดียวกับ Docs)
+// ใช้ <table> ล้วนสำหรับ layout เพราะตัวแปลง HTML→Docs ของ Google รองรับตารางได้ดีที่สุด
+// (ไม่รองรับ flexbox/float/position ซึ่งเป็นของเดิมที่ print-template-container ใช้)
+// ==========================================
 
-  // สร้าง wrapper ที่ positive coordinate ใต้ viewport — ผู้ใช้ไม่เห็น
-  const safeTop = window.scrollY + window.innerHeight + 20;
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = `position:absolute;top:${safeTop}px;left:0;width:794px;background:#fff;`;
-  document.body.appendChild(wrapper);
+function escapeHtmlForReport(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\n/g, '<br>');
+}
 
-  // ย้าย element เข้า wrapper ด้วย position:relative (เหมือน openA4PreviewModal)
-  printEl.style.cssText = 'position:relative;left:auto;top:auto;display:block;background:#ffffff;';
-  wrapper.appendChild(printEl);
+function reportBlockHtml(title, contentHtml) {
+  return `<table style="width:100%;border-collapse:collapse;border:1px solid #166534;margin-bottom:6px;" cellpadding="0" cellspacing="0">
+    <tr><td style="background-color:#dcfce7;color:#14532d;font-weight:bold;font-size:11px;padding:3px 6px;border-bottom:1px solid #166534;">${title}</td></tr>
+    <tr><td style="font-size:10.5px;padding:4px 6px;text-align:left;line-height:1.5;">${contentHtml}</td></tr>
+  </table>`;
+}
 
-  // บังคับ browser โหลด Thai font subset ก่อน capture
-  // fonts.ready อย่างเดียวไม่พอ — element off-screen ทำให้ font ไม่ถูก trigger ให้โหลด
-  await Promise.all([
-    document.fonts.load('400 14px Sarabun', 'กขคงจฉชซญดตถทธนบปผฝพฟภมยรลวสหอฮเแโใไ'),
-    document.fonts.load('600 14px Sarabun', 'กขคงจฉชซญดตถทธนบปผฝพฟภมยรลวสหอฮเแโใไ'),
-    document.fonts.load('700 14px Sarabun', 'กขคงจฉชซญดตถทธนบปผฝพฟภมยรลวสหอฮเแโใไ'),
-  ]);
-  // รอ 2 frame ให้ layout + font rendering เสร็จสมบูรณ์
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+function reportSignatureCellHtml(imgSrc, lineLabel, nameLabel, dateLabel) {
+  const img = imgSrc
+    ? `<img src="${imgSrc}" style="max-height:60px;max-width:140px;display:block;margin:0 auto;">`
+    : '<div style="height:60px;">&nbsp;</div>';
+  return `<table style="width:100%;border-collapse:collapse;text-align:center;font-size:10.5px;" cellpadding="0" cellspacing="0">
+    <tr><td>${img}</td></tr>
+    <tr><td style="padding-top:2px;">${lineLabel}<br>( ${escapeHtmlForReport(nameLabel)} )<br>วันที่ ${escapeHtmlForReport(dateLabel)}</td></tr>
+  </table>`;
+}
 
-  const driveOpt = {
-    ...opt,
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+// สร้างหน้า A4 ของห้องเรียนหนึ่งห้อง (table-based, inline style ทั้งหมด)
+function buildClassroomReportHtml(plan, cls, currentCourse, isLastPage) {
+  const dept = `กลุ่มสาระการเรียนรู้${profile.schoolName || 'คณิตศาสตร์'}`;
+  const courseLine = `วิชา ${escapeHtmlForReport(currentCourse.name || '-')}　รหัสวิชา ${escapeHtmlForReport(currentCourse.code || '-')}　ชั้นมัธยมศึกษาปีที่ ${escapeHtmlForReport(cls.name || '-')}`;
+  const unitLine = `หน่วยการเรียนรู้ที่ ${escapeHtmlForReport(plan.unit || '1')}　เรื่อง ${escapeHtmlForReport(plan.topic || '-')}`;
+
+  const customLogo = localStorage.getItem('iplane_school_logo');
+  const logoHtml = customLogo
+    ? `<img src="${customLogo}" style="max-height:60px;max-width:60px;display:block;margin:0 auto 4px auto;">`
+    : '';
+
+  // ผลการจัดการเรียนรู้/แนวทางแก้ปัญหา อาจเป็นข้อความหรือรูปลายเซ็น (data:image/...)
+  const renderOutcomeContent = (val) => {
+    if (val && val.startsWith('data:image/')) {
+      return `<img src="${val}" style="max-height:90px;max-width:100%;display:block;">`;
+    }
+    return escapeHtmlForReport((val === '-' ? '' : (val || '')) || '\n\n\n');
   };
 
-  try {
-    return await html2pdf().set(driveOpt).from(printEl).output('datauristring');
-  } finally {
-    // คืน element กลับที่เดิมและลบ wrapper
-    if (origParent) origParent.appendChild(printEl);
-    else document.body.appendChild(printEl);
-    printEl.setAttribute('style', origStyleText);
-    if (wrapper.parentElement) wrapper.parentElement.removeChild(wrapper);
-  }
+  const studentSig = localStorage.getItem('iplane_student_signature_' + cls.id) || '';
+
+  const leftCol = [
+    reportBlockHtml('1. มาตรฐาน/ตัวชี้วัด (ผลการเรียนรู้)', escapeHtmlForReport(plan.standard || '-')),
+    reportBlockHtml('2. จุดประสงค์การเรียนรู้', escapeHtmlForReport(plan.objectives || '-')),
+    reportBlockHtml('3. กิจกรรมการเรียนรู้', escapeHtmlForReport(plan.activities || '-')),
+    reportBlockHtml('4. การวัดและประเมินผล', escapeHtmlForReport(plan.assessment || '-')),
+  ].join('');
+
+  const rightCol = [
+    reportBlockHtml('5. สื่อการเรียนรู้', escapeHtmlForReport(plan.materials || '-')),
+    `<table style="width:100%;border-collapse:collapse;margin-bottom:6px;" cellpadding="0" cellspacing="0"><tr>
+      <td style="width:50%;padding-right:3px;">${reportSignatureCellHtml(studentSig, 'ลงชื่อ ................................. หัวหน้าห้อง', cls.classLeader || '.................................................', plan.date || '-')}</td>
+      <td style="width:50%;padding-left:3px;">${reportSignatureCellHtml(currentSignatureDataUrl || '', 'ลงชื่อ ................................. ครูผู้สอน', profile.teacherName || '', plan.date || '-')}</td>
+    </tr></table>`,
+    reportBlockHtml('บันทึกหลังการสอน', renderOutcomeContent(plan.outcomes)),
+    reportBlockHtml('ข้อเสนอแนะ', renderOutcomeContent(plan.solutions)),
+    `<table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr><td style="text-align:center;">${reportSignatureCellHtml('', 'ลงชื่อ ..................................... หัวหน้ากลุ่มสาระ', profile.hodName || '', '...................................')}</td></tr></table>`,
+  ].join('');
+
+  const pageBreakStyle = isLastPage ? '' : 'page-break-after: always;';
+
+  return `<table style="width:100%;border-collapse:collapse;font-family:'Sarabun',sans-serif;font-size:12px;color:#000;${pageBreakStyle}" cellpadding="0" cellspacing="0">
+    <tr><td style="text-align:center;padding-bottom:4px;">
+      ${logoHtml}
+      <div style="font-size:17px;font-weight:bold;">แผนการจัดการเรียนรู้</div>
+      <div style="font-size:13px;">${escapeHtmlForReport(dept)}</div>
+      <div style="font-size:12.5px;">${courseLine}</div>
+      <div style="font-size:12.5px;">${unitLine}</div>
+    </td></tr>
+    <tr><td style="border-top:1.5px solid #166534;border-bottom:1.5px solid #166534;padding:3px 0;">
+      <table style="width:100%;font-size:12.5px;font-weight:bold;" cellpadding="0" cellspacing="0"><tr>
+        <td style="text-align:left;padding-left:4px;">ครั้งที่ ${escapeHtmlForReport(plan.once)}</td>
+        <td style="text-align:center;">เวลา ${escapeHtmlForReport(plan.periodCount)} ชั่วโมง</td>
+        <td style="text-align:right;padding-right:4px;">วันที่ ${escapeHtmlForReport(plan.date || '-')}</td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding-top:4px;">
+      <table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr>
+        <td style="width:49%;vertical-align:top;padding-right:4px;">${leftCol}</td>
+        <td style="width:49%;vertical-align:top;padding-left:4px;">${rightCol}</td>
+      </tr></table>
+    </td></tr>
+  </table>`;
+}
+
+// รวมหน้ารายงานของทุกห้องเรียนในวิชาเดียวกันเป็นเอกสาร HTML เดียว (merge อัตโนมัติ)
+function buildDriveReportHtml(courseClasses) {
+  const currentCourse = courses.find(c => c.id === activeCourseId);
+  if (!currentCourse) return '';
+
+  const pages = [];
+  courseClasses.forEach((cls, idx) => {
+    const classPlans = loadCombinedLessons(activeCourseId, cls.id);
+    const plan = classPlans[selectedIndex];
+    if (!plan) return;
+    pages.push(buildClassroomReportHtml(plan, cls, currentCourse, idx === courseClasses.length - 1));
+  });
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="font-family:'Sarabun',sans-serif;margin:0;padding:0;">
+${pages.join('\n')}
+</body></html>`;
 }
 
 // Send reflection record + generated A4 PDF to Google Sheets & Drive
@@ -2388,9 +2464,8 @@ async function syncToGoogleSheets() {
   syncBtn.disabled = true;
 
   try {
-    const classCount = populatePrintTemplate();
-    const printEl = document.getElementById('print-template-container');
-    printEl.style.display = 'block';
+    const courseClasses = classes.filter(cl => cl.courseId === activeCourseId);
+    const classCount = courseClasses.length;
 
     const currentCourse = courses.find(c => c.id === activeCourseId);
     const currentClass = classes.find(c => c.id === activeClassId);
@@ -2401,19 +2476,9 @@ async function syncToGoogleSheets() {
     const cleanCourseName = courseName.replace(/[\\\/\:\*\?\"\<\|\>]/g, '-');
     const descriptiveFileName = `แผนการสอน_${courseCode}_${cleanCourseName}_ครั้งที่_${onceCount}.pdf`;
 
-    const opt = {
-      margin:   0,
-      filename: descriptiveFileName,
-      image:    { type: 'jpeg', quality: 0.95 },
-      jsPDF:    { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    // embed font เป็น base64 แล้วค่อย capture — ไม่ต้องย้าย element
-    const pdfDataUri = await buildPdfForDrive(printEl, opt);
-
-    if (!isPreviewOpen) {
-      printEl.style.display = 'none';
-    }
+    // สร้างรายงาน HTML แล้วส่งให้ Google Drive แปลงเป็น PDF เอง (แทน html2canvas)
+    // เพื่อให้ Google render ภาษาไทยถูกต้อง 100% — ไม่ผ่าน Canvas API ที่ตัดคำเพี้ยน
+    const reportHtml = buildDriveReportHtml(courseClasses);
 
     // Route active classroom specific sheet name
     const sheetTabName = (currentCourse && currentClass) ? getSafeSheetName(currentCourse.code, currentClass.name) : 'Sheet1';
@@ -2435,8 +2500,8 @@ async function syncToGoogleSheets() {
       
       outcomes: lessonPlans[selectedIndex].outcomes,
       solutions: lessonPlans[selectedIndex].solutions,
-      pdfBase64: pdfDataUri,
-      pdfFileName: descriptiveFileName,
+      pdfHtml: reportHtml,
+      pdfFileName: descriptiveFileName.replace(/\.pdf$/i, ''),
       folderId: config.folderId,
       teacherName: profile.teacherName || 'ครูฮัมบาลีย์ วาจิ'
     };
@@ -3981,7 +4046,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '2.5';
+  const CURRENT_VERSION = '3.0';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
