@@ -247,11 +247,24 @@ body {
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--card-border);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   position: sticky;
   top: 0;
   z-index: 5;
+}
+
+/* หัวข้อต้องมีพื้นที่ขั้นต่ำของตัวเอง ไม่งั้นเวลาจอแคบลงปุ่มต่างๆ จะแย่งพื้นที่จนข้อความหัวข้อถูกบีบ
+   ตัดบรรทัดรกรุงรัง — ให้ทั้งสองฝั่งห่อ (wrap) ลงบรรทัดใหม่แทนเมื่อพื้นที่ไม่พอ */
+.header-info {
+  flex: 1 1 280px;
+  min-width: 280px;
+}
+
+.header-actions {
+  flex-shrink: 0;
 }
 
 .header-info h1 {
