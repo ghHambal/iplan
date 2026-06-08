@@ -1007,10 +1007,10 @@ textarea:focus, input:focus, select:focus {
   color: #000;
   width: 210mm;
   height: 297mm;
-  padding: 10mm 12mm; /* Tighter padding to fit exactly in one A4 page without overflows */
+  padding: 9mm 11mm; /* Slightly slimmer page margins to give content more room to grow */
   margin: 0 auto;
   font-family: var(--font-thai);
-  line-height: 1.35;
+  line-height: 1.45;
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
@@ -1019,7 +1019,7 @@ textarea:focus, input:focus, select:focus {
 .pdf-logo-wrapper {
   display: flex;
   justify-content: center;
-  margin-bottom: 1.5mm; /* Tightened margin */
+  margin-bottom: 2mm;
 }
 
 .pdf-logo-svg {
@@ -1032,21 +1032,21 @@ textarea:focus, input:focus, select:focus {
   align-items: center;
   text-align: center;
   width: 100%;
-  margin-bottom: 2mm; /* Tightened margin */
+  margin-bottom: 2.5mm;
 }
 
 .pdf-title {
-  font-size: 17px;
-  margin-bottom: 1px;
+  font-size: 20px;
+  margin-bottom: 1.5px;
 }
 
 .pdf-subtitle {
-  font-size: 13px;
+  font-size: 15px;
   margin-bottom: 2px;
 }
 
 .pdf-meta-line {
-  font-size: 12.5px;
+  font-size: 13.5px;
   margin-bottom: 1px;
 }
 
@@ -1055,9 +1055,9 @@ textarea:focus, input:focus, select:focus {
   width: 100%;
   border-top: 1.5px solid #166534; /* Green border exactly as user image */
   border-bottom: 1.5px solid #166534;
-  padding: 1mm 0; /* Slightly tighter padding */
-  margin-bottom: 3mm; /* Tightened margin */
-  font-size: 12.5px;
+  padding: 1.5mm 0;
+  margin-bottom: 4mm;
+  font-size: 13.5px;
 }
 
 .pdf-banner-col {
@@ -1071,7 +1071,7 @@ textarea:focus, input:focus, select:focus {
 .pdf-columns-wrapper {
   display: block; /* Switch to block to support floats and prevent html2canvas Flexbox overlap bugs */
   width: 100%;
-  height: calc(100% - 41mm); /* Re-calculated print bounds height */
+  height: calc(100% - 47mm); /* Re-calculated to match the larger header/banner area below */
   box-sizing: border-box;
   overflow: hidden; /* Prevent html2pdf scrollHeight page-break overflows */
 }
@@ -1080,7 +1080,7 @@ textarea:focus, input:focus, select:focus {
   width: 48.5%; /* Explicit side-by-side width */
   display: flex;
   flex-direction: column;
-  gap: 2.5mm; /* Tightened gap between blocks */
+  gap: 4mm;
   height: 100%; /* Force columns to occupy exact parent height strictly */
   max-height: 100%;
   overflow: hidden; /* Prevent vertical overflow rendering a second blank page */
@@ -1108,18 +1108,18 @@ textarea:focus, input:focus, select:focus {
 .pdf-block-title {
   background-color: #dcfce7; /* Light green header row matching user image */
   color: #14532d;
-  padding: 1mm 2.5mm; /* Slightly tighter padding */
-  font-size: 11.5px;
+  padding: 1.5mm 3mm;
+  font-size: 13px;
   border-bottom: 1px solid #166534;
 }
 
 .pdf-block-content {
-  padding: 1.5mm 2.5mm; /* Tighter padding for compact layout */
-  font-size: 10.5px; /* Slightly smaller text to prevent box overflow */
+  padding: 2.5mm 3mm;
+  font-size: 12px;
   white-space: pre-line;
   color: #000;
   text-align: left !important;
-  line-height: 1.45 !important;
+  line-height: 1.6 !important;
   word-break: break-word; /* Ensure robust wrapping of Thai characters in html2canvas */
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -1133,20 +1133,20 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pdf-dashed-box-title {
-  font-size: 12px;
-  margin-bottom: 1mm;
+  font-size: 13.5px;
+  margin-bottom: 1.5mm;
   border-bottom: 1px solid #000;
   padding-bottom: 0.5mm;
 }
 
 .pdf-dashed-lines {
-  font-size: 10.5px; /* Slightly smaller text */
-  line-height: 6.8mm; /* Exactly aligns text lines with simulated writing sheets */
+  font-size: 12px;
+  line-height: 7.6mm; /* Exactly aligns text lines with simulated writing sheets */
   background-image: linear-gradient(to bottom, transparent 96%, #94a3b8 96%);
-  background-size: 100% 6.8mm;
+  background-size: 100% 7.6mm;
   padding: 0.5mm 2mm;
   white-space: pre-line;
-  min-height: 20.4mm; /* Adjusted to exact 3 lines to fit nicely in A4 height */
+  min-height: 22.8mm; /* 3 lines at the new larger line-height */
   word-break: break-word;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -1157,7 +1157,7 @@ textarea:focus, input:focus, select:focus {
   display: flex;
   justify-content: space-between;
   gap: 4mm;
-  margin: 0.5mm 0; /* Tightened margin */
+  margin: 1mm 0;
 }
 
 .pdf-sig-box {
@@ -1167,13 +1167,13 @@ textarea:focus, input:focus, select:focus {
   justify-content: center;
   text-align: center;
   width: 48%;
-  font-size: 11px;
+  font-size: 12.5px;
 }
 
 .pdf-sig-line {
-  width: 50mm; /* Centered fixed line width */
-  height: 8mm;
-  margin-bottom: 1.5mm;
+  width: 54mm;
+  height: 10mm;
+  margin-bottom: 2mm;
   position: relative;
   display: flex;
   align-items: center;
@@ -1181,8 +1181,8 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pdf-signature-image {
-  max-height: 9mm;
-  max-width: 32mm;
+  max-height: 11mm;
+  max-width: 36mm;
   object-fit: contain;
 }
 

@@ -422,7 +422,7 @@ function loadCombinedLessons(courseId, classId) {
     if (legacyPlans && legacyPlans.length > 0) {
       classPlans = legacyPlans.map(p => ({
         once: String(p.once),
-        week: p.week || '1',
+        week: p.week || deriveWeekFromOnce(p.once),
         date: p.date || '',
         period: p.period || '1-2',
         periodCount: String(p.periodCount || '2'),
@@ -433,7 +433,7 @@ function loadCombinedLessons(courseId, classId) {
     } else {
       classPlans = coursePlans.map((p, idx) => ({
         once: String(p.once),
-        week: String(Math.floor(idx / 2) + 1),
+        week: deriveWeekFromOnce(p.once),
         date: '',
         period: '1-2',
         periodCount: String(p.periodCount || '2'),
@@ -462,7 +462,7 @@ function loadCombinedLessons(courseId, classId) {
     };
     const classPlan = classPlans[i] || {
       once: String(i + 1),
-      week: String(Math.floor(i / 2) + 1),
+      week: deriveWeekFromOnce(i + 1),
       date: '',
       period: '1-2',
       periodCount: '2',
@@ -475,6 +475,23 @@ function loadCombinedLessons(courseId, classId) {
       ...coursePlan,
       ...classPlan
     });
+  }
+
+  // ซ่อมข้อมูล "สัปดาห์" ที่เพี้ยน — ครั้งสอนที่หลังกว่าต้องไม่อยู่สัปดาห์ก่อนหน้าครั้งก่อน (เป็นไปไม่ได้ตามธรรมชาติของตาราง)
+  // เคยเกิดจากค่า Week ว่างใน Google Sheet แล้ว fallback เป็น '1' ทำให้ลำดับสัปดาห์สลับเพี้ยนเป็น 1,1,2,1,3,1...
+  // ที่นี่จะคำนวณสัปดาห์ใหม่จากลำดับ "ครั้งที่" ทุกครั้งที่พบความขัดแย้งนี้ แล้วบันทึกค่าที่แก้แล้วกลับเข้า storage
+  let lastWeekNum = 0;
+  let weekDataRepaired = false;
+  combined.forEach((plan) => {
+    const weekNum = parseInt(plan.week, 10);
+    if (isNaN(weekNum) || weekNum < lastWeekNum) {
+      plan.week = deriveWeekFromOnce(plan.once);
+      weekDataRepaired = true;
+    }
+    lastWeekNum = parseInt(plan.week, 10);
+  });
+  if (weekDataRepaired) {
+    saveClassLessons(classId, combined);
   }
 
   return combined;
@@ -500,7 +517,7 @@ function saveClassLessons(classId, runtimePlans) {
   const classKey = `iplane_class_lessons_${classId}`;
   const classPlans = runtimePlans.map(p => ({
     once: String(p.once),
-    week: String(p.week || '1'),
+    week: String(p.week || deriveWeekFromOnce(p.once)),
     date: p.date || '',
     period: p.period || '1-2',
     periodCount: String(p.periodCount || '2'),
@@ -1704,6 +1721,14 @@ function runAutoDateRunner() {
 }
 
 // Convert native Date objects into Thai date string (DD/MM/YYYY พ.ศ.)
+// คำนวณ "สัปดาห์ที่" จากลำดับการสอน (ครั้งที่) เมื่อไม่มีค่า Week ที่บันทึกไว้จริง (ว่าง/หาย)
+// ตามรูปแบบมาตรฐาน 2 คาบ/สัปดาห์ ของ DEFAULT_LESSON_PLANS: ครั้งที่ 1,2→สัปดาห์ 1 / 3,4→สัปดาห์ 2 / 5,6→สัปดาห์ 3 ...
+// ใช้แทนการ fallback เป็น '1' คงที่ ซึ่งทำให้ลำดับสัปดาห์เพี้ยนเมื่อแถวข้อมูลบางแถวมีช่อง Week ว่าง
+function deriveWeekFromOnce(once) {
+  const onceNum = parseInt(once, 10) || 1;
+  return String(Math.ceil(onceNum / 2));
+}
+
 function formatThaiDateString(date) {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -2188,7 +2213,7 @@ async function fetchLiveGoogleData() {
           // ในชีทห้องเรียนมีแถวข้อมูลสมบูรณ์ → โหลดข้อมูลทุกช่อง (รวมทั้งข้อมูลแผนหลักเชิงวิชาการด้วย)
           const remoteLessons = classResult.data.map(sheetItem => ({
             once: String(sheetItem['ครั้งที่'] || ''),
-            week: String(sheetItem['Week'] || '1'),
+            week: String(sheetItem['Week'] || deriveWeekFromOnce(sheetItem['ครั้งที่'])),
             date: String(sheetItem['วว/ดด/ปป ที่สอน'] || ''),
             period: String(sheetItem['คาบที่สอน'] || '1-2'),
             periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
@@ -2241,7 +2266,7 @@ async function fetchLiveGoogleData() {
           if (courseResult.status === 'success' && courseResult.data && courseResult.data.length > 0) {
             courseLessons = courseResult.data.map(sheetItem => ({
               once: String(sheetItem['ครั้งที่'] || ''),
-              week: String(sheetItem['Week'] || '1'),
+              week: String(sheetItem['Week'] || deriveWeekFromOnce(sheetItem['ครั้งที่'])),
               unit: String(sheetItem['หน่วยการเรียนรู้ที่'] || '1'),
               topic: String(sheetItem['เรื่อง'] || ''),
               periodCount: String(sheetItem['จำนวนคาบ'] || '2'),
@@ -3950,7 +3975,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.7';
+  const CURRENT_VERSION = '3.8';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
