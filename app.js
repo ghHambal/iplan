@@ -302,7 +302,8 @@ let activeClassId = localStorage.getItem('iplane_active_class_id') || 'cl1';
 
 let config = {
   gasUrl: localStorage.getItem('iplane_gas_url') || '',
-  folderId: localStorage.getItem('iplane_folder_id') || ''
+  folderId: localStorage.getItem('iplane_folder_id') || '',
+  geminiApiKey: localStorage.getItem('iplane_gemini_api_key') || ''
 };
 
 // 4. Drawing Canvas signature variables
@@ -583,6 +584,7 @@ function initializeUI() {
   
   document.getElementById('input-gas-url').value = config.gasUrl;
   document.getElementById('input-drive-folder').value = config.folderId;
+  document.getElementById('input-gemini-api-key').value = config.geminiApiKey;
   updateSyncStatusIndicator();
 
   // Active Class Leader input binding
@@ -920,6 +922,7 @@ function initializeUI() {
 
   // Layout action button bindings
   document.getElementById('btn-save-offline').addEventListener('click', () => saveLessonProgress(true));
+  document.getElementById('btn-ai-draft-reflection').addEventListener('click', draftReflectionWithAI);
   document.getElementById('btn-sync-google').addEventListener('click', openA4PreviewModal);
   document.getElementById('btn-export-pdf').addEventListener('click', openA4PreviewModal);
 
@@ -1573,6 +1576,104 @@ function pushReflectionToCloud(plan) {
   }).catch(e => console.error('Error pushing reflection to cloud:', e));
 }
 
+// ใช้ Gemini ช่วยร่าง "ผลการจัดการเรียนรู้" และ "แนวทางแก้ไข" จากข้อมูลแผนการสอนปัจจุบัน
+// (เรียก Gemini REST API ตรงจากเบราว์เซอร์ด้วย API Key ที่ครูกรอกไว้ในหน้าตั้งค่า — ไม่ผ่าน Apps Script)
+async function draftReflectionWithAI() {
+  const plan = lessonPlans[selectedIndex];
+  if (!plan) return;
+
+  if (!config.geminiApiKey) {
+    alert('กรุณาใส่ Gemini API Key ในหน้า "ตั้งค่า" ก่อนใช้งานผู้ช่วย AI\n(ขอฟรีได้ที่ aistudio.google.com/apikey)');
+    document.getElementById('settings-modal').classList.add('open');
+    return;
+  }
+
+  const hasExistingText =
+    (plan.outcomesMode !== 'draw' && document.getElementById('txt-outcomes').value.trim()) ||
+    (plan.solutionsMode !== 'draw' && document.getElementById('txt-solutions').value.trim());
+  if (hasExistingText && !confirm('มีข้อความที่เขียนไว้อยู่แล้ว หากให้ AI ร่างใหม่จะเขียนทับข้อความเดิมทั้งสองช่อง ต้องการดำเนินการต่อหรือไม่?')) {
+    return;
+  }
+
+  const note = prompt('อยากให้ AI อ้างอิงบรรยากาศการสอนจริงเพิ่มเติมไหมครับ เช่น "เด็กตอบคำถามดี แต่ทำแบบฝึกหัดช้า" (ไม่กรอกก็ได้ AI จะร่างจากแผนการสอนล้วนๆ)', '');
+  if (note === null) return; // ครูกดยกเลิก
+
+  const currentCourse = courses.find(c => c.id === activeCourseId);
+  const currentClass = classes.find(c => c.id === activeClassId);
+
+  const btn = document.getElementById('btn-ai-draft-reflection');
+  const btnSpan = btn.querySelector('span');
+  const originalText = btnSpan.innerText;
+  btn.disabled = true;
+  btnSpan.innerText = 'AI กำลังร่าง...';
+
+  try {
+    const promptText = `คุณคือครูไทยที่กำลังเขียนบันทึกหลังการจัดการเรียนรู้ในแผนการสอนของตนเอง (ปพ.5)
+เขียนด้วยน้ำเสียงครูจริง กระชับ เป็นธรรมชาติ ไม่ใช้ภาษาทางการจนเกินไป ความยาวพอเหมาะ (ย่อหน้าสั้นๆ 3-5 ประโยค)
+
+ข้อมูลแผนการสอน:
+- วิชา: ${currentCourse ? `${currentCourse.name} (${currentCourse.code})` : '-'}
+- ชั้นเรียน: ${currentClass ? currentClass.name : '-'}
+- หน่วยการเรียนรู้: ${plan.unit || '-'}
+- เรื่อง: ${plan.topic || '-'}
+- มาตรฐาน/ตัวชี้วัด: ${plan.standard || '-'}
+- จุดประสงค์การเรียนรู้: ${plan.objectives || '-'}
+- กิจกรรมการเรียนรู้: ${plan.activities || '-'}
+- การวัดประเมินผล: ${plan.assessment || '-'}
+- สื่อ/อุปกรณ์: ${plan.materials || '-'}${note ? `\n- บันทึกเพิ่มเติมจากครูเกี่ยวกับการสอนจริงครั้งนี้: ${note}` : ''}
+
+ช่วยร่างข้อความ 2 ส่วน:
+1. "outcomes": ผลการจัดการเรียนรู้ — นักเรียนได้เรียนรู้/ทำอะไรได้บ้างหลังจบคาบนี้ อิงจากจุดประสงค์และกิจกรรมข้างต้น
+2. "solutions": ข้อเสนอแนะ / ปัญหาอุปสรรคที่อาจพบ และแนวทางแก้ไขสำหรับครั้งถัดไป
+
+ตอบกลับเป็น JSON เท่านั้น รูปแบบ {"outcomes": "...", "solutions": "..."} ห้ามมีข้อความอื่นนอกเหนือจาก JSON`;
+
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(config.geminiApiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: { responseMimeType: 'application/json' }
+      })
+    });
+
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => '');
+      throw new Error(`Gemini API ตอบกลับผิดพลาด (${resp.status}) ${errBody}`.trim());
+    }
+
+    const data = await resp.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let draft;
+    try {
+      draft = JSON.parse(rawText);
+    } catch (e) {
+      throw new Error('AI ตอบกลับในรูปแบบที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง');
+    }
+
+    if (draft.outcomes) {
+      setReflectionMode('outcomes', 'text');
+      const txtOutcomes = document.getElementById('txt-outcomes');
+      txtOutcomes.value = String(draft.outcomes).trim();
+      plan.outcomes = txtOutcomes.value;
+    }
+    if (draft.solutions) {
+      setReflectionMode('solutions', 'text');
+      const txtSolutions = document.getElementById('txt-solutions');
+      txtSolutions.value = String(draft.solutions).trim();
+      plan.solutions = txtSolutions.value;
+    }
+
+    alert('AI ร่างบันทึกหลังสอนให้แล้วครับ ลองอ่านทบทวนและแก้ไขให้ตรงกับที่สอนจริงก่อนกด "บันทึกหลังสอน" นะครับ');
+  } catch (err) {
+    console.error('AI draft error:', err);
+    alert('ขออภัยครับ ไม่สามารถร่างบันทึกด้วย AI ได้ในขณะนี้\n' + err.message);
+  } finally {
+    btn.disabled = false;
+    btnSpan.innerText = originalText;
+  }
+}
+
 // ==========================================
 // 6. Settings Modal Actions
 // ==========================================
@@ -1900,9 +2001,11 @@ function saveModalSettings() {
   // Sync Google Endpoint
   config.gasUrl = document.getElementById('input-gas-url').value.trim();
   config.folderId = document.getElementById('input-drive-folder').value.trim();
+  config.geminiApiKey = document.getElementById('input-gemini-api-key').value.trim();
 
   localStorage.setItem('iplane_gas_url', config.gasUrl);
   localStorage.setItem('iplane_folder_id', config.folderId);
+  localStorage.setItem('iplane_gemini_api_key', config.geminiApiKey);
 
   updateSyncStatusIndicator();
   updateProfileLabels();
@@ -4027,7 +4130,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.12';
+  const CURRENT_VERSION = '3.13';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 

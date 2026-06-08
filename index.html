@@ -36,7 +36,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.12</span>
+        <span class="version-tag" id="app-version-tag">v3.13</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -323,9 +323,16 @@
 
           <!-- Reflection Box -->
           <div class="card glass-card form-card">
-            <div class="card-header">
-              <i data-lucide="edit-3" class="card-icon edit-icon"></i>
-              <h2>ส่วนที่บันทึกหลังจัดการเรียนรู้</h2>
+            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap: wrap; gap: 8px;">
+              <div style="display:flex; align-items:center; gap: 10px;">
+                <i data-lucide="edit-3" class="card-icon edit-icon"></i>
+                <h2>ส่วนที่บันทึกหลังจัดการเรียนรู้</h2>
+              </div>
+              <button type="button" id="btn-ai-draft-reflection" class="btn btn-secondary"
+                style="font-size:12px; padding:7px 14px; display:inline-flex; align-items:center; gap:6px;">
+                <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+                <span>ช่วยร่างให้ (AI)</span>
+              </button>
             </div>
             <div class="card-body">
 
@@ -628,6 +635,20 @@
               <div class="form-group">
                 <label for="input-drive-folder">Google Drive Folder ID (จัดเก็บ PDF)</label>
                 <input type="text" id="input-drive-folder" placeholder="ปล่อยว่างระบบจะจัดสร้างอัตโนมัติ">
+              </div>
+
+              <!-- AI Assistant config -->
+              <div style="margin-top: 18px;">
+                <h3><i data-lucide="sparkles"></i> ผู้ช่วย AI ร่างบันทึกหลังสอน</h3>
+                <div class="form-group">
+                  <label for="input-gemini-api-key">Gemini API Key</label>
+                  <input type="password" id="input-gemini-api-key" placeholder="วาง API Key จาก Google AI Studio ที่นี่">
+                  <small class="form-help">
+                    ใช้สำหรับให้ AI ช่วยร่าง "ผลการจัดการเรียนรู้" และ "แนวทางแก้ไข" จากข้อมูลแผนการสอน
+                    (ขอฟรีได้ที่ <span style="color: var(--primary);">aistudio.google.com/apikey</span> —
+                    Key จะถูกเก็บไว้ในเครื่องนี้เท่านั้น ไม่ส่งผ่าน Cloud)
+                  </small>
+                </div>
               </div>
 
               <!-- Cross-device sync banner -->

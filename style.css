@@ -7,7 +7,8 @@
   --bg-app: #090d16;
   --bg-sidebar: #0e1322;
   --card-bg: rgba(17, 24, 42, 0.65);
-  --card-border: rgba(255, 255, 255, 0.07);
+  --overlay-rgb: 255, 255, 255; /* สีของ "เงาทับ" บนพื้นผิว (hover/border อ่อนๆ) — สลับเป็นโทนเข้มเองเมื่อเข้าโหมดสว่าง */
+  --card-border: rgba(var(--overlay-rgb), 0.07);
   --card-glow: rgba(99, 102, 241, 0.04);
 
   --text-main: #f3f4f6;
@@ -34,7 +35,7 @@
   --radius-lg: 18px;
 
   --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(255, 255, 255, 0.05);
+  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(var(--overlay-rgb), 0.05);
 }
 
 /* Global Reset */
@@ -148,7 +149,7 @@ body {
 }
 
 .week-item:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(var(--overlay-rgb), 0.03);
   color: var(--text-main);
 }
 
@@ -307,7 +308,7 @@ body {
 
 .active-config-banner .divider {
   margin: 0 10px;
-  color: rgba(255, 255, 255, 0.15);
+  color: rgba(var(--overlay-rgb), 0.15);
 }
 
 /* Grid Layout for Content */
@@ -364,7 +365,7 @@ body {
 }
 
 .badge {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(var(--overlay-rgb), 0.05);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 11px;
@@ -421,7 +422,7 @@ body {
 }
 
 .content-box {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: rgba(var(--overlay-rgb), 0.02);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
   padding: 14px 18px;
@@ -783,7 +784,7 @@ textarea:focus, input:focus, select:focus {
 }
 
 .modal-close {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--overlay-rgb), 0.05);
   border: 1px solid var(--card-border);
   color: var(--text-muted);
   font-size: 24px;
@@ -852,7 +853,7 @@ textarea:focus, input:focus, select:focus {
 
 .tab-btn:hover {
   color: var(--text-main);
-  background-color: rgba(255,255,255,0.02);
+  background-color: rgba(var(--overlay-rgb),0.02);
 }
 
 .tab-btn.active {
@@ -969,7 +970,7 @@ textarea:focus, input:focus, select:focus {
 .date-preview-item {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(var(--overlay-rgb),0.03);
   padding-bottom: 4px;
 }
 
@@ -1253,7 +1254,7 @@ textarea:focus, input:focus, select:focus {
     display: inline-flex;
     align-items: center;
     padding: 8px 14px;
-    background-color: rgba(255,255,255,0.03);
+    background-color: rgba(var(--overlay-rgb),0.03);
     border: 1px solid var(--card-border);
     border-radius: 20px;
     color: var(--text-muted);
@@ -1304,9 +1305,9 @@ textarea:focus, input:focus, select:focus {
   }
   
   .w-tab-btn.active {
-    background-color: rgba(255,255,255,0.05);
+    background-color: rgba(var(--overlay-rgb),0.05);
     color: var(--primary);
-    box-shadow: inset 0 1px 2px rgba(255,255,255,0.03);
+    box-shadow: inset 0 1px 2px rgba(var(--overlay-rgb),0.03);
   }
   
   .w-tab-btn i {
@@ -1631,7 +1632,7 @@ body.workspace-active #dashboard-view {
 }
 
 .classroom-item {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: rgba(var(--overlay-rgb), 0.02);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -1643,7 +1644,7 @@ body.workspace-active #dashboard-view {
 }
 
 .classroom-item:hover {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(var(--overlay-rgb), 0.04);
   border-color: rgba(99, 102, 241, 0.18);
 }
 
@@ -1685,7 +1686,7 @@ body.workspace-active #dashboard-view {
 .classroom-progress-bg {
   width: 80px;
   height: 4px;
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(var(--overlay-rgb), 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -1851,7 +1852,7 @@ body:not(.workspace-active) .nav-section-title {
 }
 .schedule-table tbody tr {
   transition: background-color 0.15s ease;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(var(--overlay-rgb), 0.05);
 }
 .schedule-table tbody tr:hover {
   background-color: rgba(99, 102, 241, 0.03);
@@ -1894,5 +1895,75 @@ body:not(.workspace-active) .nav-section-title {
   outline: none;
 }
 
+/* โหมดสว่าง — ตามค่าที่ระบบปฏิบัติการ/เบราว์เซอร์ของผู้ใช้ตั้งไว้ (prefers-color-scheme)
+   โทนสี: ชมพูเข้มเป็นสีหลัก, เขียวเป็นสีรอง/success, พื้นขาวเป็นพื้นหลังหลัก */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-app: #ffffff;
+    --bg-sidebar: #fdf2f8;
+    --card-bg: rgba(255, 255, 255, 0.8);
+    --overlay-rgb: 15, 23, 42;
+    --card-border: rgba(15, 23, 42, 0.08);
+    --card-glow: rgba(190, 24, 93, 0.05);
 
+    --text-main: #1e1b2e;
+    --text-muted: #6b7280;
 
+    --primary: #be185d;
+    --primary-hover: #9d174d;
+    --primary-glow: rgba(190, 24, 93, 0.28);
+
+    --secondary: #f1f5f9;
+    --secondary-hover: #e2e8f0;
+
+    --success: #059669;
+    --success-hover: #047857;
+    --success-glow: rgba(5, 150, 105, 0.18);
+
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
+    --danger-glow: rgba(220, 38, 38, 0.15);
+
+    --border-focus: #be185d;
+    --shadow-premium: 0 10px 30px -10px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.05);
+  }
+
+  body {
+    color: var(--text-main);
+  }
+
+  /* องค์ประกอบเหล่านี้ใช้ "ตัวอักษรสีขาวตายตัว" เพราะออกแบบบนพื้นการ์ดสีเข้มของธีมเดิม
+     พอพื้นการ์ดเปลี่ยนเป็นสีอ่อนในโหมดสว่าง ต้องสลับเป็นสีตัวอักษรเข้มเพื่อให้อ่านออก */
+  .week-item.active,
+  .mobile-week-chip.active,
+  .stat-value,
+  .course-card-title,
+  .classroom-item-name {
+    color: var(--text-main);
+  }
+
+  .btn-secondary {
+    color: var(--text-main);
+  }
+
+  textarea, input[type="url"], input[type="text"], input[type="date"], select {
+    background-color: rgba(15, 23, 42, 0.04);
+    color: var(--text-main);
+  }
+
+  /* โลโก้และหัวข้อแดชบอร์ดใช้ "ข้อความไล่สีขาว→ม่วง" ซึ่งจางหายไปบนพื้นขาว
+     เปลี่ยนเป็นไล่สีเข้ม→ชมพู (โทนใหม่) ให้อ่านออกและยังคงเอฟเฟกต์ไล่สีไว้ */
+  .logo-text,
+  .db-header-left h1 {
+    background: linear-gradient(135deg, var(--text-main) 30%, var(--primary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* แถบหัวข้อห้องเรียน (.app-header) ใช้พื้นสีกรมท่าเข้มแบบตายตัว ออกแบบมาคู่กับตัวอักษรสีอ่อนของธีมเดิม
+     พอข้อความเปลี่ยนเป็นสีเข้มตามธีมสว่าง พื้นต้องสว่างตามไปด้วย ไม่งั้นจะกลายเป็นตัวอักษรเข้มบนพื้นเข้ม อ่านไม่ออก */
+  .app-header {
+    background-color: rgba(255, 255, 255, 0.75);
+  }
+}
