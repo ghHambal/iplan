@@ -1525,13 +1525,52 @@ function saveLessonProgress(showNotification = false) {
 
   // Save to classroom local state using decouple saver
   saveClassLessons(activeClassId, lessonPlans);
-  
+
+  // ดันคอมเมนต์ (ผลการเรียนรู้/แนวทางแก้ปัญหา) ขึ้น Cloud ทันทีแบบเบาๆ
+  // โดยไม่ต้องรอสร้าง PDF/เซ็นชื่อ เพื่อให้เปิดจากเครื่องอื่นแล้วเห็นข้อมูลล่าสุดได้เลย
+  pushReflectionToCloud(plan);
+
   renderSidebar();
 
   if (showNotification) {
-    alert('บันทึกข้อมูลหลังการสอนลงในเครื่องเรียบร้อยแล้ว');
+    alert('บันทึกข้อมูลหลังการสอนเรียบร้อยแล้ว (ลงเครื่องนี้ และซิงก์ขึ้น Cloud ให้แล้ว)');
   }
   return true;
+}
+
+// ส่งเฉพาะข้อมูลแผนการสอน + คอมเมนต์ของครั้งที่กำลังแก้ ขึ้น Google Sheets แบบเงียบๆ เบื้องหลัง
+// (ใช้ doPost branch เดิมที่อัปเดตคอลัมน์ "ผลการจัดการเรียนรู้"/"แนวทางแก้ปัญหา" ตาม "ครั้งที่" — ไม่แนบ PDF จึงไม่ต้องมีลายเซ็น)
+function pushReflectionToCloud(plan) {
+  if (!config.gasUrl || !plan) return;
+  const currentCourse = courses.find(c => c.id === activeCourseId);
+  const currentClass = classes.find(c => c.id === activeClassId);
+  if (!currentCourse || !currentClass) return;
+
+  const sheetTabName = getSafeSheetName(currentCourse.code, currentClass.name);
+  const payload = {
+    sheetName: sheetTabName,
+    week: plan.week,
+    once: plan.once,
+    period: plan.period,
+    date: plan.date,
+    unit: plan.unit,
+    topic: plan.topic,
+    periodCount: plan.periodCount,
+    standard: plan.standard,
+    objectives: plan.objectives,
+    activities: plan.activities,
+    assessment: plan.assessment,
+    materials: plan.materials,
+    outcomes: plan.outcomes,
+    solutions: plan.solutions
+  };
+
+  fetch(config.gasUrl, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  }).catch(e => console.error('Error pushing reflection to cloud:', e));
 }
 
 // ==========================================
@@ -3988,7 +4027,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.9';
+  const CURRENT_VERSION = '3.10';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
