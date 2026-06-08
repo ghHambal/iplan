@@ -361,6 +361,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Register window resize listener for responsive scaling
   window.addEventListener('resize', adjustPreviewScale);
 
+  // ดึงข้อมูลล่าสุดจาก Cloud อัตโนมัติทุกครั้งที่กลับมาเปิดแอป/สลับแท็บกลับมา
+  // (ทำให้เปิดจากอุปกรณ์ไหนก็เห็นข้อมูลล่าสุดจากเครื่องอื่นโดยไม่ต้องกดปุ่มซิงก์เอง)
+  let lastCloudRefreshAt = Date.now();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !config.gasUrl) return;
+    const now = Date.now();
+    if (now - lastCloudRefreshAt < 60000) return; // กันยิง API ถี่เกินไปเวลาสลับแท็บบ่อยๆ
+    lastCloudRefreshAt = now;
+    fetchConfigFromCloud().then(() => fetchLiveGoogleData());
+  });
+
   // อัปเดตส่วนนำเข้าข้ามเครื่องใน settings
   updateEasySetupShareSection();
 });
@@ -692,9 +703,11 @@ function initializeUI() {
       const originalText = span.innerText;
       span.innerText = 'กำลังซิงก์...';
       btnDashboardSync.disabled = true;
-      
+
+      // ดึงทั้งรายวิชา/ห้องเรียน/โปรไฟล์ที่อาจถูกเพิ่ม-แก้จากเครื่องอื่น แล้วค่อยดึงแผนการสอนล่าสุด
+      await fetchConfigFromCloud();
       await fetchLiveGoogleData();
-      
+
       span.innerText = originalText;
       btnDashboardSync.disabled = false;
     });
@@ -3975,7 +3988,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.8';
+  const CURRENT_VERSION = '3.9';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
