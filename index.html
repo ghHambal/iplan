@@ -36,7 +36,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.13</span>
+        <span class="version-tag" id="app-version-tag">v3.14</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -647,6 +647,17 @@
                     ใช้สำหรับให้ AI ช่วยร่าง "ผลการจัดการเรียนรู้" และ "แนวทางแก้ไข" จากข้อมูลแผนการสอน
                     (ขอฟรีได้ที่ <span style="color: var(--primary);">aistudio.google.com/apikey</span> —
                     Key จะถูกเก็บไว้ในเครื่องนี้เท่านั้น ไม่ส่งผ่าน Cloud)
+                  </small>
+                </div>
+                <div class="form-group">
+                  <label for="input-gemini-model">Gemini Model (ไม่บังคับ)</label>
+                  <input type="text" id="input-gemini-model" placeholder="ค่าเริ่มต้นในโค้ด เช่น gemini-2.5-flash">
+                  <small class="form-help">
+                    เว้นว่างไว้ได้ — ระบบจะใช้รุ่นที่กำหนดไว้ในโค้ดให้อัตโนมัติ
+                    หากเจอข้อความ "เกินโควตา (429)" หรือ "ไม่พบโมเดลนี้ (404)" ลองเปลี่ยนมาระบุรุ่นอื่นที่นี่
+                    เช่น <span style="color: var(--primary);">gemini-flash-latest</span> หรือ
+                    <span style="color: var(--primary);">gemini-2.0-flash</span>
+                    (ดูรายชื่อรุ่นที่ใช้ได้กับ Key ของคุณที่ aistudio.google.com)
                   </small>
                 </div>
               </div>

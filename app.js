@@ -300,10 +300,14 @@ let classes = [];
 let activeCourseId = localStorage.getItem('iplane_active_course_id') || 'c1';
 let activeClassId = localStorage.getItem('iplane_active_class_id') || 'cl1';
 
+// รุ่นโมเดล Gemini ที่ใช้เป็นค่าเริ่มต้น (ใช้เมื่อครูไม่ได้ระบุรุ่นเองในหน้าตั้งค่า)
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+
 let config = {
   gasUrl: localStorage.getItem('iplane_gas_url') || '',
   folderId: localStorage.getItem('iplane_folder_id') || '',
-  geminiApiKey: localStorage.getItem('iplane_gemini_api_key') || ''
+  geminiApiKey: localStorage.getItem('iplane_gemini_api_key') || '',
+  geminiModel: localStorage.getItem('iplane_gemini_model') || ''
 };
 
 // 4. Drawing Canvas signature variables
@@ -585,6 +589,7 @@ function initializeUI() {
   document.getElementById('input-gas-url').value = config.gasUrl;
   document.getElementById('input-drive-folder').value = config.folderId;
   document.getElementById('input-gemini-api-key').value = config.geminiApiKey;
+  document.getElementById('input-gemini-model').value = config.geminiModel;
   updateSyncStatusIndicator();
 
   // Active Class Leader input binding
@@ -1628,7 +1633,8 @@ async function draftReflectionWithAI() {
 
 ตอบกลับเป็น JSON เท่านั้น รูปแบบ {"outcomes": "...", "solutions": "..."} ห้ามมีข้อความอื่นนอกเหนือจาก JSON`;
 
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(config.geminiApiKey)}`, {
+    const modelName = config.geminiModel || DEFAULT_GEMINI_MODEL;
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(config.geminiApiKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1639,7 +1645,13 @@ async function draftReflectionWithAI() {
 
     if (!resp.ok) {
       const errBody = await resp.text().catch(() => '');
-      throw new Error(`Gemini API ตอบกลับผิดพลาด (${resp.status}) ${errBody}`.trim());
+      let hint = '';
+      if (resp.status === 429) {
+        hint = '\n\nดูเหมือนรุ่นโมเดลนี้จะเกินโควตาฟรีสำหรับ Key ของคุณ ลองเปิดหน้า "ตั้งค่า" แล้วระบุชื่อรุ่นอื่น (เช่น gemini-flash-latest หรือ gemini-2.0-flash) ในช่อง "Gemini Model"';
+      } else if (resp.status === 404) {
+        hint = '\n\nไม่พบโมเดลชื่อนี้ ลองตรวจสอบหรือเปลี่ยนชื่อรุ่นในหน้า "ตั้งค่า" ช่อง "Gemini Model"';
+      }
+      throw new Error(`Gemini API ตอบกลับผิดพลาด (${resp.status}) ${errBody}`.trim() + hint);
     }
 
     const data = await resp.json();
@@ -2002,10 +2014,12 @@ function saveModalSettings() {
   config.gasUrl = document.getElementById('input-gas-url').value.trim();
   config.folderId = document.getElementById('input-drive-folder').value.trim();
   config.geminiApiKey = document.getElementById('input-gemini-api-key').value.trim();
+  config.geminiModel = document.getElementById('input-gemini-model').value.trim();
 
   localStorage.setItem('iplane_gas_url', config.gasUrl);
   localStorage.setItem('iplane_folder_id', config.folderId);
   localStorage.setItem('iplane_gemini_api_key', config.geminiApiKey);
+  localStorage.setItem('iplane_gemini_model', config.geminiModel);
 
   updateSyncStatusIndicator();
   updateProfileLabels();
@@ -4130,7 +4144,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.13';
+  const CURRENT_VERSION = '3.14';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
