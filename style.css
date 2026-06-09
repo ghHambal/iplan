@@ -490,6 +490,56 @@ textarea:focus, input:focus, select:focus {
   margin-top: -4px;
 }
 
+/* Reflection Format Toolbar */
+.reflect-format-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background-color: rgba(var(--overlay-rgb), 0.03);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.fmt-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fmt-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.fmt-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.fmt-color-dot.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
+  transform: scale(1.15);
+}
+
+.fmt-font-select {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background-color: rgba(var(--overlay-rgb), 0.05);
+  color: var(--text-main);
+  cursor: pointer;
+  height: 26px;
+}
+
 /* Signature Pad Layout */
 .signature-card .card-body {
   padding-bottom: 24px;
@@ -2051,5 +2101,18 @@ body:not(.workspace-active) .nav-section-title {
   textarea::placeholder,
   input::placeholder {
     color: #a1a1aa;
+  }
+
+  .reflect-format-bar {
+    background-color: #f4f4f5;
+  }
+
+  .fmt-color-dot.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+  }
+
+  .fmt-font-select {
+    background-color: #ffffff;
   }
 }

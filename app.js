@@ -1404,10 +1404,15 @@ function selectLesson(index) {
     outcomesText.style.display = 'block';
     outcomesDrawContainer.style.display = 'none';
     outcomesText.value = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
+    const fmtBarOut = document.getElementById('fmt-bar-outcomes');
+    if (fmtBarOut) fmtBarOut.style.display = 'flex';
+    applyReflectFormat('outcomes', plan);
   } else {
     btnToggleTextOutcomes.classList.remove('active');
     btnToggleDrawOutcomes.classList.add('active');
     outcomesText.style.display = 'none';
+    const fmtBarOut = document.getElementById('fmt-bar-outcomes');
+    if (fmtBarOut) fmtBarOut.style.display = 'none';
     outcomesDrawContainer.style.display = 'block';
     outcomesText.value = '';
     
@@ -1454,11 +1459,16 @@ function selectLesson(index) {
     solutionsText.style.display = 'block';
     solutionsDrawContainer.style.display = 'none';
     solutionsText.value = (plan.solutions === '-') ? '' : (plan.solutions || '');
+    const fmtBarSol = document.getElementById('fmt-bar-solutions');
+    if (fmtBarSol) fmtBarSol.style.display = 'flex';
+    applyReflectFormat('solutions', plan);
   } else {
     btnToggleTextSolutions.classList.remove('active');
     btnToggleDrawSolutions.classList.add('active');
     solutionsText.style.display = 'none';
     solutionsDrawContainer.style.display = 'block';
+    const fmtBarSol = document.getElementById('fmt-bar-solutions');
+    if (fmtBarSol) fmtBarSol.style.display = 'none';
     solutionsText.value = '';
     
     // Load and draw strokes or image
@@ -2818,6 +2828,8 @@ function populatePrintTemplate() {
         outcomesText.style.whiteSpace = 'pre-line';
         outcomesText.style.fontSize = '10.5px';
         outcomesText.style.marginBottom = '8px';
+        if (plan.outcomesColor) outcomesText.style.color = plan.outcomesColor;
+        if (plan.outcomesFont) outcomesText.style.fontFamily = `'${plan.outcomesFont}', sans-serif`;
         outcomesText.innerText = (plan.outcomes === '-') ? '' : (plan.outcomes || '');
         outcomesContainer.appendChild(outcomesText);
       }
@@ -2844,6 +2856,8 @@ function populatePrintTemplate() {
         const solutionsText = document.createElement('div');
         solutionsText.style.whiteSpace = 'pre-line';
         solutionsText.style.fontSize = '10.5px';
+        if (plan.solutionsColor) solutionsText.style.color = plan.solutionsColor;
+        if (plan.solutionsFont) solutionsText.style.fontFamily = `'${plan.solutionsFont}', sans-serif`;
         solutionsText.innerText = (plan.solutions === '-') ? '' : (plan.solutions || '');
         outcomesContainer.appendChild(solutionsText);
       }
@@ -4068,6 +4082,50 @@ function redrawCanvas(type) {
   });
 }
 
+// ---- Reflection Text Formatting ----
+function setReflectColor(field, color, btn) {
+  const plan = lessonPlans[selectedIndex];
+  if (!plan) return;
+  plan[field + 'Color'] = color;
+  const textarea = document.getElementById(`txt-${field}`);
+  if (textarea) textarea.style.color = color;
+  // update active dot
+  const bar = document.getElementById(`fmt-bar-${field}`);
+  if (bar) bar.querySelectorAll('.fmt-color-dot').forEach(d => d.classList.toggle('active', d === btn));
+}
+
+function setReflectFont(field, fontFamily) {
+  const plan = lessonPlans[selectedIndex];
+  if (!plan) return;
+  plan[field + 'Font'] = fontFamily;
+  const textarea = document.getElementById(`txt-${field}`);
+  if (textarea) textarea.style.fontFamily = `'${fontFamily}', sans-serif`;
+  // preview font in the select itself
+  const sel = document.getElementById(`fmt-font-${field}`);
+  if (sel) sel.style.fontFamily = `'${fontFamily}', sans-serif`;
+}
+
+function applyReflectFormat(field, plan) {
+  const textarea = document.getElementById(`txt-${field}`);
+  const bar = document.getElementById(`fmt-bar-${field}`);
+  if (!textarea || !bar) return;
+  const color = plan[field + 'Color'] || '#1a1a1a';
+  const font = plan[field + 'Font'] || 'Sarabun';
+  textarea.style.color = color;
+  textarea.style.fontFamily = `'${font}', sans-serif`;
+  // sync color dot active state
+  bar.querySelectorAll('.fmt-color-dot').forEach(d => {
+    d.classList.toggle('active', d.dataset.color === color);
+  });
+  // sync font select + preview
+  const sel = document.getElementById(`fmt-font-${field}`);
+  if (sel) {
+    sel.value = font;
+    sel.style.fontFamily = `'${font}', sans-serif`;
+  }
+}
+// ---- End Reflection Text Formatting ----
+
 function setReflectionMode(type, mode) {
   const plan = lessonPlans[selectedIndex];
   if (!plan) return;
@@ -4079,13 +4137,15 @@ function setReflectionMode(type, mode) {
   const btnDraw = document.getElementById(`btn-toggle-draw-${type}`);
   const textInput = document.getElementById(`txt-${type}`);
   const drawContainer = document.getElementById(`draw-${type}-container`);
+  const formatBar = document.getElementById(`fmt-bar-${type}`);
 
   if (mode === 'text') {
     btnText.classList.add('active');
     btnDraw.classList.remove('active');
     textInput.style.display = 'block';
     drawContainer.style.display = 'none';
-    
+    if (formatBar) formatBar.style.display = 'flex';
+
     plan[type] = '-';
     textInput.value = '';
   } else {
@@ -4093,6 +4153,7 @@ function setReflectionMode(type, mode) {
     btnDraw.classList.add('active');
     textInput.style.display = 'none';
     drawContainer.style.display = 'block';
+    if (formatBar) formatBar.style.display = 'none';
     
     plan[type] = '-';
     
@@ -4140,7 +4201,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.18';
+  const CURRENT_VERSION = '3.19';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 

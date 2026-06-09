@@ -10,7 +10,7 @@
   <!-- Inter from Google CDN (UI only, ไม่ใช้ใน PDF) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Itim&family=Charmonman:wght@400;700&display=swap" rel="stylesheet">
   <!-- Sarabun จาก local (แก้ปัญหา html2canvas ไม่โหลด Google Fonts ใน cloned DOM) -->
   <link rel="stylesheet" href="fonts/sarabun.css">
 
@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.18">
+  <link rel="stylesheet" href="style.css?v=3.19">
 </head>
 
 <body class="dark-theme">
@@ -36,7 +36,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.18</span>
+        <span class="version-tag" id="app-version-tag">v3.19</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -352,6 +352,22 @@
                   </div>
                 </div>
                 
+                <!-- Format toolbar (แสดงเฉพาะโหมดพิมพ์) -->
+                <div class="reflect-format-bar" id="fmt-bar-outcomes">
+                  <div class="fmt-colors">
+                    <button class="fmt-color-dot active" title="ดำ (ปกติ)" data-color="#1a1a1a" style="background:#1a1a1a;" onclick="setReflectColor('outcomes','#1a1a1a',this)"></button>
+                    <button class="fmt-color-dot" title="น้ำเงิน" data-color="#1d4ed8" style="background:#1d4ed8;" onclick="setReflectColor('outcomes','#1d4ed8',this)"></button>
+                    <button class="fmt-color-dot" title="เขียว" data-color="#15803d" style="background:#15803d;" onclick="setReflectColor('outcomes','#15803d',this)"></button>
+                    <button class="fmt-color-dot" title="แดง" data-color="#b91c1c" style="background:#b91c1c;" onclick="setReflectColor('outcomes','#b91c1c',this)"></button>
+                    <button class="fmt-color-dot" title="น้ำตาล" data-color="#92400e" style="background:#92400e;" onclick="setReflectColor('outcomes','#92400e',this)"></button>
+                    <button class="fmt-color-dot" title="ม่วง" data-color="#6d28d9" style="background:#6d28d9;" onclick="setReflectColor('outcomes','#6d28d9',this)"></button>
+                  </div>
+                  <select class="fmt-font-select" id="fmt-font-outcomes" onchange="setReflectFont('outcomes', this.value)">
+                    <option value="Sarabun">ไทย (ปกติ)</option>
+                    <option value="Itim">ลายมือ — Itim</option>
+                    <option value="Charmonman">คัดลายมือ — Charmonman</option>
+                  </select>
+                </div>
                 <textarea id="txt-outcomes" rows="5"
                   placeholder="ระบุผลการสอน เช่น นักเรียนเข้าใจและคำนวณรากที่ n ได้ถูกต้อง..."></textarea>
                 
@@ -393,6 +409,22 @@
                   </div>
                 </div>
                 
+                <!-- Format toolbar (แสดงเฉพาะโหมดพิมพ์) -->
+                <div class="reflect-format-bar" id="fmt-bar-solutions">
+                  <div class="fmt-colors">
+                    <button class="fmt-color-dot active" title="ดำ (ปกติ)" data-color="#1a1a1a" style="background:#1a1a1a;" onclick="setReflectColor('solutions','#1a1a1a',this)"></button>
+                    <button class="fmt-color-dot" title="น้ำเงิน" data-color="#1d4ed8" style="background:#1d4ed8;" onclick="setReflectColor('solutions','#1d4ed8',this)"></button>
+                    <button class="fmt-color-dot" title="เขียว" data-color="#15803d" style="background:#15803d;" onclick="setReflectColor('solutions','#15803d',this)"></button>
+                    <button class="fmt-color-dot" title="แดง" data-color="#b91c1c" style="background:#b91c1c;" onclick="setReflectColor('solutions','#b91c1c',this)"></button>
+                    <button class="fmt-color-dot" title="น้ำตาล" data-color="#92400e" style="background:#92400e;" onclick="setReflectColor('solutions','#92400e',this)"></button>
+                    <button class="fmt-color-dot" title="ม่วง" data-color="#6d28d9" style="background:#6d28d9;" onclick="setReflectColor('solutions','#6d28d9',this)"></button>
+                  </div>
+                  <select class="fmt-font-select" id="fmt-font-solutions" onchange="setReflectFont('solutions', this.value)">
+                    <option value="Sarabun">ไทย (ปกติ)</option>
+                    <option value="Itim">ลายมือ — Itim</option>
+                    <option value="Charmonman">คัดลายมือ — Charmonman</option>
+                  </select>
+                </div>
                 <textarea id="txt-solutions" rows="5"
                   placeholder="ระบุปัญหาอุปสรรคที่พบ และข้อเสนอแนะในการแก้ไขครั้งถัดไป..."></textarea>
                 
@@ -1222,7 +1254,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.18"></script>
+  <script src="app.js?v=3.19"></script>
 </body>
 
 </html>
