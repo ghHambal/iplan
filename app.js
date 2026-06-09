@@ -744,15 +744,38 @@ function initializeUI() {
     populatePrintTemplate();
   });
 
-  // HOD date input (per-plan)
-  const hodSigDateInput = document.getElementById('hod-sig-date-input');
-  hodSigDateInput.addEventListener('change', () => {
+  // HOD date dropdowns (per-plan) — พ.ศ.
+  const hodDayEl = document.getElementById('hod-date-day');
+  const hodMonthEl = document.getElementById('hod-date-month');
+  const hodYearEl = document.getElementById('hod-date-year');
+  const thaiMonthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                          'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  for (let d = 1; d <= 31; d++) {
+    const o = document.createElement('option'); o.value = d; o.textContent = d; hodDayEl.appendChild(o);
+  }
+  thaiMonthNames.forEach((name, i) => {
+    const o = document.createElement('option'); o.value = i + 1; o.textContent = name; hodMonthEl.appendChild(o);
+  });
+  const nowBE = new Date().getFullYear() + 543;
+  for (let y = nowBE - 5; y <= nowBE + 3; y++) {
+    const o = document.createElement('option'); o.value = y; o.textContent = y; hodYearEl.appendChild(o);
+  }
+  function onHodDateChange() {
     const plan = lessonPlans[selectedIndex];
     if (!plan) return;
-    plan.hodSignatureDate = hodSigDateInput.value;
+    const d = hodDayEl.value, m = hodMonthEl.value, yBE = hodYearEl.value;
+    if (d && m && yBE) {
+      const yCE = parseInt(yBE) - 543;
+      plan.hodSignatureDate = `${yCE}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    } else {
+      plan.hodSignatureDate = '';
+    }
     saveClassLessons(activeClassId, lessonPlans);
     populatePrintTemplate();
-  });
+  }
+  hodDayEl.addEventListener('change', onHodDateChange);
+  hodMonthEl.addEventListener('change', onHodDateChange);
+  hodYearEl.addEventListener('change', onHodDateChange);
   // ---- End HOD Signature Upload ----
 
   // Settings Modal open/close controls
@@ -1587,9 +1610,20 @@ function selectLesson(index) {
     hodClearBtn.style.display = 'none';
   }
 
-  // Load per-plan HOD date
-  const hodDateInput = document.getElementById('hod-sig-date-input');
-  if (hodDateInput) hodDateInput.value = plan.hodSignatureDate || '';
+  // Load per-plan HOD date into BE dropdowns
+  const _hodDay = document.getElementById('hod-date-day');
+  const _hodMonth = document.getElementById('hod-date-month');
+  const _hodYear = document.getElementById('hod-date-year');
+  if (plan.hodSignatureDate) {
+    const _d = new Date(plan.hodSignatureDate + 'T00:00:00');
+    if (!isNaN(_d)) {
+      _hodDay.value = _d.getDate();
+      _hodMonth.value = _d.getMonth() + 1;
+      _hodYear.value = _d.getFullYear() + 543;
+    }
+  } else {
+    _hodDay.value = ''; _hodMonth.value = ''; _hodYear.value = '';
+  }
 
   document.querySelector('.app-main').scrollTop = 0;
 }
@@ -4307,12 +4341,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.28';
+  const CURRENT_VERSION = '3.29';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.29', note: 'เปลี่ยนช่องวันที่ลงนาม HOD เป็น dropdown วัน/เดือนไทย/ปี พ.ศ.' },
     { v: '3.28', note: 'เพิ่มช่อง "วันที่ลงนาม" HOD ในการ์ด — ส่งวันที่ไปแสดงในเอกสาร PDF ต่อแผน' },
     { v: '3.27', note: 'format ลายเซ็นหัวหน้าห้อง/ครูผู้สอน เป็น "ลงชื่อ ..... ตำแหน่ง" เหมือน HOD + กึ่งกลาง' },
     { v: '3.26', note: 'ลายเซ็นชิดเส้นประ — margin-bottom: -3mm ให้ก้นลายเซ็นทับเส้น เหมือนเซ็นบนกระดาษจริง' },
