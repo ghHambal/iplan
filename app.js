@@ -689,12 +689,16 @@ function initializeUI() {
   const hodSigPlanPreview = document.getElementById('hod-sig-plan-preview');
   const hodSigPlanImg = document.getElementById('hod-sig-plan-img');
   const clearHodSigPlanBtn = document.getElementById('btn-clear-hod-sig-plan');
+  const uploadHodSigBtn = document.getElementById('btn-upload-hod-sig');
+
+  // Button opens file picker programmatically (reliable on all browsers)
+  uploadHodSigBtn.addEventListener('click', () => { hodSigPlanInput.click(); });
 
   hodSigPlanInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const plan = lessonPlans[selectedIndex];
-    if (!plan) return;
+    if (!plan) { showToast('กรุณาเลือกแผนการสอนก่อนอัปโหลด', 3000); return; }
     const reader = new FileReader();
     reader.onload = (evt) => {
       const img = new Image();
@@ -712,19 +716,20 @@ function initializeUI() {
         hodSigPlanImg.src = b64;
         hodSigPlanPreview.style.display = 'block';
         clearHodSigPlanBtn.style.display = 'inline-flex';
-        // Scroll preview into view so user sees the result
         hodSigPlanPreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        showToast('อัปโหลดลายเซ็น HOD เรียบร้อยแล้ว ✓', 2500);
         populatePrintTemplate();
       };
+      img.onerror = () => showToast('ไม่สามารถอ่านไฟล์รูปภาพได้', 3000);
       img.src = evt.target.result;
     };
     reader.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be re-uploaded
   });
 
   clearHodSigPlanBtn.addEventListener('click', () => {
     const plan = lessonPlans[selectedIndex];
     if (plan) { plan.hodSignature = ''; saveClassLessons(activeClassId, lessonPlans); }
-    hodSigPlanInput.value = '';
     hodSigPlanImg.src = '';
     hodSigPlanPreview.style.display = 'none';
     clearHodSigPlanBtn.style.display = 'none';
@@ -4276,12 +4281,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.23';
+  const CURRENT_VERSION = '3.24';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.24', note: 'แก้ปุ่มอัปโหลด HOD — ใช้ button+JS.click() แทน label-hidden-input (ทำงานได้ทุก browser)' },
     { v: '3.23', note: 'แก้ preview ลายเซ็น HOD — พื้นขาว+ขอบ ให้เห็นลายเซ็นชัดเจน + scroll เข้าหาได้ทันที' },
     { v: '3.22', note: 'ย้ายลายเซ็น HOD ให้เก็บต่อแผนการสอน (ไม่ใช่ global) — อัปโหลดได้ที่ panel ด้านขวา' },
     { v: '3.21', note: 'เพิ่มอัปโหลดลายเซ็น HOD PNG + แสดงในช่องลงชื่อหัวหน้ากลุ่มสาระใน PDF' },
