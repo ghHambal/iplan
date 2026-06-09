@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.20">
+  <link rel="stylesheet" href="style.css?v=3.21">
 </head>
 
 <body class="dark-theme">
@@ -36,7 +36,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.20</span>
+        <span class="version-tag" id="app-version-tag">v3.21</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -638,6 +638,19 @@
               </div>
 
               <div class="form-group">
+                <label for="input-hod-signature">ลายเซ็นหัวหน้ากลุ่มสาระ (อัปโหลดรูป PNG)</label>
+                <input type="file" id="input-hod-signature" accept="image/png,image/jpeg,image/gif">
+                <small class="form-help">รูปลายเซ็นจะปรากฏในช่องลงชื่อหัวหน้ากลุ่มสาระใน PDF โดยอัตโนมัติ</small>
+                <div class="logo-preview-box" id="hod-sig-preview-container"
+                  style="display:none; margin-top:8px; padding:8px; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); border-radius:8px; align-items:center; gap:10px;">
+                  <img id="hod-sig-preview-img" src="" alt="ลายเซ็น HOD"
+                    style="max-height:48px; max-width:160px; object-fit:contain; display:block;">
+                  <button type="button" id="btn-clear-hod-sig" class="btn btn-secondary"
+                    style="font-size:11px; padding:4px 10px; white-space:nowrap;">ลบลายเซ็น</button>
+                </div>
+              </div>
+
+              <div class="form-group">
                 <label for="input-school-name">กลุ่มสาระการเรียนรู้</label>
                 <input type="text" id="input-school-name" placeholder="เช่น คณิตศาสตร์">
               </div>
@@ -1177,7 +1190,7 @@
           <div class="pdf-signature-block-single">
             <div class="pdf-sig-box text-center">
               <div class="pdf-sig-line">
-                <!-- Head signature line remains blank for physical sign -->
+                <img id="pdf-print-sig-hod" class="pdf-signature-image" alt="ลายเซ็นหัวหน้ากลุ่มสาระ" style="display:none;">
               </div>
               <div class="pdf-sig-label">
                 ลงชื่อ ..................................... หัวหน้ากลุ่มสาระ<br>
@@ -1254,7 +1267,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.20"></script>
+  <script src="app.js?v=3.21"></script>
 </body>
 
 </html>

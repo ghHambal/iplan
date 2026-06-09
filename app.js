@@ -684,6 +684,53 @@ function initializeUI() {
     alert('ล้างข้อมูลโลโก้โรงเรียนเรียบร้อยแล้ว');
   });
 
+  // ---- HOD Signature Upload ----
+  const hodSigInput = document.getElementById('input-hod-signature');
+  const hodSigPreviewContainer = document.getElementById('hod-sig-preview-container');
+  const hodSigPreviewImg = document.getElementById('hod-sig-preview-img');
+  const clearHodSigBtn = document.getElementById('btn-clear-hod-sig');
+
+  const savedHodSig = localStorage.getItem('iplane_hod_signature');
+  if (savedHodSig) {
+    hodSigPreviewImg.src = savedHodSig;
+    hodSigPreviewContainer.style.display = 'flex';
+  }
+
+  hodSigInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.onload = () => {
+        // resize ให้ max 300px เพื่อลด localStorage footprint
+        const maxDim = 300;
+        let w = img.width, h = img.height;
+        if (w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else if (h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        const b64 = cv.toDataURL('image/png');
+        localStorage.setItem('iplane_hod_signature', b64);
+        hodSigPreviewImg.src = b64;
+        hodSigPreviewContainer.style.display = 'flex';
+        populatePrintTemplate();
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearHodSigBtn.addEventListener('click', () => {
+    localStorage.removeItem('iplane_hod_signature');
+    hodSigInput.value = '';
+    hodSigPreviewImg.src = '';
+    hodSigPreviewContainer.style.display = 'none';
+    populatePrintTemplate();
+  });
+  // ---- End HOD Signature Upload ----
+
   // Settings Modal open/close controls
   // Dashboard view bindings
   document.getElementById('btn-dashboard').addEventListener('click', openDashboardView);
@@ -2908,6 +2955,19 @@ function populatePrintTemplate() {
     const printHodName = pageEl.querySelector('#pdf-print-hod-name');
     if (printHodName) printHodName.innerText = profile.hodName || '';
 
+    // HOD signature image
+    const sigHodImg = pageEl.querySelector('#pdf-print-sig-hod');
+    if (sigHodImg) {
+      const hodSig = localStorage.getItem('iplane_hod_signature') || '';
+      if (hodSig) {
+        sigHodImg.src = hodSig;
+        sigHodImg.style.display = 'block';
+      } else {
+        sigHodImg.src = '';
+        sigHodImg.style.display = 'none';
+      }
+    }
+
     // Class Leader signature name
     const classLeaderNameSpan = pageEl.querySelector('#pdf-print-leader-name');
     if (classLeaderNameSpan) {
@@ -4201,7 +4261,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.20';
+  const CURRENT_VERSION = '3.21';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
