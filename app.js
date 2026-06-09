@@ -745,37 +745,45 @@ function initializeUI() {
   });
 
   // HOD date dropdowns (per-plan) — พ.ศ.
-  const hodDayEl = document.getElementById('hod-date-day');
-  const hodMonthEl = document.getElementById('hod-date-month');
-  const hodYearEl = document.getElementById('hod-date-year');
-  const thaiMonthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                          'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  for (let d = 1; d <= 31; d++) {
-    const o = document.createElement('option'); o.value = d; o.textContent = d; hodDayEl.appendChild(o);
+  // HOD date — native calendar popup + display in พ.ศ.
+  const hodDateNative = document.getElementById('hod-date-native');
+  const hodDateDisplayBtn = document.getElementById('hod-date-display');
+  const hodDateDisplayText = document.getElementById('hod-date-display-text');
+  const hodDateClearBtn = document.getElementById('hod-date-clear');
+  const thaiMonthShort = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  function setHodDateDisplay(isoVal) {
+    if (isoVal) {
+      const [y, m, d] = isoVal.split('-');
+      hodDateDisplayText.textContent = `${parseInt(d)} ${thaiMonthShort[parseInt(m)-1]} ${parseInt(y)+543}`;
+      hodDateClearBtn.style.display = 'inline-flex';
+    } else {
+      hodDateDisplayText.textContent = 'เลือกวันที่';
+      hodDateClearBtn.style.display = 'none';
+    }
   }
-  thaiMonthNames.forEach((name, i) => {
-    const o = document.createElement('option'); o.value = i + 1; o.textContent = name; hodMonthEl.appendChild(o);
+
+  hodDateDisplayBtn.addEventListener('click', () => {
+    if (hodDateNative.showPicker) hodDateNative.showPicker();
+    else hodDateNative.click();
   });
-  const nowBE = new Date().getFullYear() + 543;
-  for (let y = nowBE - 5; y <= nowBE + 3; y++) {
-    const o = document.createElement('option'); o.value = y; o.textContent = y; hodYearEl.appendChild(o);
-  }
-  function onHodDateChange() {
+
+  hodDateNative.addEventListener('change', () => {
     const plan = lessonPlans[selectedIndex];
     if (!plan) return;
-    const d = hodDayEl.value, m = hodMonthEl.value, yBE = hodYearEl.value;
-    if (d && m && yBE) {
-      const yCE = parseInt(yBE) - 543;
-      plan.hodSignatureDate = `${yCE}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    } else {
-      plan.hodSignatureDate = '';
-    }
+    plan.hodSignatureDate = hodDateNative.value;
     saveClassLessons(activeClassId, lessonPlans);
+    setHodDateDisplay(hodDateNative.value);
     populatePrintTemplate();
-  }
-  hodDayEl.addEventListener('change', onHodDateChange);
-  hodMonthEl.addEventListener('change', onHodDateChange);
-  hodYearEl.addEventListener('change', onHodDateChange);
+  });
+
+  hodDateClearBtn.addEventListener('click', () => {
+    const plan = lessonPlans[selectedIndex];
+    if (plan) { plan.hodSignatureDate = ''; saveClassLessons(activeClassId, lessonPlans); }
+    hodDateNative.value = '';
+    setHodDateDisplay('');
+    populatePrintTemplate();
+  });
   // ---- End HOD Signature Upload ----
 
   // Settings Modal open/close controls
@@ -1610,19 +1618,20 @@ function selectLesson(index) {
     hodClearBtn.style.display = 'none';
   }
 
-  // Load per-plan HOD date into BE dropdowns
-  const _hodDay = document.getElementById('hod-date-day');
-  const _hodMonth = document.getElementById('hod-date-month');
-  const _hodYear = document.getElementById('hod-date-year');
+  // Load per-plan HOD date
+  const _hodNative = document.getElementById('hod-date-native');
+  const _hodText = document.getElementById('hod-date-display-text');
+  const _hodClear = document.getElementById('hod-date-clear');
+  const _thaiShort = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   if (plan.hodSignatureDate) {
-    const _d = new Date(plan.hodSignatureDate + 'T00:00:00');
-    if (!isNaN(_d)) {
-      _hodDay.value = _d.getDate();
-      _hodMonth.value = _d.getMonth() + 1;
-      _hodYear.value = _d.getFullYear() + 543;
-    }
+    _hodNative.value = plan.hodSignatureDate;
+    const [y, m, d] = plan.hodSignatureDate.split('-');
+    _hodText.textContent = `${parseInt(d)} ${_thaiShort[parseInt(m)-1]} ${parseInt(y)+543}`;
+    _hodClear.style.display = 'inline-flex';
   } else {
-    _hodDay.value = ''; _hodMonth.value = ''; _hodYear.value = '';
+    _hodNative.value = '';
+    _hodText.textContent = 'เลือกวันที่';
+    _hodClear.style.display = 'none';
   }
 
   document.querySelector('.app-main').scrollTop = 0;
@@ -4341,12 +4350,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.29';
+  const CURRENT_VERSION = '3.30';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.30', note: 'วันที่ลงนาม HOD — ปฏิทิน popup + แสดงผลเป็น พ.ศ. (เช่น 13 พ.ค. 2569)' },
     { v: '3.29', note: 'เปลี่ยนช่องวันที่ลงนาม HOD เป็น dropdown วัน/เดือนไทย/ปี พ.ศ.' },
     { v: '3.28', note: 'เพิ่มช่อง "วันที่ลงนาม" HOD ในการ์ด — ส่งวันที่ไปแสดงในเอกสาร PDF ต่อแผน' },
     { v: '3.27', note: 'format ลายเซ็นหัวหน้าห้อง/ครูผู้สอน เป็น "ลงชื่อ ..... ตำแหน่ง" เหมือน HOD + กึ่งกลาง' },

@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.29">
+  <link rel="stylesheet" href="style.css?v=3.30">
 </head>
 
 <body class="dark-theme">
@@ -36,7 +36,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.29</span>
+        <span class="version-tag" id="app-version-tag">v3.30</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -548,16 +548,16 @@
               </div>
               <div style="margin-top:12px;">
                 <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">วันที่ลงนาม (พ.ศ.)</label>
-                <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                  <select id="hod-date-day" style="flex:0 0 60px; padding:5px 6px; background:var(--secondary); border:1px solid var(--card-border); border-radius:6px; color:var(--text-main); font-size:13px;">
-                    <option value="">วัน</option>
-                  </select>
-                  <select id="hod-date-month" style="flex:1; min-width:120px; padding:5px 6px; background:var(--secondary); border:1px solid var(--card-border); border-radius:6px; color:var(--text-main); font-size:13px;">
-                    <option value="">เดือน</option>
-                  </select>
-                  <select id="hod-date-year" style="flex:0 0 80px; padding:5px 6px; background:var(--secondary); border:1px solid var(--card-border); border-radius:6px; color:var(--text-main); font-size:13px;">
-                    <option value="">ปี</option>
-                  </select>
+                <input type="date" id="hod-date-native" style="position:absolute; opacity:0; pointer-events:none; width:0; height:0;">
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <button type="button" id="hod-date-display"
+                    style="flex:1; padding:6px 10px; background:var(--secondary); border:1px solid var(--card-border); border-radius:6px; color:var(--text-main); font-size:13px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="calendar" style="width:14px;height:14px;flex-shrink:0;"></i>
+                    <span id="hod-date-display-text">เลือกวันที่</span>
+                  </button>
+                  <button type="button" id="hod-date-clear" class="btn btn-secondary" style="display:none; padding:5px 8px;">
+                    <i data-lucide="x" style="width:13px;height:13px;"></i>
+                  </button>
                 </div>
               </div>
               <small style="color:var(--text-muted); margin-top:8px; display:block;">ลายเซ็นนี้ใช้เฉพาะแผนการสอนนี้เท่านั้น</small>
@@ -1296,7 +1296,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.29"></script>
+  <script src="app.js?v=3.30"></script>
 </body>
 
 </html>
