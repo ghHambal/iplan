@@ -531,16 +531,24 @@ function saveCourseLessons(courseId, runtimePlans) {
 
 function saveClassLessons(classId, runtimePlans) {
   const classKey = `iplane_class_lessons_${classId}`;
-  const classPlans = runtimePlans.map(p => ({
-    once: String(p.once),
-    week: String(p.week || deriveWeekFromOnce(p.once)),
-    date: p.date || '',
-    period: p.period || '1-2',
-    periodCount: String(p.periodCount || '2'),
-    outcomes: p.outcomes || '-',
-    solutions: p.solutions || '-',
-    pdfUrl: p.pdfUrl || ''
-  }));
+  const classPlans = runtimePlans.map(p => {
+    const obj = {
+      once: String(p.once),
+      week: String(p.week || deriveWeekFromOnce(p.once)),
+      date: p.date || '',
+      period: p.period || '1-2',
+      periodCount: String(p.periodCount || '2'),
+      outcomes: p.outcomes || '-',
+      solutions: p.solutions || '-',
+      pdfUrl: p.pdfUrl || ''
+    };
+    // Persist optional per-plan fields without stripping them
+    const extra = ['outcomesMode','solutionsMode',
+                   'outcomesColor','outcomesFont','solutionsColor','solutionsFont',
+                   'outcomesDrawStrokes','solutionsDrawStrokes','hodSignature'];
+    extra.forEach(k => { if (p[k] !== undefined && p[k] !== null && p[k] !== '') obj[k] = p[k]; });
+    return obj;
+  });
   localStorage.setItem(classKey, JSON.stringify(classPlans));
 }
 
@@ -4281,12 +4289,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.24';
+  const CURRENT_VERSION = '3.25';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.25', note: 'แก้ saveClassLessons ให้เก็บ hodSignature+outcomesMode+สี+ฟอนต์ครบ (เดิม strip ทิ้ง)' },
     { v: '3.24', note: 'แก้ปุ่มอัปโหลด HOD — ใช้ button+JS.click() แทน label-hidden-input (ทำงานได้ทุก browser)' },
     { v: '3.23', note: 'แก้ preview ลายเซ็น HOD — พื้นขาว+ขอบ ให้เห็นลายเซ็นชัดเจน + scroll เข้าหาได้ทันที' },
     { v: '3.22', note: 'ย้ายลายเซ็น HOD ให้เก็บต่อแผนการสอน (ไม่ใช่ global) — อัปโหลดได้ที่ panel ด้านขวา' },
