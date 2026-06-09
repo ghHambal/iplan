@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.31">
+  <link rel="stylesheet" href="style.css?v=3.32">
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -42,10 +42,11 @@
     <aside class="app-sidebar">
       <div class="sidebar-header">
         <div class="logo-wrapper">
-          <i data-lucide="book-open" class="logo-icon"></i>
+          <img id="sidebar-app-logo" src="" alt="โลโก้แอป" style="display:none; height:32px; width:32px; object-fit:contain; border-radius:6px; flex-shrink:0;">
+          <i data-lucide="book-open" class="logo-icon" id="sidebar-default-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.31</span>
+        <span class="version-tag" id="app-version-tag">v3.32</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -701,7 +702,20 @@
               </div>
 
               <div class="form-group" style="margin-top: 10px;">
-                <label for="input-school-logo">อัปโหลดโลโก้โรงเรียน (แทนรูปตราครุฑ)</label>
+                <label for="input-app-logo">โลโก้แอป <small style="color:var(--text-muted); font-weight:400;">(ไอคอนแอป PWA + แสดงใน sidebar)</small></label>
+                <input type="file" id="input-app-logo" accept="image/*">
+                <small class="form-help">ใช้เป็นไอคอนเมื่อติดตั้งเป็นแอป และแสดงในแถบซ้าย</small>
+                <div class="logo-preview-box" id="app-logo-preview-container"
+                  style="display:none; margin-top: 10px; align-items: center;">
+                  <img id="settings-app-logo-preview"
+                    style="height: 40px; width: 40px; object-fit: contain; border-radius: 8px; border:1px solid var(--card-border); background:#fff; padding:2px;" alt="โลโก้แอป">
+                  <button type="button" id="btn-clear-app-logo" class="btn btn-danger"
+                    style="padding: 6px 12px; font-size: 11px; margin-left: 10px;">ล้างโลโก้แอป</button>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 10px;">
+                <label for="input-school-logo">โลโก้โรงเรียน <small style="color:var(--text-muted); font-weight:400;">(แทนรูปตราครุฑในเอกสาร PDF)</small></label>
                 <input type="file" id="input-school-logo" accept="image/*">
                 <small class="form-help">รองรับไฟล์ PNG, JPG หรือ GIF (ระบบจะบันทึกรูปไว้บนเบราว์เซอร์)</small>
                 <div class="logo-preview-box" id="logo-preview-container"
@@ -709,7 +723,7 @@
                   <img id="settings-logo-preview"
                     style="height: 40px; width: 40px; object-fit: cover; border-radius: 50%;" alt="โลโก้ที่อัปโหลด">
                   <button type="button" id="btn-clear-logo" class="btn btn-danger"
-                    style="padding: 6px 12px; font-size: 11px; margin-left: 10px;">ล้างโลโก้</button>
+                    style="padding: 6px 12px; font-size: 11px; margin-left: 10px;">ล้างโลโก้โรงเรียน</button>
                 </div>
               </div>
             </div>
@@ -1312,7 +1326,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.31"></script>
+  <script src="app.js?v=3.32"></script>
 </body>
 
 </html>

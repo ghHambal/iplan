@@ -615,6 +615,73 @@ function initializeUI() {
     }
   });
 
+  // App Logo Upload binding (PWA icon + sidebar display)
+  const appLogoInput = document.getElementById('input-app-logo');
+  const appLogoPreviewContainer = document.getElementById('app-logo-preview-container');
+  const settingsAppLogoPreview = document.getElementById('settings-app-logo-preview');
+  const clearAppLogoBtn = document.getElementById('btn-clear-app-logo');
+
+  function applyAppLogoToSidebar(dataUrl) {
+    const sidebarImg = document.getElementById('sidebar-app-logo');
+    const sidebarIcon = document.getElementById('sidebar-default-icon');
+    if (dataUrl) {
+      sidebarImg.src = dataUrl;
+      sidebarImg.style.display = 'block';
+      if (sidebarIcon) sidebarIcon.style.display = 'none';
+    } else {
+      sidebarImg.src = '';
+      sidebarImg.style.display = 'none';
+      if (sidebarIcon) sidebarIcon.style.display = '';
+    }
+  }
+
+  const savedAppLogo = localStorage.getItem('iplane_app_logo');
+  if (savedAppLogo) {
+    settingsAppLogoPreview.src = savedAppLogo;
+    appLogoPreviewContainer.style.display = 'flex';
+    applyAppLogoToSidebar(savedAppLogo);
+  }
+
+  appLogoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 256;
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/png');
+        localStorage.setItem('iplane_app_logo', dataUrl);
+        settingsAppLogoPreview.src = dataUrl;
+        appLogoPreviewContainer.style.display = 'flex';
+        applyAppLogoToSidebar(dataUrl);
+        pushLogoToSW(dataUrl);
+        e.target.value = '';
+        showToast('อัปโหลดโลโก้แอปสำเร็จ ✓');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearAppLogoBtn.addEventListener('click', () => {
+    localStorage.removeItem('iplane_app_logo');
+    appLogoInput.value = '';
+    appLogoPreviewContainer.style.display = 'none';
+    settingsAppLogoPreview.src = '';
+    applyAppLogoToSidebar(null);
+    pushLogoToSW(null);
+    showToast('ล้างโลโก้แอปเรียบร้อยแล้ว');
+  });
+
   // School Logo Upload binding
   const logoInput = document.getElementById('input-school-logo');
   const logoPreviewContainer = document.getElementById('logo-preview-container');
@@ -667,8 +734,6 @@ function initializeUI() {
         if (config.gasUrl) {
           syncConfigToCloud();
         }
-        // Update PWA icon with new logo
-        pushLogoToSW(compressedBase64);
         alert('อัปโหลดและบีบอัดโลโก้โรงเรียนพร้อมซิงก์ขึ้น Google Sheets สำเร็จ! ✓');
       };
       img.src = event.target.result;
@@ -691,8 +756,6 @@ function initializeUI() {
     if (config.gasUrl) {
       syncConfigToCloud();
     }
-    // Reset PWA icon to default
-    pushLogoToSW(null);
     alert('ล้างข้อมูลโลโก้โรงเรียนเรียบร้อยแล้ว');
   });
 
@@ -4354,12 +4417,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.31';
+  const CURRENT_VERSION = '3.32';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.32', note: 'แยกโลโก้แอป (PWA icon + sidebar) ออกจากโลโก้โรงเรียน (ใน PDF)' },
     { v: '3.31', note: 'PWA: ติดตั้งเป็นแอปได้ — service worker + ไอคอนจากโลโก้ที่อัปโหลดในหน้าตั้งค่า' },
     { v: '3.30', note: 'วันที่ลงนาม HOD — ปฏิทิน popup + แสดงผลเป็น พ.ศ. (เช่น 13 พ.ค. 2569)' },
     { v: '3.29', note: 'เปลี่ยนช่องวันที่ลงนาม HOD เป็น dropdown วัน/เดือนไทย/ปี พ.ศ.' },
@@ -4567,9 +4631,9 @@ window.addEventListener('appinstalled', () => {
   if (!('serviceWorker' in navigator)) return;
 
   navigator.serviceWorker.register('./sw.js').then(reg => {
-    // Push logo to SW once it's ready
+    // Push app logo to SW once it's ready
     navigator.serviceWorker.ready.then(() => {
-      const logo = localStorage.getItem('iplane_school_logo');
+      const logo = localStorage.getItem('iplane_app_logo');
       pushLogoToSW(logo);
     });
   }).catch(err => console.warn('[PWA] SW registration failed:', err));
