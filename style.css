@@ -1237,17 +1237,19 @@ textarea:focus, input:focus, select:focus {
 .pdf-sig-line {
   width: 54mm;
   height: 10mm;
-  margin-bottom: 2mm;
+  margin-bottom: -3mm;
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
 
 .pdf-signature-image {
-  max-height: 11mm;
-  max-width: 36mm;
+  max-height: 10mm;
+  max-width: 38mm;
   object-fit: contain;
+  object-position: bottom center;
 }
 
 .pdf-sig-label {

@@ -4289,12 +4289,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.25';
+  const CURRENT_VERSION = '3.26';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.26', note: 'ลายเซ็นชิดเส้นประ — margin-bottom: -3mm ให้ก้นลายเซ็นทับเส้น เหมือนเซ็นบนกระดาษจริง' },
     { v: '3.25', note: 'แก้ saveClassLessons ให้เก็บ hodSignature+outcomesMode+สี+ฟอนต์ครบ (เดิม strip ทิ้ง)' },
     { v: '3.24', note: 'แก้ปุ่มอัปโหลด HOD — ใช้ button+JS.click() แทน label-hidden-input (ทำงานได้ทุก browser)' },
     { v: '3.23', note: 'แก้ preview ลายเซ็น HOD — พื้นขาว+ขอบ ให้เห็นลายเซ็นชัดเจน + scroll เข้าหาได้ทันที' },
