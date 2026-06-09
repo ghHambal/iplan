@@ -4201,7 +4201,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.19';
+  const CURRENT_VERSION = '3.20';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
