@@ -1613,25 +1613,21 @@ async function draftReflectionWithAI() {
   btnSpan.innerText = 'AI กำลังร่าง...';
 
   try {
-    const promptText = `คุณคือครูไทยที่กำลังเขียนบันทึกหลังการจัดการเรียนรู้ในแผนการสอนของตนเอง (ปพ.5)
-เขียนด้วยน้ำเสียงครูจริง กระชับ เป็นธรรมชาติ ไม่ใช้ภาษาทางการจนเกินไป ความยาวพอเหมาะ (ย่อหน้าสั้นๆ 3-5 ประโยค)
+    const promptText = `คุณคือครูไทยกำลังเขียนบันทึกหลังการจัดการเรียนรู้ (ปพ.5) ของตนเอง
+เขียนสั้น กระชับ น้ำเสียงครูจริง ไม่ใช้ภาษาทางการ แต่ละส่วนไม่เกิน 2-3 ประโยค
 
 ข้อมูลแผนการสอน:
 - วิชา: ${currentCourse ? `${currentCourse.name} (${currentCourse.code})` : '-'}
 - ชั้นเรียน: ${currentClass ? currentClass.name : '-'}
-- หน่วยการเรียนรู้: ${plan.unit || '-'}
-- เรื่อง: ${plan.topic || '-'}
-- มาตรฐาน/ตัวชี้วัด: ${plan.standard || '-'}
-- จุดประสงค์การเรียนรู้: ${plan.objectives || '-'}
-- กิจกรรมการเรียนรู้: ${plan.activities || '-'}
-- การวัดประเมินผล: ${plan.assessment || '-'}
-- สื่อ/อุปกรณ์: ${plan.materials || '-'}${note ? `\n- บันทึกเพิ่มเติมจากครูเกี่ยวกับการสอนจริงครั้งนี้: ${note}` : ''}
+- หน่วย/เรื่อง: ${plan.unit || '-'} / ${plan.topic || '-'}
+- จุดประสงค์: ${plan.objectives || '-'}
+- กิจกรรม: ${plan.activities || '-'}${note ? `\n- สิ่งที่ครูสังเกตจริง: ${note}` : ''}
 
-ช่วยร่างข้อความ 2 ส่วน:
-1. "outcomes": ผลการจัดการเรียนรู้ — นักเรียนได้เรียนรู้/ทำอะไรได้บ้างหลังจบคาบนี้ อิงจากจุดประสงค์และกิจกรรมข้างต้น
-2. "solutions": ข้อเสนอแนะ / ปัญหาอุปสรรคที่อาจพบ และแนวทางแก้ไขสำหรับครั้งถัดไป
+ร่างข้อความ 2 ส่วนสั้นๆ:
+1. "outcomes": ผลการจัดการเรียนรู้ — นักเรียนได้เรียนรู้อะไร บรรลุจุดประสงค์ข้อใดบ้าง และมีปัญหา/อุปสรรคที่พบในคาบนี้อะไรบ้าง (รวมทั้งผลและปัญหาไว้ในส่วนเดียวกัน)
+2. "solutions": แนวทางแก้ไข — วิธีแก้ปัญหาหรือข้อที่พบใน "outcomes" เพื่อปรับปรุงการสอนครั้งถัดไป
 
-ตอบกลับเป็น JSON เท่านั้น รูปแบบ {"outcomes": "...", "solutions": "..."} ห้ามมีข้อความอื่นนอกเหนือจาก JSON`;
+ตอบกลับเป็น JSON เท่านั้น {"outcomes": "...", "solutions": "..."} ห้ามมีข้อความอื่น`;
 
     const modelName = config.geminiModel || DEFAULT_GEMINI_MODEL;
     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(config.geminiApiKey)}`, {
@@ -4144,7 +4140,7 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.14';
+  const CURRENT_VERSION = '3.15';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 

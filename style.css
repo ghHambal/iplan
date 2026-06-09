@@ -1966,4 +1966,43 @@ body:not(.workspace-active) .nav-section-title {
   .app-header {
     background-color: rgba(255, 255, 255, 0.75);
   }
+
+  /* input[type=password] ไม่อยู่ในกลุ่ม textarea/input ด้านบน ทำให้ช่อง API Key แสดงตัวอักษรขาวบนพื้นขาว */
+  input[type="password"] {
+    background-color: rgba(15, 23, 42, 0.04);
+    color: var(--text-main);
+  }
+
+  /* Focus state ของ inputs — black overlay ดูเข้มเกินไปบนพื้นขาว */
+  textarea:focus, input:focus, select:focus {
+    background-color: rgba(15, 23, 42, 0.06);
+  }
+
+  /* Active sidebar item ยังใช้โทนอินดิโกของธีมเดิม เปลี่ยนเป็นชมพูให้ตรงกับธีมสว่าง */
+  .week-item.active {
+    background-color: rgba(190, 24, 93, 0.08);
+    border-color: rgba(190, 24, 93, 0.3);
+    box-shadow: 0 4px 20px rgba(190, 24, 93, 0.06);
+  }
+  .mobile-week-chip.active {
+    background-color: rgba(190, 24, 93, 0.08);
+    border-color: var(--primary);
+  }
+
+  /* Dark overlay backgrounds กลายเป็นสีโคลนบนพื้นขาว เปลี่ยนเป็นสีอ่อนของธีม */
+  .lesson-meta-grid {
+    background-color: rgba(190, 24, 93, 0.04);
+  }
+  .course-card-header {
+    background-color: rgba(190, 24, 93, 0.05);
+  }
+  .modal-header,
+  .modal-footer {
+    background-color: rgba(15, 23, 42, 0.03);
+  }
+
+  /* Badge รหัสวิชา — โทนอินดิโก ไม่ตรงกับ primary สีชมพูในธีมสว่าง */
+  .course-card-code {
+    background-color: rgba(190, 24, 93, 0.1);
+  }
 }
