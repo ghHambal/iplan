@@ -1897,43 +1897,45 @@ body:not(.workspace-active) .nav-section-title {
 
 /* โหมดสว่าง — ตามค่าที่ระบบปฏิบัติการ/เบราว์เซอร์ของผู้ใช้ตั้งไว้ (prefers-color-scheme)
    โทนสี: ชมพูเข้มเป็นสีหลัก, เขียวเป็นสีรอง/success, พื้นขาวเป็นพื้นหลังหลัก */
+/* ======================================================
+   LIGHT MODE — Clean white/gray/black, สบายตา อ่านชัด
+   ====================================================== */
 @media (prefers-color-scheme: light) {
   :root {
-    --bg-app: #ffffff;
-    --bg-sidebar: #fdf2f8;
-    --card-bg: rgba(255, 255, 255, 0.8);
+    --bg-app: #f4f4f5;           /* zinc-100 — พื้นหลังเทาอ่อนมาก */
+    --bg-sidebar: #ffffff;        /* sidebar ขาวสะอาด */
+    --card-bg: #ffffff;           /* การ์ดขาวล้วน */
     --overlay-rgb: 15, 23, 42;
-    --card-border: rgba(15, 23, 42, 0.08);
-    --card-glow: rgba(190, 24, 93, 0.05);
+    --card-border: rgba(0, 0, 0, 0.08);
+    --card-glow: rgba(0, 0, 0, 0.02);
 
-    --text-main: #1e1b2e;
-    --text-muted: #6b7280;
+    --text-main: #111827;         /* gray-900 — ใกล้ดำ อ่านง่าย */
+    --text-muted: #6b7280;        /* gray-500 */
 
-    --primary: #be185d;
-    --primary-hover: #9d174d;
-    --primary-glow: rgba(190, 24, 93, 0.28);
+    --primary: #18181b;           /* zinc-900 — ดำเกือบสนิท สะอาด */
+    --primary-hover: #3f3f46;
+    --primary-glow: rgba(24, 24, 27, 0.08);
 
-    --secondary: #f1f5f9;
-    --secondary-hover: #e2e8f0;
+    --secondary: #f4f4f5;
+    --secondary-hover: #e4e4e7;
 
     --success: #059669;
     --success-hover: #047857;
-    --success-glow: rgba(5, 150, 105, 0.18);
+    --success-glow: rgba(5, 150, 105, 0.15);
 
     --danger: #dc2626;
     --danger-hover: #b91c1c;
-    --danger-glow: rgba(220, 38, 38, 0.15);
+    --danger-glow: rgba(220, 38, 38, 0.12);
 
-    --border-focus: #be185d;
-    --shadow-premium: 0 10px 30px -10px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.05);
+    --border-focus: #71717a;      /* zinc-500 */
+    --shadow-premium: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
   }
 
   body {
     color: var(--text-main);
   }
 
-  /* องค์ประกอบเหล่านี้ใช้ "ตัวอักษรสีขาวตายตัว" เพราะออกแบบบนพื้นการ์ดสีเข้มของธีมเดิม
-     พอพื้นการ์ดเปลี่ยนเป็นสีอ่อนในโหมดสว่าง ต้องสลับเป็นสีตัวอักษรเข้มเพื่อให้อ่านออก */
+  /* ตัวอักษรสีขาวที่ใช้บนพื้นเข้มของธีมมืด — ต้องเปลี่ยนเป็นเข้มในธีมสว่าง */
   .week-item.active,
   .mobile-week-chip.active,
   .stat-value,
@@ -1946,63 +1948,78 @@ body:not(.workspace-active) .nav-section-title {
     color: var(--text-main);
   }
 
-  textarea, input[type="url"], input[type="text"], input[type="date"], select {
-    background-color: rgba(15, 23, 42, 0.04);
+  /* Input/textarea — พื้นขาว ตัวอักษรดำ ครอบคลุมทุก type */
+  textarea,
+  input[type="url"],
+  input[type="text"],
+  input[type="date"],
+  input[type="password"],
+  select {
+    background-color: #ffffff;
     color: var(--text-main);
+    border-color: rgba(0, 0, 0, 0.12);
   }
 
-  /* โลโก้และหัวข้อแดชบอร์ดใช้ "ข้อความไล่สีขาว→ม่วง" ซึ่งจางหายไปบนพื้นขาว
-     เปลี่ยนเป็นไล่สีเข้ม→ชมพู (โทนใหม่) ให้อ่านออกและยังคงเอฟเฟกต์ไล่สีไว้ */
+  textarea:focus, input:focus, select:focus {
+    background-color: #ffffff;
+    border-color: #71717a;
+    box-shadow: 0 0 0 3px rgba(113, 113, 122, 0.12);
+  }
+
+  /* Logo + dashboard h1: gradient ขาว→ม่วงที่เดิมจางหาย → เปลี่ยนเป็นดำ→เทากลาง */
   .logo-text,
   .db-header-left h1 {
-    background: linear-gradient(135deg, var(--text-main) 30%, var(--primary) 100%);
+    background: linear-gradient(135deg, #111827 20%, #6b7280 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
-  /* แถบหัวข้อห้องเรียน (.app-header) ใช้พื้นสีกรมท่าเข้มแบบตายตัว ออกแบบมาคู่กับตัวอักษรสีอ่อนของธีมเดิม
-     พอข้อความเปลี่ยนเป็นสีเข้มตามธีมสว่าง พื้นต้องสว่างตามไปด้วย ไม่งั้นจะกลายเป็นตัวอักษรเข้มบนพื้นเข้ม อ่านไม่ออก */
+  /* App header — ขาวพร้อม border ล่างบางๆ แทน backdrop สีกรมท่าเข้ม */
   .app-header {
-    background-color: rgba(255, 255, 255, 0.75);
+    background-color: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   }
 
-  /* input[type=password] ไม่อยู่ในกลุ่ม textarea/input ด้านบน ทำให้ช่อง API Key แสดงตัวอักษรขาวบนพื้นขาว */
-  input[type="password"] {
-    background-color: rgba(15, 23, 42, 0.04);
-    color: var(--text-main);
-  }
-
-  /* Focus state ของ inputs — black overlay ดูเข้มเกินไปบนพื้นขาว */
-  textarea:focus, input:focus, select:focus {
-    background-color: rgba(15, 23, 42, 0.06);
-  }
-
-  /* Active sidebar item ยังใช้โทนอินดิโกของธีมเดิม เปลี่ยนเป็นชมพูให้ตรงกับธีมสว่าง */
+  /* Active sidebar item — เทาอ่อน border เทาเข้มกว่า ไม่มี color glow */
   .week-item.active {
-    background-color: rgba(190, 24, 93, 0.08);
-    border-color: rgba(190, 24, 93, 0.3);
-    box-shadow: 0 4px 20px rgba(190, 24, 93, 0.06);
+    background-color: #f4f4f5;
+    border-color: rgba(0, 0, 0, 0.18);
+    box-shadow: none;
   }
   .mobile-week-chip.active {
-    background-color: rgba(190, 24, 93, 0.08);
-    border-color: var(--primary);
+    background-color: #f4f4f5;
+    border-color: rgba(0, 0, 0, 0.25);
   }
 
-  /* Dark overlay backgrounds กลายเป็นสีโคลนบนพื้นขาว เปลี่ยนเป็นสีอ่อนของธีม */
+  /* Sidebar footer — เทาอ่อนเหมือนพื้นหลัง แทน black overlay */
+  .sidebar-footer {
+    background-color: #f4f4f5;
+  }
+
+  /* Section backgrounds — ใช้ zinc-50 แทน dark overlay */
   .lesson-meta-grid {
-    background-color: rgba(190, 24, 93, 0.04);
+    background-color: #fafafa;
+    border-color: rgba(0, 0, 0, 0.06);
   }
   .course-card-header {
-    background-color: rgba(190, 24, 93, 0.05);
+    background-color: #fafafa;
   }
   .modal-header,
   .modal-footer {
-    background-color: rgba(15, 23, 42, 0.03);
+    background-color: #fafafa;
+  }
+  .add-builder-box {
+    background-color: #f4f4f5;
+  }
+  .date-preview-list {
+    background-color: #f4f4f5;
   }
 
-  /* Badge รหัสวิชา — โทนอินดิโก ไม่ตรงกับ primary สีชมพูในธีมสว่าง */
+  /* Badge รหัสวิชา — เทาอ่อน ตัวอักษรเทาเข้ม */
   .course-card-code {
-    background-color: rgba(190, 24, 93, 0.1);
+    background-color: rgba(0, 0, 0, 0.06);
+    color: #52525b;
   }
 }
