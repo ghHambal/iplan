@@ -326,6 +326,18 @@ let penColorStudent = '#0000FF';
 const penWidthStudent = 2.5;
 let currentSignatureStudentDataUrl = '';
 
+function applyAppLogoToSidebar(dataUrl) {
+  const sidebarImg = document.getElementById('sidebar-app-logo');
+  const sidebarIcon = document.getElementById('sidebar-default-icon');
+  if (dataUrl) {
+    if (sidebarImg) { sidebarImg.src = dataUrl; sidebarImg.style.display = 'block'; }
+    if (sidebarIcon) sidebarIcon.style.display = 'none';
+  } else {
+    if (sidebarImg) { sidebarImg.src = ''; sidebarImg.style.display = 'none'; }
+    if (sidebarIcon) sidebarIcon.style.display = '';
+  }
+}
+
 // 5. App Initialization on DOM Load
 document.addEventListener('DOMContentLoaded', () => {
   // Check URL parameters for auto configuration (useful for easy setup across devices)
@@ -620,20 +632,6 @@ function initializeUI() {
   const appLogoPreviewContainer = document.getElementById('app-logo-preview-container');
   const settingsAppLogoPreview = document.getElementById('settings-app-logo-preview');
   const clearAppLogoBtn = document.getElementById('btn-clear-app-logo');
-
-  function applyAppLogoToSidebar(dataUrl) {
-    const sidebarImg = document.getElementById('sidebar-app-logo');
-    const sidebarIcon = document.getElementById('sidebar-default-icon');
-    if (dataUrl) {
-      sidebarImg.src = dataUrl;
-      sidebarImg.style.display = 'block';
-      if (sidebarIcon) sidebarIcon.style.display = 'none';
-    } else {
-      sidebarImg.src = '';
-      sidebarImg.style.display = 'none';
-      if (sidebarIcon) sidebarIcon.style.display = '';
-    }
-  }
 
   const savedAppLogo = localStorage.getItem('iplane_app_logo');
   if (savedAppLogo) {
@@ -2330,6 +2328,18 @@ async function fetchConfigFromCloud() {
       }
       changed = true;
     }
+    if (remoteConfig.appLogo) {
+      localStorage.setItem('iplane_app_logo', remoteConfig.appLogo);
+      const appLogoPreview = document.getElementById('settings-app-logo-preview');
+      const appLogoContainer = document.getElementById('app-logo-preview-container');
+      if (appLogoPreview && appLogoContainer) {
+        appLogoPreview.src = remoteConfig.appLogo;
+        appLogoContainer.style.display = 'flex';
+      }
+      applyAppLogoToSidebar(remoteConfig.appLogo);
+      pushLogoToSW(remoteConfig.appLogo);
+      changed = true;
+    }
     if (remoteConfig.teacherSignature) {
       localStorage.setItem('iplane_teacher_signature', remoteConfig.teacherSignature);
       setTimeout(() => {
@@ -2391,6 +2401,7 @@ async function syncConfigToCloud() {
       schoolName: profile.schoolName,
       folderId: config.folderId,
       schoolLogo: localStorage.getItem('iplane_school_logo') || '',
+      appLogo: localStorage.getItem('iplane_app_logo') || '',
       teacherSignature: localStorage.getItem('iplane_teacher_signature') || ''
     };
     const response = await fetch(config.gasUrl, {
@@ -4417,12 +4428,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.32';
+  const CURRENT_VERSION = '3.33';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.33', note: 'sync โลโก้แอปขึ้น Google Sheets + แก้ปุ่มบันทึกใน settings หายบนมือถือ (100dvh)' },
     { v: '3.32', note: 'แยกโลโก้แอป (PWA icon + sidebar) ออกจากโลโก้โรงเรียน (ใน PDF)' },
     { v: '3.31', note: 'PWA: ติดตั้งเป็นแอปได้ — service worker + ไอคอนจากโลโก้ที่อัปโหลดในหน้าตั้งค่า' },
     { v: '3.30', note: 'วันที่ลงนาม HOD — ปฏิทิน popup + แสดงผลเป็น พ.ศ. (เช่น 13 พ.ค. 2569)' },
