@@ -712,6 +712,8 @@ function initializeUI() {
         hodSigPlanImg.src = b64;
         hodSigPlanPreview.style.display = 'block';
         clearHodSigPlanBtn.style.display = 'inline-flex';
+        // Scroll preview into view so user sees the result
+        hodSigPlanPreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         populatePrintTemplate();
       };
       img.src = evt.target.result;
@@ -4274,12 +4276,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.22';
+  const CURRENT_VERSION = '3.23';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.23', note: 'แก้ preview ลายเซ็น HOD — พื้นขาว+ขอบ ให้เห็นลายเซ็นชัดเจน + scroll เข้าหาได้ทันที' },
     { v: '3.22', note: 'ย้ายลายเซ็น HOD ให้เก็บต่อแผนการสอน (ไม่ใช่ global) — อัปโหลดได้ที่ panel ด้านขวา' },
     { v: '3.21', note: 'เพิ่มอัปโหลดลายเซ็น HOD PNG + แสดงในช่องลงชื่อหัวหน้ากลุ่มสาระใน PDF' },
     { v: '3.20', note: 'ปรับลายเซ็นใน PDF ให้ชิดเส้นประด้านล่าง (align-items: flex-end)' },
