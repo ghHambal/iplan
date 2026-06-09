@@ -2022,4 +2022,11 @@ body:not(.workspace-active) .nav-section-title {
     background-color: rgba(0, 0, 0, 0.06);
     color: #52525b;
   }
+
+  /* Version badge ใน sidebar — อินดิโกบนพื้นขาวดูลอย ให้ใช้เทาเข้มแทน */
+  .version-tag {
+    background-color: rgba(0, 0, 0, 0.06);
+    color: #52525b;
+    border-color: rgba(0, 0, 0, 0.1);
+  }
 }
