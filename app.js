@@ -684,26 +684,21 @@ function initializeUI() {
     alert('ล้างข้อมูลโลโก้โรงเรียนเรียบร้อยแล้ว');
   });
 
-  // ---- HOD Signature Upload ----
-  const hodSigInput = document.getElementById('input-hod-signature');
-  const hodSigPreviewContainer = document.getElementById('hod-sig-preview-container');
-  const hodSigPreviewImg = document.getElementById('hod-sig-preview-img');
-  const clearHodSigBtn = document.getElementById('btn-clear-hod-sig');
+  // ---- HOD Signature Upload (per-plan) ----
+  const hodSigPlanInput = document.getElementById('hod-sig-plan-input');
+  const hodSigPlanPreview = document.getElementById('hod-sig-plan-preview');
+  const hodSigPlanImg = document.getElementById('hod-sig-plan-img');
+  const clearHodSigPlanBtn = document.getElementById('btn-clear-hod-sig-plan');
 
-  const savedHodSig = localStorage.getItem('iplane_hod_signature');
-  if (savedHodSig) {
-    hodSigPreviewImg.src = savedHodSig;
-    hodSigPreviewContainer.style.display = 'flex';
-  }
-
-  hodSigInput.addEventListener('change', (e) => {
+  hodSigPlanInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const plan = lessonPlans[selectedIndex];
+    if (!plan) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       const img = new Image();
       img.onload = () => {
-        // resize ให้ max 300px เพื่อลด localStorage footprint
         const maxDim = 300;
         let w = img.width, h = img.height;
         if (w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
@@ -712,9 +707,11 @@ function initializeUI() {
         cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h);
         const b64 = cv.toDataURL('image/png');
-        localStorage.setItem('iplane_hod_signature', b64);
-        hodSigPreviewImg.src = b64;
-        hodSigPreviewContainer.style.display = 'flex';
+        plan.hodSignature = b64;
+        saveClassLessons(activeClassId, lessonPlans);
+        hodSigPlanImg.src = b64;
+        hodSigPlanPreview.style.display = 'block';
+        clearHodSigPlanBtn.style.display = 'inline-flex';
         populatePrintTemplate();
       };
       img.src = evt.target.result;
@@ -722,11 +719,13 @@ function initializeUI() {
     reader.readAsDataURL(file);
   });
 
-  clearHodSigBtn.addEventListener('click', () => {
-    localStorage.removeItem('iplane_hod_signature');
-    hodSigInput.value = '';
-    hodSigPreviewImg.src = '';
-    hodSigPreviewContainer.style.display = 'none';
+  clearHodSigPlanBtn.addEventListener('click', () => {
+    const plan = lessonPlans[selectedIndex];
+    if (plan) { plan.hodSignature = ''; saveClassLessons(activeClassId, lessonPlans); }
+    hodSigPlanInput.value = '';
+    hodSigPlanImg.src = '';
+    hodSigPlanPreview.style.display = 'none';
+    clearHodSigPlanBtn.style.display = 'none';
     populatePrintTemplate();
   });
   // ---- End HOD Signature Upload ----
@@ -1548,7 +1547,21 @@ function selectLesson(index) {
   drawStrokes();
   strokesStudent = [];
   drawStrokesStudent();
-  
+
+  // Load per-plan HOD signature
+  const hodPlanPreview = document.getElementById('hod-sig-plan-preview');
+  const hodPlanImg = document.getElementById('hod-sig-plan-img');
+  const hodClearBtn = document.getElementById('btn-clear-hod-sig-plan');
+  if (plan.hodSignature) {
+    hodPlanImg.src = plan.hodSignature;
+    hodPlanPreview.style.display = 'block';
+    hodClearBtn.style.display = 'inline-flex';
+  } else {
+    hodPlanImg.src = '';
+    hodPlanPreview.style.display = 'none';
+    hodClearBtn.style.display = 'none';
+  }
+
   document.querySelector('.app-main').scrollTop = 0;
 }
 
@@ -2955,10 +2968,10 @@ function populatePrintTemplate() {
     const printHodName = pageEl.querySelector('#pdf-print-hod-name');
     if (printHodName) printHodName.innerText = profile.hodName || '';
 
-    // HOD signature image
+    // HOD signature image (per-plan)
     const sigHodImg = pageEl.querySelector('#pdf-print-sig-hod');
     if (sigHodImg) {
-      const hodSig = localStorage.getItem('iplane_hod_signature') || '';
+      const hodSig = plan.hodSignature || '';
       if (hodSig) {
         sigHodImg.src = hodSig;
         sigHodImg.style.display = 'block';
@@ -4261,12 +4274,16 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.21';
+  const CURRENT_VERSION = '3.22';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.22', note: 'ย้ายลายเซ็น HOD ให้เก็บต่อแผนการสอน (ไม่ใช่ global) — อัปโหลดได้ที่ panel ด้านขวา' },
+    { v: '3.21', note: 'เพิ่มอัปโหลดลายเซ็น HOD PNG + แสดงในช่องลงชื่อหัวหน้ากลุ่มสาระใน PDF' },
+    { v: '3.20', note: 'ปรับลายเซ็นใน PDF ให้ชิดเส้นประด้านล่าง (align-items: flex-end)' },
+    { v: '3.19', note: 'เพิ่ม color picker + font selector (Sarabun/Itim/Charmonman) ในบันทึกหลังสอน' },
     { v: '3.18', note: 'แก้ข้อความใน textarea มองไม่เห็นในธีมสว่าง + เพิ่ม changelog popup (ปุ่มเวอร์ชัน)' },
     { v: '3.17', note: 'เพิ่ม cache-busting ให้ CSS/JS ป้องกันเบราว์เซอร์ใช้ไฟล์เก่า + ปรับ version badge' },
     { v: '3.16', note: 'เปลี่ยน light mode ทั้งหมดเป็นโทนขาว/เทา/ดำ สะอาด สบายตา' },

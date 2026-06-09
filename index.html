@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.21">
+  <link rel="stylesheet" href="style.css?v=3.22">
 </head>
 
 <body class="dark-theme">
@@ -36,7 +36,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.21</span>
+        <span class="version-tag" id="app-version-tag">v3.22</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -522,6 +522,33 @@
               </div>
             </div>
           </div>
+
+          <!-- HOD Signature Upload (per-plan) -->
+          <div class="card glass-card signature-card" style="margin-top: 20px;" id="hod-sig-card">
+            <div class="card-header">
+              <i data-lucide="stamp" class="card-icon pen-icon"></i>
+              <h2>ลายเซ็นหัวหน้ากลุ่มสาระ (เฉพาะแผนนี้)</h2>
+            </div>
+            <div class="card-body">
+              <div id="hod-sig-plan-preview" style="display:none; text-align:center; margin-bottom:12px;">
+                <img id="hod-sig-plan-img" src="" alt="ลายเซ็น HOD"
+                  style="max-height:64px; max-width:220px; object-fit:contain;">
+              </div>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label class="btn btn-secondary" style="cursor:pointer; margin:0; display:inline-flex; align-items:center; gap:6px;">
+                  <i data-lucide="upload"></i>
+                  <span>อัปโหลดลายเซ็น PNG</span>
+                  <input type="file" id="hod-sig-plan-input" accept="image/png,image/jpeg,image/gif" style="display:none;">
+                </label>
+                <button type="button" id="btn-clear-hod-sig-plan" class="btn btn-secondary" style="display:none;">
+                  <i data-lucide="trash-2"></i>
+                  <span>ลบลายเซ็น</span>
+                </button>
+              </div>
+              <small style="color:var(--text-muted); margin-top:8px; display:block;">ลายเซ็นนี้ใช้เฉพาะแผนการสอนนี้เท่านั้น</small>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -635,19 +662,6 @@
               <div class="form-group">
                 <label for="input-hod-name">ชื่อหัวหน้ากลุ่มสาระ (ลงท้ายเอกสาร)</label>
                 <input type="text" id="input-hod-name" placeholder="เช่น นางมารียานี แวนาแฮ">
-              </div>
-
-              <div class="form-group">
-                <label for="input-hod-signature">ลายเซ็นหัวหน้ากลุ่มสาระ (อัปโหลดรูป PNG)</label>
-                <input type="file" id="input-hod-signature" accept="image/png,image/jpeg,image/gif">
-                <small class="form-help">รูปลายเซ็นจะปรากฏในช่องลงชื่อหัวหน้ากลุ่มสาระใน PDF โดยอัตโนมัติ</small>
-                <div class="logo-preview-box" id="hod-sig-preview-container"
-                  style="display:none; margin-top:8px; padding:8px; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); border-radius:8px; align-items:center; gap:10px;">
-                  <img id="hod-sig-preview-img" src="" alt="ลายเซ็น HOD"
-                    style="max-height:48px; max-width:160px; object-fit:contain; display:block;">
-                  <button type="button" id="btn-clear-hod-sig" class="btn btn-secondary"
-                    style="font-size:11px; padding:4px 10px; white-space:nowrap;">ลบลายเซ็น</button>
-                </div>
               </div>
 
               <div class="form-group">
@@ -1267,7 +1281,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.21"></script>
+  <script src="app.js?v=3.22"></script>
 </body>
 
 </html>
