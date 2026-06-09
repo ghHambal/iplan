@@ -545,7 +545,7 @@ function saveClassLessons(classId, runtimePlans) {
     // Persist optional per-plan fields without stripping them
     const extra = ['outcomesMode','solutionsMode',
                    'outcomesColor','outcomesFont','solutionsColor','solutionsFont',
-                   'outcomesDrawStrokes','solutionsDrawStrokes','hodSignature'];
+                   'outcomesDrawStrokes','solutionsDrawStrokes','hodSignature','hodSignatureDate'];
     extra.forEach(k => { if (p[k] !== undefined && p[k] !== null && p[k] !== '') obj[k] = p[k]; });
     return obj;
   });
@@ -741,6 +741,16 @@ function initializeUI() {
     hodSigPlanImg.src = '';
     hodSigPlanPreview.style.display = 'none';
     clearHodSigPlanBtn.style.display = 'none';
+    populatePrintTemplate();
+  });
+
+  // HOD date input (per-plan)
+  const hodSigDateInput = document.getElementById('hod-sig-date-input');
+  hodSigDateInput.addEventListener('change', () => {
+    const plan = lessonPlans[selectedIndex];
+    if (!plan) return;
+    plan.hodSignatureDate = hodSigDateInput.value;
+    saveClassLessons(activeClassId, lessonPlans);
     populatePrintTemplate();
   });
   // ---- End HOD Signature Upload ----
@@ -1576,6 +1586,10 @@ function selectLesson(index) {
     hodPlanPreview.style.display = 'none';
     hodClearBtn.style.display = 'none';
   }
+
+  // Load per-plan HOD date
+  const hodDateInput = document.getElementById('hod-sig-date-input');
+  if (hodDateInput) hodDateInput.value = plan.hodSignatureDate || '';
 
   document.querySelector('.app-main').scrollTop = 0;
 }
@@ -3010,7 +3024,11 @@ function populatePrintTemplate() {
     if (printDateSigRoom) printDateSigRoom.innerText = plan.date || '-';
 
     const printDateSigHod = pageEl.querySelector('#pdf-print-date-sig-hod');
-    if (printDateSigHod) printDateSigHod.innerText = '...................................';
+    if (printDateSigHod) {
+      printDateSigHod.innerText = plan.hodSignatureDate
+        ? formatDisplayDate(plan.hodSignatureDate)
+        : '...................................';
+    }
 
     container.appendChild(pageEl);
     pageCount++;
@@ -4289,12 +4307,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.27';
+  const CURRENT_VERSION = '3.28';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.28', note: 'เพิ่มช่อง "วันที่ลงนาม" HOD ในการ์ด — ส่งวันที่ไปแสดงในเอกสาร PDF ต่อแผน' },
     { v: '3.27', note: 'format ลายเซ็นหัวหน้าห้อง/ครูผู้สอน เป็น "ลงชื่อ ..... ตำแหน่ง" เหมือน HOD + กึ่งกลาง' },
     { v: '3.26', note: 'ลายเซ็นชิดเส้นประ — margin-bottom: -3mm ให้ก้นลายเซ็นทับเส้น เหมือนเซ็นบนกระดาษจริง' },
     { v: '3.25', note: 'แก้ saveClassLessons ให้เก็บ hodSignature+outcomesMode+สี+ฟอนต์ครบ (เดิม strip ทิ้ง)' },

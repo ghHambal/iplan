@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.27">
+  <link rel="stylesheet" href="style.css?v=3.28">
 </head>
 
 <body class="dark-theme">
@@ -36,7 +36,7 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.27</span>
+        <span class="version-tag" id="app-version-tag">v3.28</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -545,6 +545,11 @@
                   <i data-lucide="trash-2"></i>
                   <span>ลบลายเซ็น</span>
                 </button>
+              </div>
+              <div style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <label for="hod-sig-date-input" style="font-size:13px; color:var(--text-muted); white-space:nowrap;">วันที่ลงนาม:</label>
+                <input type="date" id="hod-sig-date-input"
+                  style="flex:1; min-width:140px; padding:5px 10px; background:var(--secondary); border:1px solid var(--card-border); border-radius:6px; color:var(--text-main); font-size:13px;">
               </div>
               <small style="color:var(--text-muted); margin-top:8px; display:block;">ลายเซ็นนี้ใช้เฉพาะแผนการสอนนี้เท่านั้น</small>
             </div>
@@ -1282,7 +1287,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.27"></script>
+  <script src="app.js?v=3.28"></script>
 </body>
 
 </html>
