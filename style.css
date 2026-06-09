@@ -2029,4 +2029,27 @@ body:not(.workspace-active) .nav-section-title {
     color: #52525b;
     border-color: rgba(0, 0, 0, 0.1);
   }
+
+  /* .content-box ใช้สี #e5e7eb (เทาอ่อนมาก สำหรับพื้นเข้ม) — บนพื้นขาวแทบมองไม่เห็น */
+  .content-box {
+    color: var(--text-main);
+    background-color: #fafafa;
+  }
+
+  /* .topic-highlight ยังใช้โทนอินดิโก เปลี่ยนเป็น zinc ให้ตรงธีม */
+  .topic-highlight {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-left-color: #52525b;
+  }
+
+  /* .week-item-topic (คำอธิบายสั้นๆ ใต้ชื่อแผน) — ให้เห็นชัดขึ้นในธีมสว่าง */
+  .week-item-topic {
+    color: #52525b;
+  }
+
+  /* ::placeholder — โทนขาวจากธีมมืดจางหายบนพื้นขาว */
+  textarea::placeholder,
+  input::placeholder {
+    color: #a1a1aa;
+  }
 }

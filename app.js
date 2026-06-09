@@ -4140,9 +4140,58 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.17';
+  const CURRENT_VERSION = '3.18';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
+
+  // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
+  const CHANGELOG = [
+    { v: '3.18', note: 'แก้ข้อความใน textarea มองไม่เห็นในธีมสว่าง + เพิ่ม changelog popup (ปุ่มเวอร์ชัน)' },
+    { v: '3.17', note: 'เพิ่ม cache-busting ให้ CSS/JS ป้องกันเบราว์เซอร์ใช้ไฟล์เก่า + ปรับ version badge' },
+    { v: '3.16', note: 'เปลี่ยน light mode ทั้งหมดเป็นโทนขาว/เทา/ดำ สะอาด สบายตา' },
+    { v: '3.15', note: 'ปรับ light mode ให้ครอบคลุมขึ้น + AI prompt สั้นกระชับ รวมปัญหาไว้ใน outcomes' },
+    { v: '3.14', note: 'ให้ครูระบุชื่อรุ่น Gemini model เองได้ในหน้าตั้งค่า' },
+    { v: '3.13', note: 'เพิ่มผู้ช่วย AI ร่างบันทึกหลังสอน + รองรับ light/dark mode ตามระบบ' },
+  ];
+
+  function showChangelog() {
+    const existing = document.getElementById('changelog-modal-overlay');
+    if (existing) { existing.remove(); return; }
+    const rows = CHANGELOG.map(c => `
+      <tr>
+        <td style="padding:6px 12px 6px 0; white-space:nowrap; font-weight:600; color:var(--primary); font-size:12px;">v${c.v}</td>
+        <td style="padding:6px 0; font-size:13px; color:var(--text-main); line-height:1.5;">${c.note}</td>
+      </tr>`).join('');
+    const overlay = document.createElement('div');
+    overlay.id = 'changelog-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:flex-start;justify-content:flex-start;padding:70px 0 0 16px;pointer-events:none;';
+    overlay.innerHTML = `
+      <div style="pointer-events:auto;background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.25);padding:20px 24px;min-width:340px;max-width:420px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <span style="font-weight:700;font-size:14px;color:var(--text-main);">ประวัติการอัปเดต iPlane</span>
+          <button id="changelog-close-btn" style="background:transparent;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0 2px;">×</button>
+        </div>
+        <table style="border-collapse:collapse;width:100%;"><tbody>${rows}</tbody></table>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('changelog-close-btn').addEventListener('click', () => overlay.remove());
+    document.addEventListener('click', function handler(e) {
+      if (!overlay.querySelector('div').contains(e.target) && e.target.id !== 'app-version-tag') {
+        overlay.remove();
+        document.removeEventListener('click', handler);
+      }
+    }, { capture: true });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const badge = document.getElementById('app-version-tag');
+    if (badge) {
+      badge.style.cursor = 'pointer';
+      badge.title = 'คลิกเพื่อดูประวัติการอัปเดต';
+      badge.addEventListener('click', showChangelog);
+    }
+  });
 
   async function checkVersion() {
     try {
