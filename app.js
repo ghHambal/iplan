@@ -662,11 +662,13 @@ function initializeUI() {
         localStorage.setItem('iplane_school_logo', compressedBase64);
         settingsLogoPreview.src = compressedBase64;
         logoPreviewContainer.style.display = 'flex';
-        
+
         // Auto-sync config to Google Sheets
         if (config.gasUrl) {
           syncConfigToCloud();
         }
+        // Update PWA icon with new logo
+        pushLogoToSW(compressedBase64);
         alert('อัปโหลดและบีบอัดโลโก้โรงเรียนพร้อมซิงก์ขึ้น Google Sheets สำเร็จ! ✓');
       };
       img.src = event.target.result;
@@ -689,6 +691,8 @@ function initializeUI() {
     if (config.gasUrl) {
       syncConfigToCloud();
     }
+    // Reset PWA icon to default
+    pushLogoToSW(null);
     alert('ล้างข้อมูลโลโก้โรงเรียนเรียบร้อยแล้ว');
   });
 
@@ -4350,12 +4354,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.30';
+  const CURRENT_VERSION = '3.31';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.31', note: 'PWA: ติดตั้งเป็นแอปได้ — service worker + ไอคอนจากโลโก้ที่อัปโหลดในหน้าตั้งค่า' },
     { v: '3.30', note: 'วันที่ลงนาม HOD — ปฏิทิน popup + แสดงผลเป็น พ.ศ. (เช่น 13 พ.ค. 2569)' },
     { v: '3.29', note: 'เปลี่ยนช่องวันที่ลงนาม HOD เป็น dropdown วัน/เดือนไทย/ปี พ.ศ.' },
     { v: '3.28', note: 'เพิ่มช่อง "วันที่ลงนาม" HOD ในการ์ด — ส่งวันที่ไปแสดงในเอกสาร PDF ต่อแผน' },
@@ -4456,4 +4461,127 @@ function clearCanvas(type) {
 
   setInterval(checkVersion, CHECK_INTERVAL_MS);
   setTimeout(checkVersion, 5000); // ตรวจครั้งแรกหลังจาก 5 วินาที
+})();
+
+// ==========================================
+// 10. PWA — Service Worker + Install
+// ==========================================
+
+// Generate canvas PNG from logo (or default "iP" icon when logoDataUrl is null)
+function generatePWAIconBlob(logoDataUrl) {
+  return new Promise(resolve => {
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Rounded background
+    ctx.fillStyle = '#1e1b4b';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(0, 0, size, size, 80);
+    } else {
+      ctx.rect(0, 0, size, size);
+    }
+    ctx.fill();
+
+    function drawDefault() {
+      // Document shape
+      ctx.fillStyle = '#4f46e5';
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(96, 56, 320, 400, 24);
+      } else {
+        ctx.rect(96, 56, 320, 400);
+      }
+      ctx.fill();
+      // Ruled lines
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillRect(136, 130, 200, 20);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      [168, 200, 232, 264].forEach(y => ctx.fillRect(136, y, 240, 14));
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      [306, 338, 370].forEach(y => ctx.fillRect(136, y, 200, 14));
+      // iP label
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.font = 'bold 60px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('iP', 256, 418);
+      canvas.toBlob(resolve, 'image/png');
+    }
+
+    if (logoDataUrl) {
+      const img = new Image();
+      img.onload = () => {
+        const pad = 56;
+        const drawSize = size - pad * 2;
+        ctx.drawImage(img, pad, pad, drawSize, drawSize);
+        canvas.toBlob(resolve, 'image/png');
+      };
+      img.onerror = drawDefault;
+      img.src = logoDataUrl;
+    } else {
+      drawDefault();
+    }
+  });
+}
+
+// Send icon blob to service worker to cache as pwa-icon.png
+function pushLogoToSW(logoDataUrl) {
+  if (!('serviceWorker' in navigator)) return;
+
+  function send(sw) {
+    generatePWAIconBlob(logoDataUrl).then(blob => {
+      sw.postMessage({ type: 'SET_ICON', iconBlob: blob });
+    });
+  }
+
+  if (navigator.serviceWorker.controller) {
+    send(navigator.serviceWorker.controller);
+  } else {
+    // First load — wait for SW to take control
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (navigator.serviceWorker.controller) send(navigator.serviceWorker.controller);
+    }, { once: true });
+  }
+}
+
+// PWA install prompt
+let _pwaInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  const btn = document.getElementById('btn-pwa-install');
+  if (btn) btn.style.display = 'flex';
+});
+window.addEventListener('appinstalled', () => {
+  _pwaInstallPrompt = null;
+  const btn = document.getElementById('btn-pwa-install');
+  if (btn) btn.style.display = 'none';
+});
+
+// Register service worker and push current logo as icon
+(function initPWA() {
+  if (!('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    // Push logo to SW once it's ready
+    navigator.serviceWorker.ready.then(() => {
+      const logo = localStorage.getItem('iplane_school_logo');
+      pushLogoToSW(logo);
+    });
+  }).catch(err => console.warn('[PWA] SW registration failed:', err));
+
+  // Wire install button
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-pwa-install');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (!_pwaInstallPrompt) return;
+      _pwaInstallPrompt.prompt();
+      _pwaInstallPrompt.userChoice.then(() => { _pwaInstallPrompt = null; });
+    });
+  });
 })();

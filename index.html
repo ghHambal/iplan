@@ -21,7 +21,16 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.30">
+  <link rel="stylesheet" href="style.css?v=3.31">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="iPlane">
+  <link rel="apple-touch-icon" href="pwa-icon.png">
 </head>
 
 <body class="dark-theme">
@@ -36,13 +45,20 @@
           <i data-lucide="book-open" class="logo-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.30</span>
+        <span class="version-tag" id="app-version-tag">v3.31</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
         <button id="btn-dashboard" class="btn btn-primary btn-full">
           <i data-lucide="layout-dashboard"></i>
           <span>แดชบอร์ดหลัก (Dashboard)</span>
+        </button>
+      </div>
+
+      <div class="sidebar-action">
+        <button id="btn-pwa-install" class="btn btn-secondary btn-full" style="display:none; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border-color:transparent;">
+          <i data-lucide="download"></i>
+          <span>ติดตั้งเป็นแอป</span>
         </button>
       </div>
 
@@ -1296,7 +1312,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.30"></script>
+  <script src="app.js?v=3.31"></script>
 </body>
 
 </html>
