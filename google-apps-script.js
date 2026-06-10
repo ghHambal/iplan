@@ -185,7 +185,7 @@ function doGet(e) {
           result[key] = [];
         }
       });
-      ['teacherName', 'hodName', 'schoolName', 'folderId', 'gasUrl', 'schoolLogo', 'appLogo', 'teacherSignature'].forEach(key => {
+      ['teacherName', 'hodName', 'schoolName', 'folderId', 'gasUrl', 'schoolLogo', 'appLogo', 'teacherSignature', 'hodSignature'].forEach(key => {
         result[key] = config[key] || '';
       });
       return corsResponse({ status: 'success', config: result });
@@ -264,6 +264,9 @@ function doPost(e) {
       }
       if (payload.teacherSignature !== undefined) {
         writeConfig(ss, 'teacherSignature', payload.teacherSignature);
+      }
+      if (payload.hodSignature !== undefined) {
+        writeConfig(ss, 'hodSignature', payload.hodSignature);
       }
       // บันทึก GAS URL ลงชีทโดยอัตโนมัติด้วย
       try {

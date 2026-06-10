@@ -338,6 +338,24 @@ function applyAppLogoToSidebar(dataUrl) {
   }
 }
 
+// Refresh both the Settings preview and the workspace read-only preview
+// for the global, optional HOD signature image.
+function updateHodSignatureDisplay() {
+  const sig = localStorage.getItem('iplane_hod_signature') || '';
+
+  const displayPreview = document.getElementById('hod-sig-display-preview');
+  const displayImg = document.getElementById('hod-sig-display-img');
+  const emptyNote = document.getElementById('hod-sig-empty-note');
+  if (displayImg) displayImg.src = sig;
+  if (displayPreview) displayPreview.style.display = sig ? 'block' : 'none';
+  if (emptyNote) emptyNote.style.display = sig ? 'none' : 'block';
+
+  const settingsPreview = document.getElementById('settings-hod-signature-preview');
+  const settingsContainer = document.getElementById('hod-signature-preview-container');
+  if (settingsPreview) settingsPreview.src = sig;
+  if (settingsContainer) settingsContainer.style.display = sig ? 'flex' : 'none';
+}
+
 // 5. App Initialization on DOM Load
 document.addEventListener('DOMContentLoaded', () => {
   // Check URL parameters for auto configuration (useful for easy setup across devices)
@@ -557,7 +575,7 @@ function saveClassLessons(classId, runtimePlans) {
     // Persist optional per-plan fields without stripping them
     const extra = ['outcomesMode','solutionsMode',
                    'outcomesColor','outcomesFont','solutionsColor','solutionsFont',
-                   'outcomesDrawStrokes','solutionsDrawStrokes','hodSignature','hodSignatureDate'];
+                   'outcomesDrawStrokes','solutionsDrawStrokes','hodSignatureDate'];
     extra.forEach(k => { if (p[k] !== undefined && p[k] !== null && p[k] !== '') obj[k] = p[k]; });
     return obj;
   });
@@ -757,21 +775,15 @@ function initializeUI() {
     alert('ล้างข้อมูลโลโก้โรงเรียนเรียบร้อยแล้ว');
   });
 
-  // ---- HOD Signature Upload (per-plan) ----
-  const hodSigPlanInput = document.getElementById('hod-sig-plan-input');
-  const hodSigPlanPreview = document.getElementById('hod-sig-plan-preview');
-  const hodSigPlanImg = document.getElementById('hod-sig-plan-img');
-  const clearHodSigPlanBtn = document.getElementById('btn-clear-hod-sig-plan');
-  const uploadHodSigBtn = document.getElementById('btn-upload-hod-sig');
+  // ---- HOD Signature (global, optional — set in Settings) ----
+  const hodSigInput = document.getElementById('input-hod-signature');
+  const clearHodSigBtn = document.getElementById('btn-clear-hod-signature');
 
-  // Button opens file picker programmatically (reliable on all browsers)
-  uploadHodSigBtn.addEventListener('click', () => { hodSigPlanInput.click(); });
+  updateHodSignatureDisplay();
 
-  hodSigPlanInput.addEventListener('change', (e) => {
+  hodSigInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const plan = lessonPlans[selectedIndex];
-    if (!plan) { showToast('กรุณาเลือกแผนการสอนก่อนอัปโหลด', 3000); return; }
     const reader = new FileReader();
     reader.onload = (evt) => {
       const img = new Image();
@@ -784,14 +796,11 @@ function initializeUI() {
         cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h);
         const b64 = cv.toDataURL('image/png');
-        plan.hodSignature = b64;
-        saveClassLessons(activeClassId, lessonPlans);
-        hodSigPlanImg.src = b64;
-        hodSigPlanPreview.style.display = 'block';
-        clearHodSigPlanBtn.style.display = 'inline-flex';
-        hodSigPlanPreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        showToast('อัปโหลดลายเซ็น HOD เรียบร้อยแล้ว ✓', 2500);
+        localStorage.setItem('iplane_hod_signature', b64);
+        updateHodSignatureDisplay();
         populatePrintTemplate();
+        if (config.gasUrl) syncConfigToCloud();
+        showToast('อัปโหลดลายเซ็นหัวหน้ากลุ่มสาระเรียบร้อยแล้ว ✓', 2500);
       };
       img.onerror = () => showToast('ไม่สามารถอ่านไฟล์รูปภาพได้', 3000);
       img.src = evt.target.result;
@@ -800,13 +809,12 @@ function initializeUI() {
     e.target.value = ''; // reset so same file can be re-uploaded
   });
 
-  clearHodSigPlanBtn.addEventListener('click', () => {
-    const plan = lessonPlans[selectedIndex];
-    if (plan) { plan.hodSignature = ''; saveClassLessons(activeClassId, lessonPlans); }
-    hodSigPlanImg.src = '';
-    hodSigPlanPreview.style.display = 'none';
-    clearHodSigPlanBtn.style.display = 'none';
+  clearHodSigBtn.addEventListener('click', () => {
+    localStorage.removeItem('iplane_hod_signature');
+    updateHodSignatureDisplay();
     populatePrintTemplate();
+    if (config.gasUrl) syncConfigToCloud();
+    showToast('ลบลายเซ็นหัวหน้ากลุ่มสาระแล้ว — ช่องลายเซ็นในเอกสารจะเว้นว่างไว้ให้เซ็นเอง', 3000);
   });
 
   // HOD date dropdowns (per-plan) — พ.ศ.
@@ -849,7 +857,7 @@ function initializeUI() {
     setHodDateDisplay('');
     populatePrintTemplate();
   });
-  // ---- End HOD Signature Upload ----
+  // ---- End HOD Signature ----
 
   // Settings Modal open/close controls
   // Dashboard view bindings
@@ -1669,20 +1677,6 @@ function selectLesson(index) {
   strokesStudent = [];
   drawStrokesStudent();
 
-  // Load per-plan HOD signature
-  const hodPlanPreview = document.getElementById('hod-sig-plan-preview');
-  const hodPlanImg = document.getElementById('hod-sig-plan-img');
-  const hodClearBtn = document.getElementById('btn-clear-hod-sig-plan');
-  if (plan.hodSignature) {
-    hodPlanImg.src = plan.hodSignature;
-    hodPlanPreview.style.display = 'block';
-    hodClearBtn.style.display = 'inline-flex';
-  } else {
-    hodPlanImg.src = '';
-    hodPlanPreview.style.display = 'none';
-    hodClearBtn.style.display = 'none';
-  }
-
   // Load per-plan HOD date
   const _hodNative = document.getElementById('hod-date-native');
   const _hodText = document.getElementById('hod-date-display-text');
@@ -2283,6 +2277,15 @@ async function fetchConfigFromCloud() {
       // Ensure all classes have courseId
       classes.forEach(c => { if (!c.courseId) c.courseId = courses[0]?.id || 'c1'; });
       localStorage.setItem('iplane_classes', JSON.stringify(classes));
+      // Restore room leader signatures (synced per-class) into their localStorage slots
+      classes.forEach(c => {
+        if (c.leaderSignature) {
+          localStorage.setItem('iplane_student_signature_' + c.id, c.leaderSignature);
+        } else {
+          localStorage.removeItem('iplane_student_signature_' + c.id);
+        }
+      });
+      setTimeout(() => drawStrokesStudent(), 100);
       changed = true;
     }
 
@@ -2347,6 +2350,15 @@ async function fetchConfigFromCloud() {
       }, 100);
       changed = true;
     }
+    if (remoteConfig.hodSignature !== undefined) {
+      if (remoteConfig.hodSignature) {
+        localStorage.setItem('iplane_hod_signature', remoteConfig.hodSignature);
+      } else {
+        localStorage.removeItem('iplane_hod_signature');
+      }
+      updateHodSignatureDisplay();
+      changed = true;
+    }
 
     if (changed) {
       // Validate active IDs still exist after merge
@@ -2402,7 +2414,8 @@ async function syncConfigToCloud() {
       folderId: config.folderId,
       schoolLogo: localStorage.getItem('iplane_school_logo') || '',
       appLogo: localStorage.getItem('iplane_app_logo') || '',
-      teacherSignature: localStorage.getItem('iplane_teacher_signature') || ''
+      teacherSignature: localStorage.getItem('iplane_teacher_signature') || '',
+      hodSignature: localStorage.getItem('iplane_hod_signature') || ''
     };
     const response = await fetch(config.gasUrl, {
       method: 'POST',
@@ -3118,10 +3131,10 @@ function populatePrintTemplate() {
     const printHodName = pageEl.querySelector('#pdf-print-hod-name');
     if (printHodName) printHodName.innerText = profile.hodName || '';
 
-    // HOD signature image (per-plan)
+    // HOD signature image (global, optional)
     const sigHodImg = pageEl.querySelector('#pdf-print-sig-hod');
     if (sigHodImg) {
-      const hodSig = plan.hodSignature || '';
+      const hodSig = localStorage.getItem('iplane_hod_signature') || '';
       if (hodSig) {
         sigHodImg.src = hodSig;
         sigHodImg.style.display = 'block';
@@ -3448,9 +3461,19 @@ function drawStrokesStudent() {
   currentSignatureStudentDataUrl = canvasStudent.toDataURL('image/png');
 }
 
+// Persist the room leader signature into the class record so it syncs across devices
+function syncLeaderSignatureToClass(dataUrl) {
+  const classIdx = classes.findIndex(c => c.id === activeClassId);
+  if (classIdx === -1) return;
+  classes[classIdx].leaderSignature = dataUrl || '';
+  localStorage.setItem('iplane_classes', JSON.stringify(classes));
+  if (config.gasUrl) syncConfigToCloud();
+}
+
 function saveStudentSignatureToStorage(dataUrl) {
   if (dataUrl) {
     localStorage.setItem('iplane_student_signature_' + activeClassId, dataUrl);
+    syncLeaderSignatureToClass(dataUrl);
   }
 }
 
@@ -3465,18 +3488,21 @@ function clearStudentSignature() {
   }
   currentSignatureStudentDataUrl = '';
   localStorage.removeItem('iplane_student_signature_' + activeClassId);
+  syncLeaderSignatureToClass('');
 }
 
 function undoStudentSignatureStroke() {
   strokesStudent.pop();
   drawStrokesStudent();
-  
+
   if (strokesStudent.length === 0) {
     currentSignatureStudentDataUrl = '';
     localStorage.removeItem('iplane_student_signature_' + activeClassId);
+    syncLeaderSignatureToClass('');
   } else {
     currentSignatureStudentDataUrl = canvasStudent.toDataURL('image/png');
     localStorage.setItem('iplane_student_signature_' + activeClassId, currentSignatureStudentDataUrl);
+    syncLeaderSignatureToClass(currentSignatureStudentDataUrl);
   }
 }
 
@@ -4428,12 +4454,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.34';
+  const CURRENT_VERSION = '3.35';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.35', note: 'ลายเซ็นหัวหน้ากลุ่มสาระเป็นแบบเดียว ตั้งค่าได้ในหน้าการตั้งค่า (ไม่บังคับ) + ลายเซ็นหัวหน้าห้อง sync ขึ้น Cloud' },
     { v: '3.34', note: 'แก้ SW cache ค้างเวอร์ชันเก่า — network-first สำหรับไฟล์หลัก + ปุ่มโหลดใหม่ล้าง cache/SW จริง' },
     { v: '3.33', note: 'sync โลโก้แอปขึ้น Google Sheets + แก้ปุ่มบันทึกใน settings หายบนมือถือ (100dvh)' },
     { v: '3.32', note: 'แยกโลโก้แอป (PWA icon + sidebar) ออกจากโลโก้โรงเรียน (ใน PDF)' },
