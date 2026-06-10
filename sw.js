@@ -1,12 +1,17 @@
-const CACHE_NAME = 'iplane-v3.31';
+const CACHE_NAME = 'iplane-v3.34';
 const STATIC_ASSETS = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json',
-  './version.json',
   './fonts/sarabun.css'
+];
+
+// Core app files: always try network first so updates show immediately.
+// Cache is only a fallback for offline use.
+const NETWORK_FIRST_PATTERNS = [
+  /\/$|index\.html$/,
+  /style\.css$/,
+  /app\.js$/,
+  /manifest\.json$/,
+  /version\.json$/,
+  /sw\.js$/
 ];
 
 // ---- Generate default PWA icon via OffscreenCanvas ----
@@ -120,7 +125,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cache-first for everything else
+  const isNetworkFirst = NETWORK_FIRST_PATTERNS.some(re => re.test(url.pathname));
+
+  if (isNetworkFirst) {
+    // Network-first: always fetch fresh copy when online; cache as offline fallback
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone)).catch(() => {});
+        }
+        return response;
+      }).catch(() => caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        if (event.request.headers.get('accept') &&
+            event.request.headers.get('accept').includes('text/html')) {
+          return caches.match('./index.html');
+        }
+      }))
+    );
+    return;
+  }
+
+  // Cache-first for everything else (fonts, images, vendor libs)
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
@@ -130,11 +157,6 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(c => c.put(event.request, clone)).catch(() => {});
         }
         return response;
-      }).catch(() => {
-        if (event.request.headers.get('accept') &&
-            event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('./index.html');
-        }
       });
     })
   );

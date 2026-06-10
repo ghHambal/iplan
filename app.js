@@ -4428,12 +4428,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.33';
+  const CURRENT_VERSION = '3.34';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.34', note: 'แก้ SW cache ค้างเวอร์ชันเก่า — network-first สำหรับไฟล์หลัก + ปุ่มโหลดใหม่ล้าง cache/SW จริง' },
     { v: '3.33', note: 'sync โลโก้แอปขึ้น Google Sheets + แก้ปุ่มบันทึกใน settings หายบนมือถือ (100dvh)' },
     { v: '3.32', note: 'แยกโลโก้แอป (PWA icon + sidebar) ออกจากโลโก้โรงเรียน (ใน PDF)' },
     { v: '3.31', note: 'PWA: ติดตั้งเป็นแอปได้ — service worker + ไอคอนจากโลโก้ที่อัปโหลดในหน้าตั้งค่า' },
@@ -4521,7 +4522,7 @@ function clearCanvas(type) {
     ].join(';');
     banner.innerHTML = `
       <span>มีเวอร์ชันใหม่ v${newVer} พร้อมใช้งาน</span>
-      <button onclick="location.reload()" style="
+      <button onclick="forceReloadApp()" style="
         background:#fff; color:#6366f1; border:none; border-radius:8px;
         padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;">
         โหลดใหม่
@@ -4542,6 +4543,22 @@ function clearCanvas(type) {
 // ==========================================
 // 10. PWA — Service Worker + Install
 // ==========================================
+
+// Hard refresh: unregister SW + clear caches so the new version's files
+// are guaranteed to load (bypasses any stale cached index.html/app.js)
+async function forceReloadApp() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (_) {}
+  location.reload();
+}
 
 // Generate canvas PNG from logo (or default "iP" icon when logoDataUrl is null)
 function generatePWAIconBlob(logoDataUrl) {
