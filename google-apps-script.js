@@ -185,7 +185,7 @@ function doGet(e) {
           result[key] = [];
         }
       });
-      ['teacherName', 'hodName', 'schoolName', 'folderId', 'gasUrl', 'schoolLogo', 'teacherSignature'].forEach(key => {
+      ['teacherName', 'hodName', 'schoolName', 'folderId', 'gasUrl', 'schoolLogo', 'appLogo', 'teacherSignature'].forEach(key => {
         result[key] = config[key] || '';
       });
       return corsResponse({ status: 'success', config: result });
@@ -258,6 +258,9 @@ function doPost(e) {
       }
       if (payload.schoolLogo !== undefined) {
         writeConfig(ss, 'schoolLogo', payload.schoolLogo);
+      }
+      if (payload.appLogo !== undefined) {
+        writeConfig(ss, 'appLogo', payload.appLogo);
       }
       if (payload.teacherSignature !== undefined) {
         writeConfig(ss, 'teacherSignature', payload.teacherSignature);
