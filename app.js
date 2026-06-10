@@ -2417,11 +2417,14 @@ async function fetchConfigFromCloud() {
       classes.forEach(c => { if (!c.courseId) c.courseId = courses[0]?.id || 'c1'; });
       localStorage.setItem('iplane_classes', JSON.stringify(classes));
       // Restore room leader signatures (synced per-class) into their localStorage slots
+      // หมายเหตุ: ถ้า field นี้ไม่มีใน cloud เลย (ข้อมูลเก่าก่อนมีฟีเจอร์นี้) ห้ามลบลายเซ็นที่มีอยู่ในเครื่อง
       classes.forEach(c => {
-        if (c.leaderSignature) {
-          localStorage.setItem('iplane_student_signature_' + c.id, c.leaderSignature);
-        } else {
-          localStorage.removeItem('iplane_student_signature_' + c.id);
+        if (c.leaderSignature !== undefined) {
+          if (c.leaderSignature) {
+            localStorage.setItem('iplane_student_signature_' + c.id, c.leaderSignature);
+          } else {
+            localStorage.removeItem('iplane_student_signature_' + c.id);
+          }
         }
       });
       setTimeout(() => drawStrokesStudent(), 100);
@@ -2726,6 +2729,40 @@ function getSafeSheetName(courseCode, className) {
   return name.trim();
 }
 
+// Merge ข้อมูล "บันทึกหลังสอน" จากชีท (remote) เข้ากับข้อมูลในเครื่อง (local) แบบไม่เขียนทับ
+// — ถ้าฟิลด์ใดในเครื่องมีเนื้อหาอยู่แล้ว แต่ remote ว่าง/ไม่มี (ยังไม่ได้ sync ขึ้นชีท) ให้คงค่าในเครื่องไว้
+// ป้องกันไม่ให้ "บันทึกหลังสอน"/วันที่/โหมดวาดมือ ที่กรอกไว้ในเครื่องหายไปทุกครั้งที่แอปดึงข้อมูลจาก Cloud
+function mergeLocalClassLessons(remoteClassLessons, classId) {
+  let existingClassLessons = [];
+  try {
+    existingClassLessons = JSON.parse(localStorage.getItem(`iplane_class_lessons_${classId}`) || '[]');
+  } catch (_) {}
+  const existingByOnce = {};
+  existingClassLessons.forEach(p => { existingByOnce[String(p.once)] = p; });
+  const isBlank = v => !v || v === '-';
+  const carryOverFields = ['outcomesMode','solutionsMode','outcomesColor','outcomesFont',
+                            'solutionsColor','solutionsFont','outcomesDrawStrokes','solutionsDrawStrokes',
+                            'hodSignatureDate'];
+
+  return remoteClassLessons.map(p => {
+    const existing = existingByOnce[String(p.once)];
+    const merged = {
+      once: p.once,
+      week: p.week,
+      date: (isBlank(p.date) && existing && !isBlank(existing.date)) ? existing.date : p.date,
+      period: p.period,
+      periodCount: p.periodCount,
+      outcomes: (isBlank(p.outcomes) && existing && !isBlank(existing.outcomes)) ? existing.outcomes : p.outcomes,
+      solutions: (isBlank(p.solutions) && existing && !isBlank(existing.solutions)) ? existing.solutions : p.solutions,
+      pdfUrl: p.pdfUrl || (existing ? (existing.pdfUrl || '') : '')
+    };
+    if (existing) {
+      carryOverFields.forEach(k => { if (existing[k] !== undefined) merged[k] = existing[k]; });
+    }
+    return merged;
+  });
+}
+
 // Fetch live sheet data from Apps Script backend on startup
 async function fetchLiveGoogleData() {
   if (!config.gasUrl || classes.length === 0) return;
@@ -2781,7 +2818,7 @@ async function fetchLiveGoogleData() {
             materials: p.materials
           }));
 
-          const classLessons = remoteLessons.map(p => ({
+          const remoteClassLessons = remoteLessons.map(p => ({
             once: p.once,
             week: p.week,
             date: p.date,
@@ -2791,6 +2828,7 @@ async function fetchLiveGoogleData() {
             solutions: p.solutions,
             pdfUrl: p.pdfUrl
           }));
+          const classLessons = mergeLocalClassLessons(remoteClassLessons, cls.id);
 
           localStorage.setItem(`iplane_course_lessons_${cls.courseId}`, JSON.stringify(courseLessons));
           localStorage.setItem(`iplane_class_lessons_${cls.id}`, JSON.stringify(classLessons));
@@ -2825,8 +2863,9 @@ async function fetchLiveGoogleData() {
             }
           }
 
-          // สร้างรายละเอียดกำหนดการสำหรับห้องเรียนนี้
-          const classLessons = courseLessons.map((p, idx) => ({
+          // สร้างรายละเอียดกำหนดการสำหรับห้องเรียนนี้ (เปล่า) แล้ว merge กับข้อมูลในเครื่องที่มีอยู่ก่อน
+          // ป้องกันไม่ให้ "บันทึกหลังสอน"/วันที่ ที่กรอกไว้ในเครื่องหายไป เมื่อชีทห้องเรียนว่างเปล่า (เช่น sync ครั้งแรกหลังอัปเดตเวอร์ชัน)
+          const blankClassLessons = courseLessons.map((p, idx) => ({
             once: p.once,
             week: p.week,
             date: '',
@@ -2836,6 +2875,7 @@ async function fetchLiveGoogleData() {
             solutions: '-',
             pdfUrl: ''
           }));
+          const classLessons = mergeLocalClassLessons(blankClassLessons, cls.id);
           localStorage.setItem(`iplane_class_lessons_${cls.id}`, JSON.stringify(classLessons));
 
           // เขียนบันทึกตารางเรียนตั้งต้นขึ้น Google ชีทในแท็บห้องเรียนทันที
@@ -4593,12 +4633,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.37';
+  const CURRENT_VERSION = '3.38';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.38', note: 'แก้บั๊กข้อมูลบันทึกหลังสอน (วาดมือ)/วันที่/ลายเซ็นหัวหน้าห้อง ที่ยังไม่ได้ sync ขึ้นชีท ถูกเขียนทับด้วยค่าว่างจาก Cloud ทุกครั้งที่เปิดแอป' },
     { v: '3.37', note: 'แก้บั๊กส่งข้อมูล/ขึ้น Drive ไม่ได้เมื่อยังไม่ตั้งลายเซ็นหัวหน้ากลุ่มสาระ (รูปลายเซ็นว่างทำให้สร้าง PDF ล้มเหลว)' },
     { v: '3.36', note: 'ใส่ Gemini API Key ได้สูงสุด 10 อัน สลับอัตโนมัติเมื่อตัวใดมีปัญหา (จุดแดงแจ้งเตือน) + แก้ปฏิทินวันที่หัวหน้ากลุ่มสาระให้กดเลือกได้บน iPad/มือถือ' },
     { v: '3.35', note: 'ลายเซ็นหัวหน้ากลุ่มสาระเป็นแบบเดียว ตั้งค่าได้ในหน้าการตั้งค่า (ไม่บังคับ) + ลายเซ็นหัวหน้าห้อง sync ขึ้น Cloud' },
