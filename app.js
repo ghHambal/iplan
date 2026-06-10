@@ -302,13 +302,142 @@ let activeClassId = localStorage.getItem('iplane_active_class_id') || 'cl1';
 
 // รุ่นโมเดล Gemini ที่ใช้เป็นค่าเริ่มต้น (ใช้เมื่อครูไม่ได้ระบุรุ่นเองในหน้าตั้งค่า)
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const MAX_GEMINI_KEYS = 10;
+
+// โหลดรายการ Gemini API Key (รองรับหลายอันสำหรับ auto-fallback)
+// + ย้ายข้อมูลจาก key เดี่ยวรุ่นเก่า (iplane_gemini_api_key) มาเป็นอันแรกในรายการ
+function loadGeminiApiKeys() {
+  const raw = localStorage.getItem('iplane_gemini_api_keys');
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0) {
+        return arr.map(e => ({ key: e.key || '', status: e.status || 'untested', error: e.error || '' }));
+      }
+    } catch (_) {}
+  }
+  const oldKey = localStorage.getItem('iplane_gemini_api_key');
+  if (oldKey) {
+    return [{ key: oldKey, status: 'untested', error: '' }];
+  }
+  return [{ key: '', status: 'untested', error: '' }];
+}
 
 let config = {
   gasUrl: localStorage.getItem('iplane_gas_url') || '',
   folderId: localStorage.getItem('iplane_folder_id') || '',
-  geminiApiKey: localStorage.getItem('iplane_gemini_api_key') || '',
+  geminiApiKeys: loadGeminiApiKeys(),
+  geminiKeyIndex: parseInt(localStorage.getItem('iplane_gemini_key_index') || '0', 10) || 0,
   geminiModel: localStorage.getItem('iplane_gemini_model') || ''
 };
+
+function saveGeminiKeys() {
+  localStorage.setItem('iplane_gemini_api_keys', JSON.stringify(config.geminiApiKeys));
+}
+
+// วาดรายการ Gemini API Key ในหน้าตั้งค่า พร้อมจุดสถานะ (เขียว = ใช้ได้, แดง = มีปัญหาล่าสุด, เทา = ยังไม่เคยใช้)
+function renderGeminiKeysUI() {
+  const list = document.getElementById('gemini-keys-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  config.geminiApiKeys.forEach((entry, idx) => {
+    const row = document.createElement('div');
+    row.className = 'gemini-key-row';
+
+    const dot = document.createElement('span');
+    dot.className = 'status-dot ' + (entry.status === 'ok' ? 'ok' : entry.status === 'error' ? 'error' : 'untested');
+    dot.title = entry.status === 'error'
+      ? ('มีปัญหาล่าสุด: ' + (entry.error || 'ไม่ทราบสาเหตุ'))
+      : (entry.status === 'ok' ? 'ใช้งานล่าสุดสำเร็จ' : 'ยังไม่เคยใช้');
+
+    const input = document.createElement('input');
+    input.type = 'password';
+    input.className = 'gemini-key-input';
+    input.placeholder = `API Key #${idx + 1}`;
+    input.value = entry.key || '';
+    input.dataset.index = String(idx);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-danger btn-remove-gemini-key';
+    removeBtn.style.cssText = 'padding:6px 10px; font-size:11px;';
+    removeBtn.dataset.index = String(idx);
+    removeBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i>';
+
+    row.appendChild(dot);
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+  });
+
+  const addBtn = document.getElementById('btn-add-gemini-key');
+  if (addBtn) addBtn.style.display = config.geminiApiKeys.length >= MAX_GEMINI_KEYS ? 'none' : '';
+
+  lucide.createIcons();
+}
+
+// เรียก Gemini generateContent โดยลองไล่ทีละ Key ในรายการ — ถ้า Key ปัจจุบันมีปัญหา (โควต้าเต็ม/คีย์ผิด)
+// จะสลับไปใช้ Key ถัดไปอัตโนมัติ และจำ Key ที่สำเร็จล่าสุดไว้เป็นจุดเริ่มต้นครั้งถัดไป
+async function callGeminiGenerateContent(promptText) {
+  const modelName = config.geminiModel || DEFAULT_GEMINI_MODEL;
+  const candidates = config.geminiApiKeys
+    .map((entry, idx) => ({ entry, idx }))
+    .filter(c => c.entry.key && c.entry.key.trim());
+
+  if (candidates.length === 0) {
+    const err = new Error('NO_KEY');
+    err.code = 'NO_KEY';
+    throw err;
+  }
+
+  let startPos = candidates.findIndex(c => c.idx === config.geminiKeyIndex);
+  if (startPos === -1) startPos = 0;
+
+  let lastErr = null;
+  for (let i = 0; i < candidates.length; i++) {
+    const { entry, idx } = candidates[(startPos + i) % candidates.length];
+    try {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(entry.key.trim())}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: { responseMimeType: 'application/json' }
+        })
+      });
+
+      if (!resp.ok) {
+        let shortMsg = `ตอบกลับผิดพลาด (${resp.status})`;
+        if (resp.status === 429) shortMsg = 'โควต้าเต็ม (429)';
+        else if (resp.status === 400 || resp.status === 403) shortMsg = `คีย์ไม่ถูกต้องหรือถูกปฏิเสธ (${resp.status})`;
+        else if (resp.status === 404) shortMsg = 'ไม่พบโมเดลนี้ (404)';
+        entry.status = 'error';
+        entry.error = shortMsg;
+        lastErr = new Error(`API Key #${idx + 1}: ${shortMsg}`);
+        lastErr.httpStatus = resp.status;
+        continue;
+      }
+
+      entry.status = 'ok';
+      entry.error = '';
+      config.geminiKeyIndex = idx;
+      localStorage.setItem('iplane_gemini_key_index', String(idx));
+      saveGeminiKeys();
+      renderGeminiKeysUI();
+      return await resp.json();
+
+    } catch (networkErr) {
+      entry.status = 'error';
+      entry.error = 'เชื่อมต่อไม่สำเร็จ';
+      lastErr = networkErr;
+    }
+  }
+
+  saveGeminiKeys();
+  renderGeminiKeysUI();
+  throw lastErr || new Error('ไม่สามารถเรียกใช้ Gemini API ได้');
+}
 
 // 4. Drawing Canvas signature variables
 let canvas, ctx;
@@ -626,9 +755,37 @@ function initializeUI() {
   
   document.getElementById('input-gas-url').value = config.gasUrl;
   document.getElementById('input-drive-folder').value = config.folderId;
-  document.getElementById('input-gemini-api-key').value = config.geminiApiKey;
   document.getElementById('input-gemini-model').value = config.geminiModel;
   updateSyncStatusIndicator();
+
+  // Gemini API Keys (multi-key with auto-fallback)
+  renderGeminiKeysUI();
+
+  const geminiKeysList = document.getElementById('gemini-keys-list');
+  geminiKeysList.addEventListener('input', (e) => {
+    if (!e.target.classList.contains('gemini-key-input')) return;
+    const idx = parseInt(e.target.dataset.index, 10);
+    config.geminiApiKeys[idx].key = e.target.value;
+    saveGeminiKeys();
+  });
+  geminiKeysList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-remove-gemini-key');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.index, 10);
+    config.geminiApiKeys.splice(idx, 1);
+    if (config.geminiApiKeys.length === 0) {
+      config.geminiApiKeys.push({ key: '', status: 'untested', error: '' });
+    }
+    saveGeminiKeys();
+    renderGeminiKeysUI();
+  });
+
+  document.getElementById('btn-add-gemini-key').addEventListener('click', () => {
+    if (config.geminiApiKeys.length >= MAX_GEMINI_KEYS) return;
+    config.geminiApiKeys.push({ key: '', status: 'untested', error: '' });
+    saveGeminiKeys();
+    renderGeminiKeysUI();
+  });
 
   // Active Class Leader input binding
   const currentClassObj = classes.find(c => c.id === activeClassId);
@@ -820,7 +977,6 @@ function initializeUI() {
   // HOD date dropdowns (per-plan) — พ.ศ.
   // HOD date — native calendar popup + display in พ.ศ.
   const hodDateNative = document.getElementById('hod-date-native');
-  const hodDateDisplayBtn = document.getElementById('hod-date-display');
   const hodDateDisplayText = document.getElementById('hod-date-display-text');
   const hodDateClearBtn = document.getElementById('hod-date-clear');
   const thaiMonthShort = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -835,11 +991,6 @@ function initializeUI() {
       hodDateClearBtn.style.display = 'none';
     }
   }
-
-  hodDateDisplayBtn.addEventListener('click', () => {
-    if (hodDateNative.showPicker) hodDateNative.showPicker();
-    else hodDateNative.click();
-  });
 
   hodDateNative.addEventListener('change', () => {
     const plan = lessonPlans[selectedIndex];
@@ -1788,8 +1939,8 @@ async function draftReflectionWithAI() {
   const plan = lessonPlans[selectedIndex];
   if (!plan) return;
 
-  if (!config.geminiApiKey) {
-    alert('กรุณาใส่ Gemini API Key ในหน้า "ตั้งค่า" ก่อนใช้งานผู้ช่วย AI\n(ขอฟรีได้ที่ aistudio.google.com/apikey)');
+  if (!config.geminiApiKeys.some(k => k.key && k.key.trim())) {
+    alert('กรุณาใส่ Gemini API Key อย่างน้อย 1 อัน ในหน้า "ตั้งค่า" ก่อนใช้งานผู้ช่วย AI\n(ขอฟรีได้ที่ aistudio.google.com/apikey)');
     document.getElementById('settings-modal').classList.add('open');
     return;
   }
@@ -1830,28 +1981,7 @@ async function draftReflectionWithAI() {
 
 ตอบกลับเป็น JSON เท่านั้น {"outcomes": "...", "solutions": "..."} ห้ามมีข้อความอื่น`;
 
-    const modelName = config.geminiModel || DEFAULT_GEMINI_MODEL;
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(config.geminiApiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        generationConfig: { responseMimeType: 'application/json' }
-      })
-    });
-
-    if (!resp.ok) {
-      const errBody = await resp.text().catch(() => '');
-      let hint = '';
-      if (resp.status === 429) {
-        hint = '\n\nดูเหมือนรุ่นโมเดลนี้จะเกินโควตาฟรีสำหรับ Key ของคุณ ลองเปิดหน้า "ตั้งค่า" แล้วระบุชื่อรุ่นอื่น (เช่น gemini-flash-latest หรือ gemini-2.0-flash) ในช่อง "Gemini Model"';
-      } else if (resp.status === 404) {
-        hint = '\n\nไม่พบโมเดลชื่อนี้ ลองตรวจสอบหรือเปลี่ยนชื่อรุ่นในหน้า "ตั้งค่า" ช่อง "Gemini Model"';
-      }
-      throw new Error(`Gemini API ตอบกลับผิดพลาด (${resp.status}) ${errBody}`.trim() + hint);
-    }
-
-    const data = await resp.json();
+    const data = await callGeminiGenerateContent(promptText);
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     let draft;
     try {
@@ -1876,7 +2006,18 @@ async function draftReflectionWithAI() {
     alert('AI ร่างบันทึกหลังสอนให้แล้วครับ ลองอ่านทบทวนและแก้ไขให้ตรงกับที่สอนจริงก่อนกด "บันทึกหลังสอน" นะครับ');
   } catch (err) {
     console.error('AI draft error:', err);
-    alert('ขออภัยครับ ไม่สามารถร่างบันทึกด้วย AI ได้ในขณะนี้\n' + err.message);
+    if (err.code === 'NO_KEY') {
+      alert('กรุณาใส่ Gemini API Key อย่างน้อย 1 อัน ในหน้า "ตั้งค่า" ก่อนใช้งานผู้ช่วย AI\n(ขอฟรีได้ที่ aistudio.google.com/apikey)');
+      document.getElementById('settings-modal').classList.add('open');
+    } else {
+      let hint = '\n\nลองตรวจสอบสถานะ Key แต่ละอันได้ในหน้า "ตั้งค่า" (จุดสีแดง = Key นั้นมีปัญหา)';
+      if (err.httpStatus === 404) {
+        hint += '\nหรือลองเปลี่ยนชื่อรุ่นในช่อง "Gemini Model" (เช่น gemini-flash-latest)';
+      } else if (err.httpStatus === 429) {
+        hint += '\nหรือลองเปลี่ยนชื่อรุ่นในช่อง "Gemini Model" (เช่น gemini-flash-latest หรือ gemini-2.0-flash) เพื่อลดการใช้โควต้า';
+      }
+      alert('ขออภัยครับ ไม่สามารถร่างบันทึกด้วย AI ได้ในขณะนี้\n' + err.message + hint);
+    }
   } finally {
     btn.disabled = false;
     btnSpan.innerText = originalText;
@@ -2210,12 +2351,10 @@ function saveModalSettings() {
   // Sync Google Endpoint
   config.gasUrl = document.getElementById('input-gas-url').value.trim();
   config.folderId = document.getElementById('input-drive-folder').value.trim();
-  config.geminiApiKey = document.getElementById('input-gemini-api-key').value.trim();
   config.geminiModel = document.getElementById('input-gemini-model').value.trim();
 
   localStorage.setItem('iplane_gas_url', config.gasUrl);
   localStorage.setItem('iplane_folder_id', config.folderId);
-  localStorage.setItem('iplane_gemini_api_key', config.geminiApiKey);
   localStorage.setItem('iplane_gemini_model', config.geminiModel);
 
   updateSyncStatusIndicator();
@@ -4454,12 +4593,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.35';
+  const CURRENT_VERSION = '3.36';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.36', note: 'ใส่ Gemini API Key ได้สูงสุด 10 อัน สลับอัตโนมัติเมื่อตัวใดมีปัญหา (จุดแดงแจ้งเตือน) + แก้ปฏิทินวันที่หัวหน้ากลุ่มสาระให้กดเลือกได้บน iPad/มือถือ' },
     { v: '3.35', note: 'ลายเซ็นหัวหน้ากลุ่มสาระเป็นแบบเดียว ตั้งค่าได้ในหน้าการตั้งค่า (ไม่บังคับ) + ลายเซ็นหัวหน้าห้อง sync ขึ้น Cloud' },
     { v: '3.34', note: 'แก้ SW cache ค้างเวอร์ชันเก่า — network-first สำหรับไฟล์หลัก + ปุ่มโหลดใหม่ล้าง cache/SW จริง' },
     { v: '3.33', note: 'sync โลโก้แอปขึ้น Google Sheets + แก้ปุ่มบันทึกใน settings หายบนมือถือ (100dvh)' },

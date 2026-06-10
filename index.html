@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=3.35">
+  <link rel="stylesheet" href="style.css?v=3.36">
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -46,7 +46,7 @@
           <i data-lucide="book-open" class="logo-icon" id="sidebar-default-icon"></i>
           <span class="logo-text">iPlane</span>
         </div>
-        <span class="version-tag" id="app-version-tag">v3.35</span>
+        <span class="version-tag" id="app-version-tag">v3.36</span>
       </div>
 
       <div class="sidebar-action" style="padding-bottom: 0;">
@@ -557,13 +557,16 @@
               </small>
               <div style="margin-top:0;">
                 <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">วันที่ลงนาม (พ.ศ.)</label>
-                <input type="date" id="hod-date-native" style="position:absolute; opacity:0; pointer-events:none; width:0; height:0;">
                 <div style="display:flex; gap:6px; align-items:center;">
-                  <button type="button" id="hod-date-display"
-                    style="flex:1; padding:6px 10px; background:var(--secondary); border:1px solid var(--card-border); border-radius:6px; color:var(--text-main); font-size:13px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:6px;">
-                    <i data-lucide="calendar" style="width:14px;height:14px;flex-shrink:0;"></i>
-                    <span id="hod-date-display-text">เลือกวันที่</span>
-                  </button>
+                  <div style="position:relative; flex:1;">
+                    <button type="button" id="hod-date-display"
+                      style="width:100%; box-sizing:border-box; padding:6px 10px; background:var(--secondary); border:1px solid var(--card-border); border-radius:6px; color:var(--text-main); font-size:13px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:6px;">
+                      <i data-lucide="calendar" style="width:14px;height:14px;flex-shrink:0;"></i>
+                      <span id="hod-date-display-text">เลือกวันที่</span>
+                    </button>
+                    <input type="date" id="hod-date-native"
+                      style="position:absolute; inset:0; width:100%; height:100%; margin:0; padding:0; border:none; opacity:0; cursor:pointer; -webkit-appearance:none; appearance:none;">
+                  </div>
                   <button type="button" id="hod-date-clear" class="btn btn-secondary" style="display:none; padding:5px 8px;">
                     <i data-lucide="x" style="width:13px;height:13px;"></i>
                   </button>
@@ -750,12 +753,19 @@
               <div style="margin-top: 18px;">
                 <h3><i data-lucide="sparkles"></i> ผู้ช่วย AI ร่างบันทึกหลังสอน</h3>
                 <div class="form-group">
-                  <label for="input-gemini-api-key">Gemini API Key</label>
-                  <input type="password" id="input-gemini-api-key" placeholder="วาง API Key จาก Google AI Studio ที่นี่">
+                  <label>Gemini API Key <small style="color:var(--text-muted); font-weight:400;">(ใส่ได้สูงสุด 10 อัน)</small></label>
+                  <div id="gemini-keys-list"></div>
+                  <button type="button" id="btn-add-gemini-key" class="btn btn-secondary" style="padding:6px 12px; font-size:12px;">
+                    <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                    <span>เพิ่ม API Key</span>
+                  </button>
                   <small class="form-help">
                     ใช้สำหรับให้ AI ช่วยร่าง "ผลการจัดการเรียนรู้" และ "แนวทางแก้ไข" จากข้อมูลแผนการสอน
                     (ขอฟรีได้ที่ <span style="color: var(--primary);">aistudio.google.com/apikey</span> —
-                    Key จะถูกเก็บไว้ในเครื่องนี้เท่านั้น ไม่ส่งผ่าน Cloud)
+                    Key จะถูกเก็บไว้ในเครื่องนี้เท่านั้น ไม่ส่งผ่าน Cloud)<br>
+                    ถ้าคีย์ที่ใช้อยู่มีปัญหา (โควต้าเต็ม/คีย์ผิด) ระบบจะสลับไปใช้คีย์ถัดไปในรายการให้อัตโนมัติ —
+                    จุดสีแดง <span class="status-dot error" style="display:inline-block; vertical-align:middle;"></span>
+                    หมายถึงคีย์นั้นมีปัญหาล่าสุด (วางเมาส์ดูสาเหตุ)
                   </small>
                 </div>
                 <div class="form-group">
@@ -1331,7 +1341,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.35"></script>
+  <script src="app.js?v=3.36"></script>
 </body>
 
 </html>
