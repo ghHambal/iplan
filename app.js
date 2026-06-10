@@ -3010,7 +3010,13 @@ async function syncToGoogleSheets() {
     }
   } catch (error) {
     console.error(error);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย หรือ โดนบล็อกสิทธิ์ CORS\n\nคำแนะนำในการแก้ไข:\n1. ตรวจสอบว่าใน Apps Script ตอน Deploy ได้เลือก Who has access เป็น "Anyone" (ทุกคน) แล้วหรือยัง\n2. ตรวจสอบว่าคัดลอก URL ของ Web App มาวางถูกต้อง (ลิงก์ต้องลงท้ายด้วย /exec เท่านั้น)\n3. มั่นใจว่าได้กดให้สิทธิ์การใช้งานบัญชีกับสคริปต์ (Authorize Access) ตอน Deploy แล้ว');
+    if (error instanceof TypeError) {
+      // fetch ล้มเหลวจริงๆ (เครือข่าย/CORS) — TypeError คือสิ่งเดียวที่ fetch() throw เมื่อเรียก request ไม่สำเร็จ
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย หรือ โดนบล็อกสิทธิ์ CORS\n\nคำแนะนำในการแก้ไข:\n1. ตรวจสอบว่าใน Apps Script ตอน Deploy ได้เลือก Who has access เป็น "Anyone" (ทุกคน) แล้วหรือยัง\n2. ตรวจสอบว่าคัดลอก URL ของ Web App มาวางถูกต้อง (ลิงก์ต้องลงท้ายด้วย /exec เท่านั้น)\n3. มั่นใจว่าได้กดให้สิทธิ์การใช้งานบัญชีกับสคริปต์ (Authorize Access) ตอน Deploy แล้ว');
+    } else {
+      // ข้อผิดพลาดอื่น (เช่น สร้าง PDF ไม่สำเร็จ) — แสดงข้อความจริงเพื่อช่วยวินิจฉัย
+      alert(`เกิดข้อผิดพลาดขณะสร้าง/ส่งไฟล์ PDF:\n\n${error.name || 'Error'}: ${error.message || error}\n\nลองใหม่อีกครั้ง หากยังไม่ได้ ส่งภาพหน้าจอข้อความนี้ให้ผู้พัฒนาตรวจสอบ`);
+    }
   } finally {
     syncBtnText.innerText = 'ส่งข้อมูล & ขึ้น Drive';
     syncBtn.disabled = false;
@@ -3108,7 +3114,7 @@ async function exportPDFDocument() {
     exportBtn.disabled = false;
   } catch (err) {
     console.error(err);
-    alert('การสร้าง PDF ขัดข้อง');
+    alert(`การสร้าง PDF ขัดข้อง:\n\n${err.name || 'Error'}: ${err.message || err}`);
     exportText.innerText = 'ดาวน์โหลด PDF (หน้าเดียว)';
     exportBtn.disabled = false;
   }
@@ -4633,12 +4639,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.38';
+  const CURRENT_VERSION = '3.39';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.39', note: 'แสดงข้อความ error จริงตอนสร้าง/ส่ง PDF ล้มเหลว แทนที่จะขึ้นข้อความ CORS เสมอ (ช่วยวินิจฉัยปัญหาบนอุปกรณ์ต่างๆ ได้แม่นยำขึ้น)' },
     { v: '3.38', note: 'แก้บั๊กข้อมูลบันทึกหลังสอน (วาดมือ)/วันที่/ลายเซ็นหัวหน้าห้อง ที่ยังไม่ได้ sync ขึ้นชีท ถูกเขียนทับด้วยค่าว่างจาก Cloud ทุกครั้งที่เปิดแอป' },
     { v: '3.37', note: 'แก้บั๊กส่งข้อมูล/ขึ้น Drive ไม่ได้เมื่อยังไม่ตั้งลายเซ็นหัวหน้ากลุ่มสาระ (รูปลายเซ็นว่างทำให้สร้าง PDF ล้มเหลว)' },
     { v: '3.36', note: 'ใส่ Gemini API Key ได้สูงสุด 10 อัน สลับอัตโนมัติเมื่อตัวใดมีปัญหา (จุดแดงแจ้งเตือน) + แก้ปฏิทินวันที่หัวหน้ากลุ่มสาระให้กดเลือกได้บน iPad/มือถือ' },
