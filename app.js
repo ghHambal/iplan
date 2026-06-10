@@ -3278,7 +3278,7 @@ function populatePrintTemplate() {
         sigHodImg.src = hodSig;
         sigHodImg.style.display = 'block';
       } else {
-        sigHodImg.src = '';
+        sigHodImg.src = TRANSPARENT_PIXEL_DATA_URL;
         sigHodImg.style.display = 'none';
       }
     }
@@ -4593,12 +4593,13 @@ function clearCanvas(type) {
 // 9. Auto-reload when new version is deployed
 // ==========================================
 (function startVersionWatcher() {
-  const CURRENT_VERSION = '3.36';
+  const CURRENT_VERSION = '3.37';
   const CHECK_INTERVAL_MS = 60000; // ตรวจทุก 60 วินาที
   let updateBannerShown = false;
 
   // Changelog — เพิ่มรายการใหม่ด้านบนเสมอ
   const CHANGELOG = [
+    { v: '3.37', note: 'แก้บั๊กส่งข้อมูล/ขึ้น Drive ไม่ได้เมื่อยังไม่ตั้งลายเซ็นหัวหน้ากลุ่มสาระ (รูปลายเซ็นว่างทำให้สร้าง PDF ล้มเหลว)' },
     { v: '3.36', note: 'ใส่ Gemini API Key ได้สูงสุด 10 อัน สลับอัตโนมัติเมื่อตัวใดมีปัญหา (จุดแดงแจ้งเตือน) + แก้ปฏิทินวันที่หัวหน้ากลุ่มสาระให้กดเลือกได้บน iPad/มือถือ' },
     { v: '3.35', note: 'ลายเซ็นหัวหน้ากลุ่มสาระเป็นแบบเดียว ตั้งค่าได้ในหน้าการตั้งค่า (ไม่บังคับ) + ลายเซ็นหัวหน้าห้อง sync ขึ้น Cloud' },
     { v: '3.34', note: 'แก้ SW cache ค้างเวอร์ชันเก่า — network-first สำหรับไฟล์หลัก + ปุ่มโหลดใหม่ล้าง cache/SW จริง' },
